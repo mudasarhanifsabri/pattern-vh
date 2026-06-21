@@ -1,0 +1,52 @@
+@php($tenantOnly = $tenantOnly ?? false)
+
+<header class="sticky top-0 z-20 flex {{ $tenantOnly ? 'h-16' : 'h-20' }} items-center gap-3 border-b border-[#dfe7f1] bg-white/95 px-4 backdrop-blur sm:px-6 lg:px-8">
+    @unless ($tenantOnly)
+        <button class="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 lg:hidden" @click="sidebarOpen = true" aria-label="Open menu">
+            <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+        </button>
+    @endunless
+
+    @if ($tenantOnly)
+        <a href="{{ route('dashboard') }}" class="flex min-w-0 items-center gap-3">
+            <span class="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-blue-600 text-sm font-black text-white shadow-lg shadow-blue-600/20">P</span>
+            <span class="min-w-0">
+                <span class="block truncate text-sm font-black text-[#071a3b]">Pattern RMS</span>
+                <span class="block truncate text-[11px] font-semibold text-slate-500">My stay workspace</span>
+            </span>
+        </a>
+    @else
+        <div class="relative hidden w-full max-w-[405px] sm:block">
+            <svg class="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+            <input type="search" placeholder="Search this workspace..." class="erp-focus h-11 w-full rounded-xl border border-slate-200 bg-[#f8faff] py-2 pl-11 pr-16 text-sm text-slate-700 placeholder:text-slate-400">
+            <span class="absolute right-3 top-1/2 -translate-y-1/2 rounded-md border border-slate-200 bg-white px-2 py-1 text-[10px] font-semibold text-slate-400">Ctrl K</span>
+        </div>
+    @endif
+
+    <div class="ml-auto flex items-center gap-2">
+        <button class="{{ $tenantOnly ? 'hidden sm:flex' : 'hidden md:flex' }} h-11 items-center gap-2 rounded-xl border border-slate-200 px-3 text-sm font-medium text-slate-600 hover:bg-slate-50" type="button">
+            <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18"/></svg>
+            English
+        </button>
+        <button class="relative grid h-11 w-11 place-items-center rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50" type="button" aria-label="Notifications">
+            <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></svg>
+            <span class="absolute right-2.5 top-2.5 h-2 w-2 rounded-full border-2 border-white bg-rose-500"></span>
+        </button>
+
+        <x-dropdown align="right" width="48" contentClasses="py-1.5 bg-white">
+            <x-slot name="trigger">
+                <button class="flex h-12 items-center gap-3 rounded-xl border border-slate-200 px-2.5 text-left hover:bg-slate-50 sm:min-w-[185px]">
+                    <span class="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-blue-100 text-xs font-bold text-blue-700">{{ strtoupper(substr(auth()->user()->name, 0, 2)) }}</span>
+                    <span class="hidden min-w-0 flex-1 sm:block"><span class="block truncate text-xs font-bold text-[#071a3b]">{{ auth()->user()->name }}</span><span class="block truncate text-[10px] text-slate-500">{{ auth()->user()->getRoleNames()->first() ?? 'User' }}</span></span>
+                    <svg class="hidden h-4 w-4 text-slate-500 sm:block" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m6 9 6 6 6-6"/></svg>
+                </button>
+            </x-slot>
+            <x-slot name="content">
+                <x-dropdown-link :href="route('profile.edit')">{{ __('Profile settings') }}</x-dropdown-link>
+                <form method="POST" action="{{ route('logout') }}">@csrf
+                    <x-dropdown-link :href="route('logout')" onclick="event.preventDefault(); this.closest('form').submit();">{{ __('Log out') }}</x-dropdown-link>
+                </form>
+            </x-slot>
+        </x-dropdown>
+    </div>
+</header>

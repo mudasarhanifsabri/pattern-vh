@@ -1,0 +1,1 @@
+<x-app-layout><x-slot name="header"><div><p class="text-[11px] font-bold uppercase tracking-[0.22em] text-blue-600">Finance</p><h1 class="text-2xl font-bold text-[#071a3b]">Add invoice</h1></div></x-slot><form method="POST" action="{{ route('invoices.store') }}">@include('invoices._form', ['invoice' => null, 'submitLabel' => 'Create invoice'])</form></x-app-layout>
