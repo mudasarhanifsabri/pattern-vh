@@ -30,7 +30,10 @@ class TtLockSettingsController extends Controller
         }
 
         if (Schema::hasTable('tt_locks')) {
-            $locks = TtLock::query()->with(['setting', 'unit.building'])->orderBy('lock_name')->get();
+            $locks = TtLock::query()
+                ->with(['setting', 'unit.building', 'events' => fn ($query) => $query->latest('event_at')->latest()->limit(25)])
+                ->orderBy('lock_name')
+                ->get();
         }
 
         if (Schema::hasTable('tt_lock_events')) {

@@ -40,7 +40,6 @@
 
         <nav class="erp-card flex gap-2 overflow-x-auto p-2 text-sm font-black">
             <a href="#locks" class="whitespace-nowrap rounded-xl bg-blue-50 px-4 py-2.5 text-blue-700">Installed locks</a>
-            <a href="#history" class="whitespace-nowrap rounded-xl px-4 py-2.5 text-slate-500 hover:bg-slate-50">Lock history</a>
             <a href="#api-groups" class="whitespace-nowrap rounded-xl px-4 py-2.5 text-slate-500 hover:bg-slate-50">API credential groups</a>
         </nav>
 
@@ -62,7 +61,7 @@
             </div>
             <div class="hidden overflow-x-auto md:block">
                 <table class="min-w-full divide-y divide-slate-200 text-sm">
-                    <thead class="bg-slate-50 text-left text-[11px] font-black uppercase tracking-[0.16em] text-slate-500"><tr><th class="px-5 py-3">Lock</th><th class="px-5 py-3">Connection</th><th class="px-5 py-3">Health</th><th class="px-5 py-3">Assigned unit</th><th class="px-5 py-3">Last sync</th><th class="px-5 py-3 text-right">Actions</th></tr></thead>
+                    <thead class="bg-slate-50 text-left text-[11px] font-black uppercase tracking-[0.16em] text-slate-500"><tr><th class="px-5 py-3">Lock</th><th class="px-5 py-3">Connection</th><th class="px-5 py-3">Health</th><th class="px-5 py-3">Assigned unit</th><th class="px-5 py-3">Recent access</th><th class="px-5 py-3 text-right">Actions</th></tr></thead>
                     <tbody class="divide-y divide-slate-100 bg-white">
                         @forelse($locks as $lock)
                             <tr class="hover:bg-slate-50/70">
@@ -70,8 +69,15 @@
                                 <td class="px-5 py-4 text-xs text-slate-600"><p>{{ $lock->setting?->name ?: 'No API group' }}</p><p class="mt-1">{{ $lock->gateway_id ? 'Gateway '.$lock->gateway_id : 'Bluetooth only / no gateway' }}</p></td>
                                 <td class="px-5 py-4"><div class="flex items-center gap-2"><span class="font-black {{ ($lock->battery_level ?? 100) < 25 ? 'text-amber-600' : 'text-[#071a3b]' }}">{{ $lock->battery_level === null ? '—' : $lock->battery_level.'%' }}</span><span class="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-600">{{ str($lock->status)->replace('_', ' ')->headline() }}</span></div></td>
                                 <td class="px-5 py-4 text-sm">@if($lock->unit)<span class="font-bold text-[#071a3b]">{{ $lock->unit->building?->name }}</span><span class="block text-xs text-slate-500">Unit {{ $lock->unit->unit_no }}</span>@else<span class="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-700">Available</span>@endif</td>
-                                <td class="px-5 py-4 text-xs text-slate-500">{{ $lock->last_synced_at?->diffForHumans() ?? 'Never' }}</td>
-                                <td class="px-5 py-4"><div class="flex justify-end gap-2"><button type="button" x-data x-on:click="$dispatch('open-modal', 'edit-lock-{{ $lock->id }}')" class="rounded-xl border border-slate-200 px-3 py-2 text-xs font-black text-[#071a3b]">Edit</button><form method="POST" action="{{ route('tt-lock-settings.locks.destroy', $lock) }}" onsubmit="return confirm('Delete this TT Lock?')">@csrf @method('DELETE')<button class="rounded-xl border border-rose-200 px-3 py-2 text-xs font-black text-rose-600">Delete</button></form></div></td>
+                                <td class="px-5 py-4 text-xs text-slate-500">
+                                    @if($lock->events->first())
+                                        <span class="font-black text-[#071a3b]">{{ str($lock->events->first()->event_type)->replace('_', ' ')->headline() }}</span>
+                                        <span class="block">{{ $lock->events->first()->event_at?->diffForHumans() ?? $lock->events->first()->created_at->diffForHumans() }}</span>
+                                    @else
+                                        <span>No history yet</span>
+                                    @endif
+                                </td>
+                                <td class="px-5 py-4"><div class="flex justify-end gap-2"><button type="button" x-data x-on:click="$dispatch('open-modal', 'lock-history-{{ $lock->id }}')" class="rounded-xl bg-indigo-50 px-3 py-2 text-xs font-black text-indigo-700">History</button><button type="button" x-data x-on:click="$dispatch('open-modal', 'edit-lock-{{ $lock->id }}')" class="rounded-xl border border-slate-200 px-3 py-2 text-xs font-black text-[#071a3b]">Edit</button><form method="POST" action="{{ route('tt-lock-settings.locks.destroy', $lock) }}" onsubmit="return confirm('Delete this TT Lock?')">@csrf @method('DELETE')<button class="rounded-xl border border-rose-200 px-3 py-2 text-xs font-black text-rose-600">Delete</button></form></div></td>
                             </tr>
                         @empty
                             <tr><td colspan="6" class="px-5 py-12 text-center text-slate-500">No installed locks yet.</td></tr>
@@ -86,11 +92,11 @@
             </div>
         </section>
 
-        <section id="history" class="erp-card overflow-hidden">
+        <section class="erp-card overflow-hidden">
             <div class="flex flex-col gap-2 border-b border-slate-100 p-5 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                    <h2 class="text-lg font-black text-[#071a3b]">Lock history</h2>
-                    <p class="mt-1 text-sm text-slate-500">Unlock and access records received from TTLock callback or pulled by manual sync.</p>
+                    <h2 class="text-lg font-black text-[#071a3b]">Latest access activity</h2>
+                    <p class="mt-1 text-sm text-slate-500">Quick view only. Use each lock's History button for the full popup.</p>
                 </div>
                 <span class="rounded-full bg-blue-50 px-3 py-1 text-xs font-black text-blue-700">{{ $events->count() }} latest</span>
             </div>
@@ -181,5 +187,65 @@
     <x-modal name="add-lock-group" maxWidth="lg" focusable><form method="POST" action="{{ route('tt-lock-settings.groups.store') }}" class="p-6">@csrf @include('tt-lock-settings.partials.group-form', ['setting' => null, 'title' => 'Add API credential group'])</form></x-modal>
     <x-modal name="add-lock" maxWidth="xl" focusable><form method="POST" action="{{ route('tt-lock-settings.locks.store') }}" class="p-6">@csrf @include('tt-lock-settings.partials.lock-form', ['lock' => null, 'title' => 'Add installed lock'])</form></x-modal>
     @foreach($settings as $setting)<x-modal name="edit-lock-group-{{ $setting->id }}" maxWidth="lg" focusable><form method="POST" action="{{ route('tt-lock-settings.groups.update', $setting) }}" class="p-6">@csrf @method('PATCH') @include('tt-lock-settings.partials.group-form', ['setting' => $setting, 'title' => 'Edit API credential group'])</form></x-modal>@endforeach
+    @foreach($locks as $lock)
+        <x-modal name="lock-history-{{ $lock->id }}" maxWidth="2xl" focusable>
+            <div class="p-6">
+                <div class="flex flex-col gap-3 border-b border-slate-100 pb-5 sm:flex-row sm:items-start sm:justify-between">
+                    <div>
+                        <p class="text-[11px] font-black uppercase tracking-[0.18em] text-indigo-600">Smart lock history</p>
+                        <h2 class="mt-1 text-2xl font-black text-[#071a3b]">{{ $lock->lock_name }}</h2>
+                        <p class="mt-1 text-sm text-slate-500">{{ $lock->unit ? ($lock->unit->building?->name.' / Unit '.$lock->unit->unit_no) : 'No unit attached' }}</p>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2 text-xs">
+                        <div class="rounded-2xl bg-slate-50 p-3">
+                            <p class="font-black uppercase tracking-[0.12em] text-slate-400">Battery</p>
+                            <p class="mt-1 text-lg font-black text-[#071a3b]">{{ $lock->battery_level === null ? '-' : $lock->battery_level.'%' }}</p>
+                        </div>
+                        <div class="rounded-2xl bg-slate-50 p-3">
+                            <p class="font-black uppercase tracking-[0.12em] text-slate-400">Gateway</p>
+                            <p class="mt-1 text-sm font-black text-[#071a3b]">{{ $lock->gateway_id ?: 'Bluetooth only' }}</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-5 max-h-[520px] overflow-auto">
+                    @forelse($lock->events as $event)
+                        <div class="mb-3 rounded-2xl border border-slate-200 p-4">
+                            <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                                <div>
+                                    <p class="font-black text-[#071a3b]">{{ str($event->event_type)->replace('_', ' ')->headline() }}</p>
+                                    <p class="mt-1 text-sm text-slate-500">{{ $event->operator_name ?: 'Operator not provided' }}</p>
+                                </div>
+                                <span class="w-fit rounded-full bg-indigo-50 px-3 py-1 text-xs font-black text-indigo-700">{{ $event->source ?: 'history' }}</span>
+                            </div>
+                            <div class="mt-4 grid gap-3 text-sm sm:grid-cols-3">
+                                <div class="rounded-xl bg-slate-50 p-3">
+                                    <p class="text-[10px] font-black uppercase tracking-[0.12em] text-slate-400">Time</p>
+                                    <p class="mt-1 font-bold text-[#071a3b]">{{ $event->event_at?->format('M d, Y H:i') ?? $event->created_at->format('M d, Y H:i') }}</p>
+                                </div>
+                                <div class="rounded-xl bg-slate-50 p-3">
+                                    <p class="text-[10px] font-black uppercase tracking-[0.12em] text-slate-400">Record</p>
+                                    <p class="mt-1 font-bold text-[#071a3b]">{{ $event->record_id ?: 'No record id' }}</p>
+                                </div>
+                                <div class="rounded-xl bg-slate-50 p-3">
+                                    <p class="text-[10px] font-black uppercase tracking-[0.12em] text-slate-400">Code</p>
+                                    <p class="mt-1 font-bold text-[#071a3b]">{{ $event->keyboard_pwd ?: 'Not provided' }}</p>
+                                </div>
+                            </div>
+                        </div>
+                    @empty
+                        <div class="rounded-2xl border border-dashed border-slate-200 px-4 py-10 text-center">
+                            <p class="font-black text-[#071a3b]">No history for this lock yet</p>
+                            <p class="mt-2 text-sm text-slate-500">Click Sync history from the API group, or wait for TTLock callback events.</p>
+                        </div>
+                    @endforelse
+                </div>
+
+                <div class="mt-5 flex justify-end">
+                    <button type="button" x-data x-on:click="$dispatch('close')" class="rounded-xl border border-slate-200 px-4 py-2 text-sm font-black text-[#071a3b]">Close</button>
+                </div>
+            </div>
+        </x-modal>
+    @endforeach
     @foreach($locks as $lock)<x-modal name="edit-lock-{{ $lock->id }}" maxWidth="xl" focusable><form method="POST" action="{{ route('tt-lock-settings.locks.update', $lock) }}" class="p-6">@csrf @method('PATCH') @include('tt-lock-settings.partials.lock-form', ['lock' => $lock, 'title' => 'Edit installed lock'])</form></x-modal>@endforeach
 </x-app-layout>
