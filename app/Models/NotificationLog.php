@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 #[Fillable(['booking_id', 'channel', 'recipient', 'subject', 'message', 'status', 'payload', 'sent_at'])]
 class NotificationLog extends Model
@@ -20,5 +21,10 @@ class NotificationLog extends Model
     public function booking(): BelongsTo
     {
         return $this->belongsTo(Booking::class);
+    }
+
+    public function reads(): HasMany
+    {
+        return $this->hasMany(NotificationRead::class);
     }
 }
