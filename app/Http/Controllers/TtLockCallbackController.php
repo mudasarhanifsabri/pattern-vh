@@ -6,6 +6,7 @@ use App\Models\TtLock;
 use App\Models\TtLockEvent;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Schema;
 
 class TtLockCallbackController extends Controller
 {
@@ -16,7 +17,7 @@ class TtLockCallbackController extends Controller
         $recordId = $this->value($payload, ['recordId', 'record_id', 'recordID']);
         $lock = $lockId ? TtLock::query()->with('unit')->where('lock_id', (string) $lockId)->first() : null;
 
-        if ($payload) {
+        if ($payload && Schema::hasTable('tt_lock_events')) {
             TtLockEvent::updateOrCreate(
                 [
                     'record_id' => $recordId ? (string) $recordId : null,

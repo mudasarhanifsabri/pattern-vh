@@ -8,16 +8,21 @@ use App\Models\TtLockSetting;
 use App\Support\ActivityLogger;
 use App\Support\TtLockApi;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\Rule;
 
 class TtLockSettingsController extends Controller
 {
     public function index()
     {
+        $events = Schema::hasTable('tt_lock_events')
+            ? TtLockEvent::query()->with(['ttLock.unit.building', 'unit.building'])->latest('event_at')->latest()->limit(100)->get()
+            : collect();
+
         return view('tt-lock-settings.index', [
             'settings' => TtLockSetting::query()->withCount('locks')->latest()->get(),
             'locks' => TtLock::query()->with(['setting', 'unit.building'])->orderBy('lock_name')->get(),
-            'events' => TtLockEvent::query()->with(['ttLock.unit.building', 'unit.building'])->latest('event_at')->latest()->limit(100)->get(),
+            'events' => $events,
             'statuses' => TtLock::STATUSES,
             'callbackUrl' => route('ttlock.callback'),
         ]);
@@ -118,7 +123,7 @@ class TtLockSettingsController extends Controller
 
         $validated['name'] = ($validated['name'] ?? null) ?: 'Default';
         $validated['is_active'] = $request->boolean('is_active');
-        $validated['redirect_uri'] = $validated['redirect_uri'] ?: route('ttlock.callback');
+        $validated['redirect_uri'] = ($validated['redirect_uri'] ?? null) ?: route('ttlock.callback');
 
         if ($setting && blank($validated['client_secret'] ?? null)) {
             unset($validated['client_secret']);
