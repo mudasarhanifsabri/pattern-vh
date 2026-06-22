@@ -32,7 +32,7 @@ class SupportCenterController extends Controller
         $manage = $request->user()->can('support.manage');
 
         $tickets = SupportTicket::query()
-            ->with(['category', 'assignee.onlineStatus', 'messages' => fn ($query) => $query
+            ->with(['category', 'requester.onlineStatus', 'assignee.onlineStatus', 'messages' => fn ($query) => $query
                 ->when(! $manage, fn ($query) => $query->where('is_internal_note', false))
                 ->latest()
                 ->limit(1)])
@@ -277,7 +277,7 @@ class SupportCenterController extends Controller
 
     private function ticketRelations(): array
     {
-        return ['category', 'assignee.onlineStatus', 'messages.attachments', 'booking.unit.building', 'unit.building', 'tenant', 'owner', 'agent', 'maintainer', 'payment.invoice'];
+        return ['category', 'requester.onlineStatus', 'assignee.onlineStatus', 'messages.attachments', 'booking.unit.building', 'unit.building', 'tenant', 'owner', 'agent', 'maintainer', 'payment.invoice'];
     }
 
     private function downloadAttachment(TicketAttachment $attachment)
