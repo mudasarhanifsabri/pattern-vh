@@ -29,7 +29,7 @@ class TtLockApi
         do {
             $response = Http::asForm()
                 ->timeout(30)
-                ->post($this->url('/lock/list'), [
+                ->post($this->apiUrl('/lock/list'), [
                     'clientId' => $setting->client_id,
                     'accessToken' => $token,
                     'pageNo' => $pageNo,
@@ -115,7 +115,7 @@ class TtLockApi
     {
         $response = Http::asForm()
             ->timeout(30)
-            ->post($this->url('/oauth2/token'), [
+            ->post($this->oauthUrl('/oauth2/token'), [
                 'clientId' => $setting->client_id,
                 'clientSecret' => $setting->client_secret,
                 'username' => $setting->username,
@@ -148,9 +148,14 @@ class TtLockApi
         return $value === null ? null : max(0, min(100, (int) $value));
     }
 
-    private function url(string $path): string
+    private function apiUrl(string $path): string
     {
-        return rtrim((string) config('ttlock.base_url'), '/').$path;
+        return rtrim((string) config('ttlock.api_url'), '/').$path;
+    }
+
+    private function oauthUrl(string $path): string
+    {
+        return rtrim((string) config('ttlock.oauth_url'), '/').$path;
     }
 
     private function milliseconds(): int
