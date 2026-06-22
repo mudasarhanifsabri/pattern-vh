@@ -122,12 +122,23 @@
         }
 
         .support-mobile-pane {
+            position: relative;
             height: 100%;
             min-height: 0 !important;
         }
 
+        .support-message-scroll {
+            padding-bottom: 10.5rem !important;
+        }
+
         .support-composer {
+            position: absolute;
+            right: 0;
+            bottom: 0;
+            left: 0;
+            z-index: 5;
             padding-bottom: max(0.9rem, env(safe-area-inset-bottom));
+            box-shadow: 0 -14px 28px rgba(15, 23, 42, 0.06);
         }
 
         body.support-mobile-active {

@@ -133,15 +133,15 @@
                         </div>
                     </header>
 
-                    <div class="min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden bg-white px-4 py-4" data-support-messages data-message-count="{{ $selected->messages->count() }}">
+                    <div class="support-message-scroll min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden bg-white px-4 py-4" data-support-messages data-message-count="{{ $selected->messages->count() }}">
                         @if($tenantChat)
-                            <div class="mb-5 rounded-[1.4rem] bg-gradient-to-br from-blue-50 to-slate-50 p-4 text-center">
-                                <div class="mx-auto grid h-12 w-12 place-items-center rounded-full bg-white text-blue-600 shadow-sm">
+                            <div class="mb-4 rounded-[1.4rem] bg-gradient-to-br from-blue-50 to-slate-50 p-3 text-center">
+                                <div class="mx-auto grid h-10 w-10 place-items-center rounded-full bg-white text-blue-600 shadow-sm">
                                     <svg class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 10a6 6 0 0 0-12 0v4a3 3 0 0 0 3 3h1" /><path d="M18 14v2a2 2 0 0 1-2 2h-2" /></svg>
                                 </div>
-                                <h3 class="mt-3 text-base font-black text-[#071a3b]">Welcome to Pattern live chat</h3>
-                                <p class="mt-1 text-sm font-semibold leading-6 text-slate-500">We are connecting you with the right team. You can ask about booking, payment, check-in, checkout, deposit, Wi-Fi, or maintenance.</p>
-                                <div class="mt-3 inline-flex items-center gap-2 rounded-full bg-white px-3 py-2 text-xs font-black text-emerald-700">
+                                <h3 class="mt-2 text-sm font-black text-[#071a3b]">Welcome to Pattern live chat</h3>
+                                <p class="mx-auto mt-1 max-w-[300px] text-xs font-semibold leading-5 text-slate-500">Ask about booking, payment, check-in, checkout, deposit, Wi-Fi, or maintenance.</p>
+                                <div class="mt-2 inline-flex items-center gap-2 rounded-full bg-white px-3 py-1.5 text-xs font-black text-emerald-700">
                                     <span class="h-2 w-2 rounded-full bg-emerald-500"></span>
                                     Live chat active
                                 </div>
