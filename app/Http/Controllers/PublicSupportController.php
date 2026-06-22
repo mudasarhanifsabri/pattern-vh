@@ -92,16 +92,24 @@ class PublicSupportController extends Controller
         $this->validateToken($supportTicket, $token);
 
         if ($request->isMethod('post')) {
-            Cache::put($this->typingKey($supportTicket, 'customer'), [
-                'name' => $supportTicket->requester_name ?: 'Customer',
-                'side' => 'customer',
-                'at' => now()->toIso8601String(),
-            ], now()->addSeconds(8));
+            try {
+                Cache::put($this->typingKey($supportTicket, 'customer'), [
+                    'name' => $supportTicket->requester_name ?: 'Customer',
+                    'side' => 'customer',
+                    'at' => now()->toIso8601String(),
+                ], now()->addSeconds(8));
+            } catch (\Throwable) {
+                return response()->json(['ok' => true, 'cached' => false]);
+            }
 
             return response()->json(['ok' => true]);
         }
 
-        $typing = Cache::get($this->typingKey($supportTicket, 'staff'));
+        try {
+            $typing = Cache::get($this->typingKey($supportTicket, 'staff'));
+        } catch (\Throwable) {
+            $typing = null;
+        }
 
         return response()->json([
             'is_typing' => (bool) $typing,

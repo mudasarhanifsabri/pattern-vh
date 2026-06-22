@@ -53,7 +53,7 @@ class NotificationCenterController extends Controller
             $this->queryFor($request)->limit(100)->get()->each(fn (NotificationLog $notification) => $this->markRead($request, $notification));
         }
 
-        Cache::forget($this->topbarCacheKey($request));
+        $this->forgetTopbarCache($request);
 
         return back()->with('status', 'Notifications marked as read.');
     }
@@ -66,7 +66,7 @@ class NotificationCenterController extends Controller
 
         $controller = app(self::class);
 
-        return Cache::remember($controller->topbarCacheKey($request), now()->addSeconds(20), function () use ($controller, $request): array {
+        $callback = function () use ($controller, $request): array {
             $notifications = $controller->queryFor($request)
                 ->withExists(['reads as is_read' => fn (Builder $query) => $query->where('user_id', $request->user()->id)])
                 ->latest()
@@ -77,7 +77,13 @@ class NotificationCenterController extends Controller
                 'topbarNotifications' => $notifications,
                 'topbarNotificationCount' => $controller->unreadCount($request),
             ];
-        });
+        };
+
+        try {
+            return Cache::remember($controller->topbarCacheKey($request), now()->addSeconds(20), $callback);
+        } catch (\Throwable) {
+            return $callback();
+        }
     }
 
     private function queryFor(Request $request): Builder
@@ -115,7 +121,7 @@ class NotificationCenterController extends Controller
             ['read_at' => now()]
         );
 
-        Cache::forget($this->topbarCacheKey($request));
+        $this->forgetTopbarCache($request);
     }
 
     private static function tablesReady(): bool
@@ -128,6 +134,15 @@ class NotificationCenterController extends Controller
     private function topbarCacheKey(Request $request): string
     {
         return 'topbar_notifications:user:'.$request->user()->id;
+    }
+
+    private function forgetTopbarCache(Request $request): void
+    {
+        try {
+            Cache::forget($this->topbarCacheKey($request));
+        } catch (\Throwable) {
+            //
+        }
     }
 
     private function targetUrl(NotificationLog $notification): string

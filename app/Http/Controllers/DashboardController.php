@@ -51,7 +51,11 @@ class DashboardController extends Controller
 
     private function operationsDashboard(): array
     {
-        return Cache::remember('dashboard:operations:'.now()->format('Y-m-d-H-i'), now()->addSeconds(60), fn (): array => $this->buildOperationsDashboard());
+        return $this->remember(
+            'dashboard:operations:'.now()->format('Y-m-d-H-i'),
+            now()->addSeconds(60),
+            fn (): array => $this->buildOperationsDashboard()
+        );
     }
 
     private function buildOperationsDashboard(): array
@@ -180,7 +184,7 @@ class DashboardController extends Controller
 
     private function tenantBalanceDue(Tenant $tenant): float
     {
-        return (float) Cache::remember(
+        return (float) $this->remember(
             'dashboard:tenant-balance:'.$tenant->id,
             now()->addSeconds(30),
             fn () => Invoice::where('tenant_id', $tenant->id)->where('balance_amount', '>', 0)->sum('balance_amount')
@@ -189,11 +193,20 @@ class DashboardController extends Controller
 
     private function tenantOpenRefund(Tenant $tenant): ?BookingDepositRefund
     {
-        return Cache::remember(
+        return $this->remember(
             'dashboard:tenant-refund:'.$tenant->id,
             now()->addSeconds(30),
             fn () => BookingDepositRefund::where('tenant_id', $tenant->id)->latest()->first()
         );
+    }
+
+    private function remember(string $key, $ttl, callable $callback): mixed
+    {
+        try {
+            return Cache::remember($key, $ttl, $callback);
+        } catch (\Throwable) {
+            return $callback();
+        }
     }
 
     private function workspaceStats(): array

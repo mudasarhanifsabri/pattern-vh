@@ -182,16 +182,24 @@ class SupportCenterController extends Controller
         $side = $request->user()->can('support.manage') ? 'staff' : 'customer';
 
         if ($request->isMethod('post')) {
-            Cache::put($this->typingKey($supportTicket, $side), [
-                'name' => $request->user()->name,
-                'side' => $side,
-                'at' => now()->toIso8601String(),
-            ], now()->addSeconds(8));
+            try {
+                Cache::put($this->typingKey($supportTicket, $side), [
+                    'name' => $request->user()->name,
+                    'side' => $side,
+                    'at' => now()->toIso8601String(),
+                ], now()->addSeconds(8));
+            } catch (\Throwable) {
+                return response()->json(['ok' => true, 'cached' => false]);
+            }
 
             return response()->json(['ok' => true]);
         }
 
-        $typing = Cache::get($this->typingKey($supportTicket, $side === 'staff' ? 'customer' : 'staff'));
+        try {
+            $typing = Cache::get($this->typingKey($supportTicket, $side === 'staff' ? 'customer' : 'staff'));
+        } catch (\Throwable) {
+            $typing = null;
+        }
 
         return response()->json([
             'is_typing' => (bool) $typing,
