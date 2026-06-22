@@ -68,7 +68,7 @@ class SoftwareUpdateController extends Controller
         $steps = [];
 
         if (! empty($validated['git_pull'])) {
-            $steps['Download latest code'] = ['git', 'pull', '--ff-only'];
+            $steps['Download latest code'] = [config('erp.git_binary'), 'pull', '--ff-only'];
         }
 
         if (! empty($validated['composer_install'])) {
