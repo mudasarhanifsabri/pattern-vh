@@ -463,12 +463,17 @@
         });
 
         @auth
-            fetch('{{ route('support.presence.ping') }}', { method: 'POST', headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json' } });
-            setInterval(() => fetch('{{ route('support.presence.ping') }}', { method: 'POST', headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json' } }), 60000);
+            const pingPresence = () => {
+                if (document.hidden) return;
+                fetch('{{ route('support.presence.ping') }}', { method: 'POST', headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json' } });
+            };
+            pingPresence();
+            setInterval(pingPresence, 90000);
         @endauth
 
         @if($selected)
             setInterval(async () => {
+                if (document.hidden) return;
                 const box = document.querySelector('[data-support-messages]');
                 const input = document.querySelector('[data-message-input]');
                 if (!box || (input && input.value.trim())) return;
@@ -481,7 +486,7 @@
                     notifyUser('New support message', latest.body || '{{ $selected->ticket_no }}');
                     setTimeout(() => window.location.reload(), 1200);
                 }
-            }, 6000);
+            }, 15000);
         @endif
     </script>
 </x-app-layout>

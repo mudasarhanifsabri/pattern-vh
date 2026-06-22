@@ -7,13 +7,14 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Schema;
 
 class NotificationCenterController extends Controller
 {
     public function feed(Request $request): JsonResponse
     {
-        if (! Schema::hasTable('notification_logs') || ! Schema::hasTable('notification_reads')) {
+        if (! self::tablesReady()) {
             return response()->json(['unread_count' => 0, 'items' => []]);
         }
 
@@ -48,30 +49,35 @@ class NotificationCenterController extends Controller
 
     public function readAll(Request $request): RedirectResponse
     {
-        if (Schema::hasTable('notification_reads')) {
+        if (self::tablesReady()) {
             $this->queryFor($request)->limit(100)->get()->each(fn (NotificationLog $notification) => $this->markRead($request, $notification));
         }
+
+        Cache::forget($this->topbarCacheKey($request));
 
         return back()->with('status', 'Notifications marked as read.');
     }
 
     public static function topbarData(Request $request): array
     {
-        if (! $request->user() || ! Schema::hasTable('notification_logs') || ! Schema::hasTable('notification_reads')) {
+        if (! $request->user() || ! self::tablesReady()) {
             return ['topbarNotifications' => collect(), 'topbarNotificationCount' => 0];
         }
 
         $controller = app(self::class);
-        $notifications = $controller->queryFor($request)
-            ->withExists(['reads as is_read' => fn (Builder $query) => $query->where('user_id', $request->user()->id)])
-            ->latest()
-            ->limit(8)
-            ->get();
 
-        return [
-            'topbarNotifications' => $notifications,
-            'topbarNotificationCount' => $controller->unreadCount($request),
-        ];
+        return Cache::remember($controller->topbarCacheKey($request), now()->addSeconds(20), function () use ($controller, $request): array {
+            $notifications = $controller->queryFor($request)
+                ->withExists(['reads as is_read' => fn (Builder $query) => $query->where('user_id', $request->user()->id)])
+                ->latest()
+                ->limit(8)
+                ->get();
+
+            return [
+                'topbarNotifications' => $notifications,
+                'topbarNotificationCount' => $controller->unreadCount($request),
+            ];
+        });
     }
 
     private function queryFor(Request $request): Builder
@@ -108,6 +114,20 @@ class NotificationCenterController extends Controller
             ['user_id' => $request->user()->id],
             ['read_at' => now()]
         );
+
+        Cache::forget($this->topbarCacheKey($request));
+    }
+
+    private static function tablesReady(): bool
+    {
+        static $ready = null;
+
+        return $ready ??= Schema::hasTable('notification_logs') && Schema::hasTable('notification_reads');
+    }
+
+    private function topbarCacheKey(Request $request): string
+    {
+        return 'topbar_notifications:user:'.$request->user()->id;
     }
 
     private function targetUrl(NotificationLog $notification): string

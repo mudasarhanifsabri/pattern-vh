@@ -13,8 +13,8 @@
         @php
             $booking = $currentBooking;
             $nights = $booking ? $booking->check_in_date->diffInDays($booking->check_out_date) : 0;
-            $balanceDue = (float) \App\Models\Invoice::where('tenant_id', $tenant->id)->where('balance_amount', '>', 0)->sum('balance_amount');
-            $openRefund = \App\Models\BookingDepositRefund::where('tenant_id', $tenant->id)->latest()->first();
+            $balanceDue = (float) $tenantBalanceDue;
+            $openRefund = $tenantOpenRefund;
         @endphp
 
         <div class="tenant-app-screen space-y-5">

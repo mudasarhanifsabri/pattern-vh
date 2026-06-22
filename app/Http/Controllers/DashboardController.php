@@ -19,6 +19,7 @@ use App\Models\Tenant;
 use App\Models\Unit;
 use App\Models\UtilityBill;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 
 class DashboardController extends Controller
 {
@@ -36,6 +37,8 @@ class DashboardController extends Controller
             'owner' => $owner,
             'operationsDashboard' => (! $tenant && ! $owner) ? $this->operationsDashboard() : null,
             'currentBooking' => $tenant ? $this->currentTenantBooking($tenant) : null,
+            'tenantBalanceDue' => $tenant ? $this->tenantBalanceDue($tenant) : 0,
+            'tenantOpenRefund' => $tenant ? $this->tenantOpenRefund($tenant) : null,
             'ownerUnits' => $owner ? $owner->units()->with('building')->get() : collect(),
             'stats' => $tenant ? $this->tenantStats($tenant) : ($owner ? $this->ownerStats($owner) : $this->workspaceStats()),
             'quickActions' => $tenant ? $this->tenantActions() : ($owner ? $this->ownerActions() : $this->workspaceActions()),
@@ -47,6 +50,11 @@ class DashboardController extends Controller
     }
 
     private function operationsDashboard(): array
+    {
+        return Cache::remember('dashboard:operations:'.now()->format('Y-m-d-H-i'), now()->addSeconds(60), fn (): array => $this->buildOperationsDashboard());
+    }
+
+    private function buildOperationsDashboard(): array
     {
         $periodStart = now()->startOfMonth();
         $periodEnd = now()->endOfMonth();
@@ -170,6 +178,24 @@ class DashboardController extends Controller
         ];
     }
 
+    private function tenantBalanceDue(Tenant $tenant): float
+    {
+        return (float) Cache::remember(
+            'dashboard:tenant-balance:'.$tenant->id,
+            now()->addSeconds(30),
+            fn () => Invoice::where('tenant_id', $tenant->id)->where('balance_amount', '>', 0)->sum('balance_amount')
+        );
+    }
+
+    private function tenantOpenRefund(Tenant $tenant): ?BookingDepositRefund
+    {
+        return Cache::remember(
+            'dashboard:tenant-refund:'.$tenant->id,
+            now()->addSeconds(30),
+            fn () => BookingDepositRefund::where('tenant_id', $tenant->id)->latest()->first()
+        );
+    }
+
     private function workspaceStats(): array
     {
         return [
@@ -184,9 +210,9 @@ class DashboardController extends Controller
     {
         return [
             ['label' => 'Current stay', 'value' => $this->currentTenantBooking($tenant)?->booking_no ?? 'None', 'note' => 'One active booking at a time', 'tone' => 'blue'],
-            ['label' => 'Balance due', 'value' => 'AED '.number_format((float) Invoice::where('tenant_id', $tenant->id)->where('balance_amount', '>', 0)->sum('balance_amount'), 0), 'note' => 'Pay online later or request collection now', 'tone' => 'amber'],
+            ['label' => 'Balance due', 'value' => 'AED '.number_format($this->tenantBalanceDue($tenant), 0), 'note' => 'Pay online later or request collection now', 'tone' => 'amber'],
             ['label' => 'Active requests', 'value' => PaymentCollectionRequest::where('tenant_id', $tenant->id)->whereNotIn('status', ['approved', 'cancelled', 'rejected'])->count(), 'note' => 'Doorstep cash/card collection', 'tone' => 'violet'],
-            ['label' => 'Refunds', 'value' => BookingDepositRefund::where('tenant_id', $tenant->id)->whereNotIn('status', ['refunded'])->count(), 'note' => 'Deposit refund workflows', 'tone' => 'cyan'],
+            ['label' => 'Refunds', 'value' => $this->tenantOpenRefund($tenant) ? 1 : 0, 'note' => 'Deposit refund workflows', 'tone' => 'cyan'],
         ];
     }
 
