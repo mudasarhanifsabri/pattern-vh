@@ -59,6 +59,7 @@ Route::post('support/help', [PublicSupportController::class, 'store'])->name('su
 Route::get('support/conversation/{supportTicket}/{token}', [PublicSupportController::class, 'thread'])->name('support.public.thread');
 Route::post('support/conversation/{supportTicket}/{token}', [PublicSupportController::class, 'reply'])->name('support.public.reply');
 Route::get('support/conversation/{supportTicket}/{token}/messages', [PublicSupportController::class, 'messages'])->name('support.public.messages');
+Route::match(['GET', 'POST'], 'support/conversation/{supportTicket}/{token}/typing', [PublicSupportController::class, 'typing'])->name('support.public.typing');
 Route::get('support/conversation/{supportTicket}/{token}/attachments/{attachment}', [PublicSupportController::class, 'attachment'])->name('support.public.attachment');
 
 Route::get('booking-confirmations/{booking}/{token}', [BookingConfirmationSigningController::class, 'show'])
@@ -87,6 +88,7 @@ Route::middleware('auth')->group(function () {
     Route::delete('support/{supportTicket}', [SupportCenterController::class, 'destroy'])->middleware('permission:support.manage')->name('support.destroy');
     Route::post('support/{supportTicket}/reply', [SupportCenterController::class, 'reply'])->middleware('permission:support.view|support.manage')->name('support.reply');
     Route::post('support/{supportTicket}/convert', [SupportCenterController::class, 'convert'])->middleware('permission:support.manage')->name('support.convert');
+    Route::match(['GET', 'POST'], 'support/{supportTicket}/typing', [SupportCenterController::class, 'typing'])->middleware('permission:support.view|support.manage')->name('support.typing');
     Route::get('support/{supportTicket}/messages', [SupportCenterController::class, 'messages'])->middleware('permission:support.view|support.manage')->name('support.messages');
     Route::get('support/attachments/{attachment}', [SupportCenterController::class, 'attachment'])->middleware('permission:support.view|support.manage')->name('support.attachments');
     Route::post('support/presence/ping', [SupportCenterController::class, 'ping'])->middleware('permission:support.view|support.manage')->name('support.presence.ping');

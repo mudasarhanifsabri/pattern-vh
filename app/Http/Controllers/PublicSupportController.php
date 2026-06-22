@@ -14,6 +14,7 @@ use App\Models\TicketAttachment;
 use App\Models\User;
 use App\Support\SupportConversationService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Response;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
@@ -61,6 +62,7 @@ class PublicSupportController extends Controller
     {
         $this->validateToken($supportTicket, $token);
         $supportTicket->load(['category', 'messages' => fn ($query) => $query->where('is_internal_note', false)->with('attachments')->oldest(), 'booking.unit.building', 'unit.building']);
+        $this->markPublicRead($supportTicket);
 
         return view('support.public-thread', ['ticket' => $supportTicket, 'token' => $token]);
     }
@@ -80,8 +82,31 @@ class PublicSupportController extends Controller
     public function messages(SupportTicket $supportTicket, string $token)
     {
         $this->validateToken($supportTicket, $token);
+        $this->markPublicRead($supportTicket);
 
-        return response()->json($supportTicket->messages()->where('is_internal_note', false)->oldest()->get(['id', 'sender_type', 'body', 'created_at']));
+        return response()->json($supportTicket->messages()->where('is_internal_note', false)->oldest()->get(['id', 'sender_type', 'sender_name', 'body', 'delivery_status', 'read_at', 'created_at']));
+    }
+
+    public function typing(Request $request, SupportTicket $supportTicket, string $token)
+    {
+        $this->validateToken($supportTicket, $token);
+
+        if ($request->isMethod('post')) {
+            Cache::put($this->typingKey($supportTicket, 'customer'), [
+                'name' => $supportTicket->requester_name ?: 'Customer',
+                'side' => 'customer',
+                'at' => now()->toIso8601String(),
+            ], now()->addSeconds(8));
+
+            return response()->json(['ok' => true]);
+        }
+
+        $typing = Cache::get($this->typingKey($supportTicket, 'staff'));
+
+        return response()->json([
+            'is_typing' => (bool) $typing,
+            'name' => $typing['name'] ?? null,
+        ]);
     }
 
     public function attachment(SupportTicket $supportTicket, string $token, TicketAttachment $attachment)
@@ -118,5 +143,19 @@ class PublicSupportController extends Controller
     private function validateToken(SupportTicket $ticket, string $token): void
     {
         abort_unless(hash_equals((string) $ticket->public_token, $token), 403);
+    }
+
+    private function markPublicRead(SupportTicket $ticket): void
+    {
+        $ticket->messages()
+            ->whereNull('read_at')
+            ->whereIn('sender_type', ['staff', 'bot'])
+            ->where('is_internal_note', false)
+            ->update(['read_at' => now()]);
+    }
+
+    private function typingKey(SupportTicket $ticket, string $side): string
+    {
+        return "support:typing:{$ticket->id}:{$side}";
     }
 }

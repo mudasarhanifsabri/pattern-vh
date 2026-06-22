@@ -152,7 +152,7 @@
                         @endphp
                         @foreach($selected->messages as $message)
                             @php
-                                $mine = $message->sender_type === 'staff';
+                                $mine = $manage ? $message->sender_type === 'staff' : $message->sender_type === 'customer';
                                 $messageDate = $message->created_at->format('M d, Y');
                             @endphp
                             @if($lastDate !== $messageDate)
@@ -171,11 +171,21 @@
                                     @foreach($message->attachments as $attachment)
                                         <a href="{{ route('support.attachments', $attachment) }}" class="mt-3 block rounded-xl bg-white/80 px-3 py-2 text-xs font-bold text-blue-700 break-words">Attachment: {{ $attachment->original_name }}</a>
                                     @endforeach
-                                    <p class="mt-2 text-right text-[10px] opacity-60">{{ $message->created_at->format('H:i') }}</p>
+                                    <p class="mt-2 flex items-center justify-end gap-1 text-[10px] opacity-60">
+                                        <span>{{ $message->created_at->format('H:i') }}</span>
+                                        @if($mine && ! $message->is_internal_note)
+                                            <span class="inline-flex items-center gap-0.5 {{ $message->read_at ? 'text-emerald-200' : '' }}" title="{{ $message->read_at ? 'Read' : 'Sent' }}">
+                                                <svg class="h-3 w-3" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 8 3 3 7-7"/></svg>
+                                                @if($message->read_at)
+                                                    <svg class="-ml-1 h-3 w-3" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 8 3 3 7-7"/></svg>
+                                                @endif
+                                            </span>
+                                        @endif
+                                    </p>
                                 </div>
                             </div>
                         @endforeach
-                        <div data-agent-typing class="mb-3 {{ $tenantChat ? 'flex' : 'hidden' }} justify-start">
+                        <div data-agent-typing class="mb-3 hidden justify-start">
                             <div class="rounded-[1.25rem] border border-slate-100 bg-white px-4 py-3 text-sm font-bold text-slate-500 shadow-sm">
                                 <span data-typing-copy>{{ $selected->assigned_to ? $chatPartnerName.' is typing' : 'Connecting agent' }}</span>
                                 <span class="ml-1 inline-flex gap-1 align-middle">
@@ -387,10 +397,22 @@
         });
 
         document.querySelectorAll('[data-message-input]').forEach((input) => {
+            let typingTimer;
+            const sendTyping = () => {
+                @if($selected)
+                    if (document.hidden) return;
+                    fetch('{{ route('support.typing', $selected) }}', { method: 'POST', headers: { 'X-CSRF-TOKEN': csrfToken, 'Accept': 'application/json' } });
+                @endif
+            };
+
             input.addEventListener('input', () => {
                 input.style.height = 'auto';
                 input.style.height = Math.min(input.scrollHeight, 128) + 'px';
+                clearTimeout(typingTimer);
+                sendTyping();
+                typingTimer = setTimeout(sendTyping, 2500);
             });
+            input.addEventListener('focus', sendTyping);
         });
 
         const vapidPublicKey = @js(config('services.webpush.public_key'));
@@ -472,6 +494,24 @@
         @endauth
 
         @if($selected)
+            const updateTypingIndicator = async () => {
+                if (document.hidden) return;
+                const indicator = document.querySelector('[data-agent-typing]');
+                if (!indicator) return;
+                const response = await fetch('{{ route('support.typing', $selected) }}', { headers: { 'Accept': 'application/json' } });
+                if (!response.ok) return;
+                const status = await response.json();
+                if (status.is_typing) {
+                    indicator.querySelector('[data-typing-copy]').textContent = (status.name || 'Someone') + ' is typing';
+                    indicator.classList.remove('hidden');
+                    indicator.classList.add('flex');
+                } else {
+                    indicator.classList.add('hidden');
+                    indicator.classList.remove('flex');
+                }
+            };
+            setInterval(updateTypingIndicator, 3000);
+
             setInterval(async () => {
                 if (document.hidden) return;
                 const box = document.querySelector('[data-support-messages]');

@@ -19,6 +19,7 @@ use App\Models\User;
 use App\Models\UserOnlineStatus;
 use App\Support\SupportConversationService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Response;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
@@ -55,6 +56,7 @@ class SupportCenterController extends Controller
 
         if ($selected) {
             $this->authorize('view', $selected);
+            $this->markConversationRead($request, $selected);
             if (! $manage) {
                 $selected->setRelation('messages', $selected->messages->where('is_internal_note', false)->values());
             }
@@ -168,9 +170,33 @@ class SupportCenterController extends Controller
     public function messages(Request $request, SupportTicket $supportTicket)
     {
         $this->authorize('view', $supportTicket);
+        $this->markConversationRead($request, $supportTicket);
         $messages = $supportTicket->messages()->with('attachments')->when(! $request->user()->can('support.manage'), fn ($query) => $query->where('is_internal_note', false))->oldest()->get();
 
         return response()->json($messages);
+    }
+
+    public function typing(Request $request, SupportTicket $supportTicket)
+    {
+        $this->authorize('view', $supportTicket);
+        $side = $request->user()->can('support.manage') ? 'staff' : 'customer';
+
+        if ($request->isMethod('post')) {
+            Cache::put($this->typingKey($supportTicket, $side), [
+                'name' => $request->user()->name,
+                'side' => $side,
+                'at' => now()->toIso8601String(),
+            ], now()->addSeconds(8));
+
+            return response()->json(['ok' => true]);
+        }
+
+        $typing = Cache::get($this->typingKey($supportTicket, $side === 'staff' ? 'customer' : 'staff'));
+
+        return response()->json([
+            'is_typing' => (bool) $typing,
+            'name' => $typing['name'] ?? null,
+        ]);
     }
 
     public function attachment(Request $request, TicketAttachment $attachment)
@@ -278,6 +304,22 @@ class SupportCenterController extends Controller
     private function ticketRelations(): array
     {
         return ['category', 'requester.onlineStatus', 'assignee.onlineStatus', 'messages.attachments', 'booking.unit.building', 'unit.building', 'tenant', 'owner', 'agent', 'maintainer', 'payment.invoice'];
+    }
+
+    private function markConversationRead(Request $request, SupportTicket $ticket): void
+    {
+        $readerIsStaff = $request->user()->can('support.manage');
+
+        $ticket->messages()
+            ->whereNull('read_at')
+            ->whereIn('sender_type', $readerIsStaff ? ['customer'] : ['staff', 'bot'])
+            ->when(! $readerIsStaff, fn ($query) => $query->where('is_internal_note', false))
+            ->update(['read_at' => now()]);
+    }
+
+    private function typingKey(SupportTicket $ticket, string $side): string
+    {
+        return "support:typing:{$ticket->id}:{$side}";
     }
 
     private function downloadAttachment(TicketAttachment $attachment)
