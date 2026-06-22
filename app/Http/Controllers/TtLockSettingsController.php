@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\TtLock;
+use App\Models\TtLockEvent;
 use App\Models\TtLockSetting;
 use App\Support\ActivityLogger;
 use App\Support\TtLockApi;
@@ -16,6 +17,7 @@ class TtLockSettingsController extends Controller
         return view('tt-lock-settings.index', [
             'settings' => TtLockSetting::query()->withCount('locks')->latest()->get(),
             'locks' => TtLock::query()->with(['setting', 'unit.building'])->orderBy('lock_name')->get(),
+            'events' => TtLockEvent::query()->with(['ttLock.unit.building', 'unit.building'])->latest('event_at')->latest()->limit(100)->get(),
             'statuses' => TtLock::STATUSES,
             'callbackUrl' => route('ttlock.callback'),
         ]);

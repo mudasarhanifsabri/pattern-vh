@@ -89,6 +89,7 @@ class UnitController extends Controller
                 'building',
                 'owners',
                 'ttLock.setting',
+                'ttLock.events' => fn ($query) => $query->latest('event_at')->latest()->limit(15),
                 'utilityAccounts',
                 'ownerContracts.owner',
                 'bookings' => fn ($query) => $query->with('tenant')->latest('check_in_date'),

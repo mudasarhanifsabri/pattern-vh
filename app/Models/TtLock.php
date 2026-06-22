@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
 #[Fillable([
@@ -31,5 +32,10 @@ class TtLock extends Model
     public function unit(): HasOne
     {
         return $this->hasOne(Unit::class, 'tt_lock_id');
+    }
+
+    public function events(): HasMany
+    {
+        return $this->hasMany(TtLockEvent::class, 'tt_lock_id');
     }
 }

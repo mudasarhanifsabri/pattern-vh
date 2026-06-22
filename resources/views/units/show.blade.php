@@ -386,12 +386,26 @@
                                     <div class="font-bold text-[#071a3b]">{{ $lock->lock_name }}</div>
                                     <span class="rounded-full bg-blue-50 px-2.5 py-1 text-xs font-bold text-blue-700">{{ str($lock->status)->replace('_', ' ')->headline() }}</span>
                                 </div>
-                                <div class="mt-2 text-xs text-slate-500">Lock ID: {{ $lock->lock_id }} / Gateway: {{ $lock->gateway_id ?: 'N/A' }}</div>
+                                <div class="mt-2 text-xs text-slate-500">Lock ID: {{ $lock->lock_id }} / {{ $lock->gateway_id ? 'Gateway: '.$lock->gateway_id : 'Bluetooth only / no gateway' }}</div>
                                 <div class="mt-2 text-xs text-slate-500">Battery: {{ $lock->battery_level !== null ? $lock->battery_level.'%' : 'N/A' }} / Signal: {{ $lock->signal_strength ?: 'N/A' }}</div>
                                 <div class="mt-2 text-xs text-slate-500">Last sync: {{ $lock->last_synced_at?->format('M d, Y H:i') ?? 'Not synced' }}</div>
                                 @if ($lock->notes)
                                     <p class="mt-3 text-sm text-slate-600">{{ $lock->notes }}</p>
                                 @endif
+                            </div>
+                            <div class="mt-4 overflow-hidden rounded-2xl border border-slate-200">
+                                <div class="bg-slate-50 px-4 py-3 text-xs font-black uppercase tracking-[0.14em] text-slate-400">Recent lock history</div>
+                                @forelse($lock->events as $event)
+                                    <div class="flex flex-col gap-1 border-t border-slate-100 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+                                        <div>
+                                            <p class="text-sm font-bold text-[#071a3b]">{{ str($event->event_type)->replace('_', ' ')->headline() }}</p>
+                                            <p class="text-xs text-slate-500">{{ $event->operator_name ?: 'Unknown operator' }} {{ $event->record_id ? '/ '.$event->record_id : '' }}</p>
+                                        </div>
+                                        <span class="text-xs font-bold text-slate-500">{{ $event->event_at?->format('M d, H:i') ?? $event->created_at->format('M d, H:i') }}</span>
+                                    </div>
+                                @empty
+                                    <p class="border-t border-slate-100 px-4 py-6 text-center text-sm text-slate-500">No unlock history received yet.</p>
+                                @endforelse
                             </div>
                         @else
                             <p class="rounded-2xl border border-dashed border-slate-200 px-4 py-6 text-center text-sm text-slate-500">No smart lock attached yet.</p>

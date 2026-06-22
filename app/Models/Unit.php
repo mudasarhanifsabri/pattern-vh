@@ -83,6 +83,11 @@ class Unit extends Model
         return $this->belongsTo(TtLock::class, 'tt_lock_id');
     }
 
+    public function ttLockEvents(): HasMany
+    {
+        return $this->hasMany(TtLockEvent::class);
+    }
+
     public function documentUrl(string $type): ?string
     {
         $path = $this->getAttribute("{$type}_path");

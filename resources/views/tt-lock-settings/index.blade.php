@@ -35,6 +35,7 @@
 
         <nav class="erp-card flex gap-2 overflow-x-auto p-2 text-sm font-black">
             <a href="#locks" class="whitespace-nowrap rounded-xl bg-blue-50 px-4 py-2.5 text-blue-700">Installed locks</a>
+            <a href="#history" class="whitespace-nowrap rounded-xl px-4 py-2.5 text-slate-500 hover:bg-slate-50">Lock history</a>
             <a href="#api-groups" class="whitespace-nowrap rounded-xl px-4 py-2.5 text-slate-500 hover:bg-slate-50">API credential groups</a>
         </nav>
 
@@ -61,7 +62,7 @@
                         @forelse($locks as $lock)
                             <tr class="hover:bg-slate-50/70">
                                 <td class="px-5 py-4"><p class="font-black text-[#071a3b]">{{ $lock->lock_name }}</p><p class="mt-1 text-xs text-slate-500">{{ $lock->lock_alias ?: 'No alias' }} · {{ $lock->lock_id }}</p></td>
-                                <td class="px-5 py-4 text-xs text-slate-600"><p>{{ $lock->setting?->name ?: 'No API group' }}</p><p class="mt-1">Gateway {{ $lock->gateway_id ?: 'not set' }}</p></td>
+                                <td class="px-5 py-4 text-xs text-slate-600"><p>{{ $lock->setting?->name ?: 'No API group' }}</p><p class="mt-1">{{ $lock->gateway_id ? 'Gateway '.$lock->gateway_id : 'Bluetooth only / no gateway' }}</p></td>
                                 <td class="px-5 py-4"><div class="flex items-center gap-2"><span class="font-black {{ ($lock->battery_level ?? 100) < 25 ? 'text-amber-600' : 'text-[#071a3b]' }}">{{ $lock->battery_level === null ? '—' : $lock->battery_level.'%' }}</span><span class="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-600">{{ str($lock->status)->replace('_', ' ')->headline() }}</span></div></td>
                                 <td class="px-5 py-4 text-sm">@if($lock->unit)<span class="font-bold text-[#071a3b]">{{ $lock->unit->building?->name }}</span><span class="block text-xs text-slate-500">Unit {{ $lock->unit->unit_no }}</span>@else<span class="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-700">Available</span>@endif</td>
                                 <td class="px-5 py-4 text-xs text-slate-500">{{ $lock->last_synced_at?->diffForHumans() ?? 'Never' }}</td>
@@ -77,6 +78,46 @@
                 @forelse($locks as $lock)
                     <article class="rounded-2xl border border-slate-200 p-4"><div class="flex items-start justify-between gap-3"><div><h3 class="font-black text-[#071a3b]">{{ $lock->lock_name }}</h3><p class="mt-1 text-xs text-slate-500">{{ $lock->lock_id }} · {{ $lock->lock_alias ?: 'No alias' }}</p></div><span class="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-bold">{{ $lock->battery_level === null ? '—' : $lock->battery_level.'%' }}</span></div><p class="mt-3 text-sm text-slate-600">{{ $lock->unit ? ($lock->unit->building?->name.' / '.$lock->unit->unit_no) : 'Available to assign' }}</p><button type="button" x-data x-on:click="$dispatch('open-modal', 'edit-lock-{{ $lock->id }}')" class="mt-4 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm font-black">Edit lock</button></article>
                 @empty<p class="py-8 text-center text-sm text-slate-500">No installed locks yet.</p>@endforelse
+            </div>
+        </section>
+
+        <section id="history" class="erp-card overflow-hidden">
+            <div class="flex flex-col gap-2 border-b border-slate-100 p-5 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                    <h2 class="text-lg font-black text-[#071a3b]">Lock history</h2>
+                    <p class="mt-1 text-sm text-slate-500">Unlock and access records received from TTLock callback.</p>
+                </div>
+                <span class="rounded-full bg-blue-50 px-3 py-1 text-xs font-black text-blue-700">{{ $events->count() }} latest</span>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-slate-200 text-sm">
+                    <thead class="bg-slate-50 text-left text-[11px] font-black uppercase tracking-[0.16em] text-slate-500">
+                        <tr>
+                            <th class="px-5 py-3">Time</th>
+                            <th class="px-5 py-3">Lock / unit</th>
+                            <th class="px-5 py-3">Event</th>
+                            <th class="px-5 py-3">Operator</th>
+                            <th class="px-5 py-3">Record</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100 bg-white">
+                        @forelse($events as $event)
+                            @php($eventUnit = $event->unit ?: $event->ttLock?->unit)
+                            <tr class="hover:bg-slate-50/70">
+                                <td class="px-5 py-4 whitespace-nowrap text-xs font-bold text-[#071a3b]">{{ $event->event_at?->format('M d, Y H:i') ?? $event->created_at->format('M d, Y H:i') }}</td>
+                                <td class="px-5 py-4">
+                                    <p class="font-black text-[#071a3b]">{{ $event->lock_name ?: $event->ttLock?->lock_name ?: 'Unknown lock' }}</p>
+                                    <p class="mt-1 text-xs text-slate-500">{{ $eventUnit ? ($eventUnit->building?->name.' / Unit '.$eventUnit->unit_no) : 'No unit attached' }}</p>
+                                </td>
+                                <td class="px-5 py-4"><span class="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-700">{{ str($event->event_type)->replace('_', ' ')->headline() }}</span></td>
+                                <td class="px-5 py-4 text-sm text-slate-600">{{ $event->operator_name ?: 'Not provided' }}</td>
+                                <td class="px-5 py-4 text-xs text-slate-500">{{ $event->record_id ?: ($event->keyboard_pwd ? 'Code '.$event->keyboard_pwd : 'Callback') }}</td>
+                            </tr>
+                        @empty
+                            <tr><td colspan="5" class="px-5 py-12 text-center text-slate-500">No TTLock history received yet. Test the callback in TTLock after setting the callback URL.</td></tr>
+                        @endforelse
+                    </tbody>
+                </table>
             </div>
         </section>
 
