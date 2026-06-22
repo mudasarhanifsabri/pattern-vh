@@ -65,25 +65,18 @@ class NotificationCenterController extends Controller
         }
 
         $controller = app(self::class);
+        $controller->forgetTopbarCache($request);
 
-        $callback = function () use ($controller, $request): array {
-            $notifications = $controller->queryFor($request)
-                ->withExists(['reads as is_read' => fn (Builder $query) => $query->where('user_id', $request->user()->id)])
-                ->latest()
-                ->limit(8)
-                ->get();
+        $notifications = $controller->queryFor($request)
+            ->withExists(['reads as is_read' => fn (Builder $query) => $query->where('user_id', $request->user()->id)])
+            ->latest()
+            ->limit(8)
+            ->get();
 
-            return [
-                'topbarNotifications' => $notifications,
-                'topbarNotificationCount' => $controller->unreadCount($request),
-            ];
-        };
-
-        try {
-            return Cache::remember($controller->topbarCacheKey($request), now()->addSeconds(20), $callback);
-        } catch (\Throwable) {
-            return $callback();
-        }
+        return [
+            'topbarNotifications' => $notifications,
+            'topbarNotificationCount' => $controller->unreadCount($request),
+        ];
     }
 
     private function queryFor(Request $request): Builder

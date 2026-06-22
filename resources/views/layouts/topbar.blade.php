@@ -51,7 +51,12 @@
                     </div>
                 </div>
                 <div data-notification-list class="max-h-[420px] overflow-y-auto p-2">
-                    @forelse($topbarNotifications as $notification)
+                    @php
+                        $safeTopbarNotifications = collect($topbarNotifications ?? [])->filter(
+                            fn ($item) => $item instanceof \App\Models\NotificationLog
+                        );
+                    @endphp
+                    @forelse($safeTopbarNotifications as $notification)
                         @php
                             $displayStatus = $notification->sent_at ? 'sent' : $notification->status;
                             $isRead = (bool) $notification->is_read;
