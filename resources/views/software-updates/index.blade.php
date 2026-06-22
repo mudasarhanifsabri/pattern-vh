@@ -39,7 +39,7 @@
                         'clear_cache' => ['Clear old cache', 'Clears stale config, routes, views, and app cache before migration.', true],
                         'migrate' => ['Run database migrations', 'Applies new tables/columns safely while preserving existing records.', true],
                         'build_cache' => ['Rebuild Laravel cache', 'Optimizes config, routes, events, and views for production speed.', true],
-                        'npm_build' => ['Build frontend assets', 'Use this only if Node/npm is installed on cPanel. Otherwise build locally before upload.', false],
+                        'npm_build' => ['Build frontend assets', 'Runs npm run build so new UI styles and app scripts are published.', true],
                     ] as $name => [$label, $copy, $checked])
                         <label class="flex gap-3 rounded-2xl border border-slate-200 bg-white p-4 transition hover:border-blue-200 hover:bg-blue-50/40">
                             <input type="checkbox" name="{{ $name }}" value="1" @checked($checked) class="mt-1 h-4 w-4 rounded border-slate-300 text-blue-600">
@@ -55,6 +55,7 @@
                     <div class="space-y-1 text-xs font-bold text-slate-500">
                         <p>PHP binary: <span class="text-slate-700">{{ $phpBinary }}</span></p>
                         <p>Git: <span class="text-slate-700">{{ $gitBinary }}</span> / Composer: <span class="text-slate-700">{{ $composerBinary }}</span></p>
+                        <p>NPM: <span class="text-slate-700">{{ config('erp.npm_binary') }}</span></p>
                     </div>
                     <button @disabled(! $enabled) class="rounded-2xl bg-blue-600 px-5 py-3 text-sm font-black text-white shadow-lg shadow-blue-600/20 transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300">
                         Run software update
@@ -68,6 +69,7 @@
                     <div class="mt-4 space-y-3 text-sm leading-6 text-slate-600">
                         <p class="rounded-2xl bg-emerald-50 p-4 text-emerald-800"><strong>Real data safe:</strong> updates run migrations only, so records stay in place.</p>
                         <p class="rounded-2xl bg-blue-50 p-4 text-blue-800"><strong>Before first cPanel use:</strong> set <code>SEED_DEMO_DATA=false</code> in production.</p>
+                        <p class="rounded-2xl bg-indigo-50 p-4 text-indigo-800"><strong>UI updates:</strong> keep <code>Build frontend assets</code> selected when I change any page design.</p>
                         <p class="rounded-2xl bg-amber-50 p-4 text-amber-800"><strong>Never use:</strong> <code>php artisan migrate:fresh</code> on live data.</p>
                     </div>
                 </div>
