@@ -50,7 +50,7 @@ Route::get('/', function () {
 });
 
 Route::view('/offline', 'offline')->name('offline');
-Route::post('ttlock/callback', TtLockCallbackController::class)->name('ttlock.callback');
+Route::match(['GET', 'POST'], 'ttlock/callback', TtLockCallbackController::class)->name('ttlock.callback');
 
 Route::get('support/help', [PublicSupportController::class, 'create'])->name('support.public.create');
 Route::post('support/help', [PublicSupportController::class, 'store'])->name('support.public.store');
