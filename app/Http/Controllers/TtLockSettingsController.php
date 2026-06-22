@@ -78,6 +78,27 @@ class TtLockSettingsController extends Controller
         }
     }
 
+    public function syncHistory(Request $request, TtLockSetting $ttLockSetting, TtLockApi $api)
+    {
+        $validated = $request->validate([
+            'days' => ['nullable', 'integer', 'between:1,365'],
+        ]);
+
+        try {
+            $result = $api->syncHistory($ttLockSetting, (int) ($validated['days'] ?? 30));
+            ActivityLogger::log('tt_locks.history_synced', "Synced {$result['synced']} TT Lock history records from {$ttLockSetting->name}.", $ttLockSetting);
+
+            return back()->with('status', "Synced {$result['synced']} history record(s) from {$result['locks']} lock(s) for the last {$result['days']} day(s).");
+        } catch (\Throwable $exception) {
+            $ttLockSetting->forceFill([
+                'last_tested_at' => now(),
+                'last_error' => $exception->getMessage(),
+            ])->save();
+
+            return back()->withErrors(['ttlock' => 'TTLock history sync failed: '.$exception->getMessage()]);
+        }
+    }
+
     public function destroySetting(TtLockSetting $ttLockSetting)
     {
         $ttLockSetting->delete();

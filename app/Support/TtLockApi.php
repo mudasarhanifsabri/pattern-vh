@@ -3,7 +3,9 @@
 namespace App\Support;
 
 use App\Models\TtLock;
+use App\Models\TtLockEvent;
 use App\Models\TtLockSetting;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\Http;
 
 class TtLockApi
@@ -74,6 +76,64 @@ class TtLockApi
 
         return [
             'synced' => $synced,
+        ];
+    }
+
+    public function syncHistory(TtLockSetting $setting, int $days = 30): array
+    {
+        $token = $this->validAccessToken($setting);
+        $synced = 0;
+        $locksChecked = 0;
+        $startDate = now()->subDays($days);
+        $endDate = now();
+
+        $locks = TtLock::query()
+            ->with('unit')
+            ->where('tt_lock_setting_id', $setting->id)
+            ->whereNotNull('lock_id')
+            ->get();
+
+        foreach ($locks as $lock) {
+            $locksChecked++;
+            $pageNo = 1;
+            $pageSize = 100;
+
+            do {
+                $response = Http::asForm()
+                    ->timeout(30)
+                    ->post($this->apiUrl('/lockRecord/list'), [
+                        'clientId' => $setting->client_id,
+                        'accessToken' => $token,
+                        'lockId' => $lock->lock_id,
+                        'startDate' => $this->dateMilliseconds($startDate),
+                        'endDate' => $this->dateMilliseconds($endDate),
+                        'pageNo' => $pageNo,
+                        'pageSize' => $pageSize,
+                        'date' => $this->milliseconds(),
+                    ]);
+
+                $payload = $this->payloadOrFail($response->json(), 'Could not fetch TTLock history.');
+                $records = collect($payload['list'] ?? []);
+
+                foreach ($records as $record) {
+                    $this->persistRecord($lock, (array) $record);
+                    $synced++;
+                }
+
+                $pages = (int) ($payload['pages'] ?? $pageNo);
+                $pageNo++;
+            } while ($pageNo <= $pages);
+        }
+
+        $setting->forceFill([
+            'last_tested_at' => now(),
+            'last_error' => null,
+        ])->save();
+
+        return [
+            'synced' => $synced,
+            'locks' => $locksChecked,
+            'days' => $days,
         ];
     }
 
@@ -148,6 +208,70 @@ class TtLockApi
         return $value === null ? null : max(0, min(100, (int) $value));
     }
 
+    private function persistRecord(TtLock $lock, array $record): void
+    {
+        $eventAt = $this->recordDate($record);
+        $eventType = $this->recordEventType($record);
+        $keyboardPwd = $record['keyboardPwd'] ?? $record['keyboardPwdName'] ?? null;
+
+        TtLockEvent::updateOrCreate(
+            [
+                'lock_id' => (string) $lock->lock_id,
+                'event_type' => $eventType,
+                'event_at' => $eventAt?->format('Y-m-d H:i:s'),
+                'keyboard_pwd' => $keyboardPwd ? (string) $keyboardPwd : null,
+            ],
+            [
+                'tt_lock_id' => $lock->id,
+                'unit_id' => $lock->unit?->id,
+                'lock_name' => $record['lockName'] ?? $lock->lock_name,
+                'operator_name' => $record['username'] ?? $record['nickName'] ?? $record['senderUsername'] ?? null,
+                'keyboard_pwd' => $keyboardPwd ? (string) $keyboardPwd : null,
+                'record_id' => isset($record['recordId']) ? (string) $record['recordId'] : null,
+                'source' => 'api_sync',
+                'payload' => $record,
+            ],
+        );
+    }
+
+    private function recordEventType(array $record): string
+    {
+        $type = (int) ($record['recordType'] ?? $record['recordTypeFromLock'] ?? 0);
+
+        return [
+            1 => 'app_unlock',
+            2 => 'manual_lock',
+            3 => 'gateway_unlock',
+            4 => 'passcode_unlock',
+            5 => 'passcode_lock',
+            6 => 'passcode_deleted',
+            7 => 'ic_card_unlock',
+            8 => 'fingerprint_unlock',
+            9 => 'wristband_unlock',
+            10 => 'mechanical_key_unlock',
+            11 => 'app_lock',
+            12 => 'gateway_lock',
+            29 => 'unexpected_unlock',
+            30 => 'door_magnet_close',
+            31 => 'door_magnet_open',
+            32 => 'open_from_inside',
+            44 => 'tamper_alert',
+            45 => 'auto_lock',
+            48 => 'invalid_passcode_attempts',
+        ][$type] ?? 'record_type_'.$type;
+    }
+
+    private function recordDate(array $record): ?Carbon
+    {
+        $value = $record['lockDate'] ?? $record['serverDate'] ?? null;
+
+        if (! $value) {
+            return null;
+        }
+
+        return Carbon::createFromTimestampMs((int) $value);
+    }
+
     private function apiUrl(string $path): string
     {
         return rtrim((string) config('ttlock.api_url'), '/').$path;
@@ -161,5 +285,10 @@ class TtLockApi
     private function milliseconds(): int
     {
         return (int) floor(microtime(true) * 1000);
+    }
+
+    private function dateMilliseconds(Carbon $date): int
+    {
+        return $date->getTimestampMs();
     }
 }

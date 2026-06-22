@@ -85,7 +85,7 @@
             <div class="flex flex-col gap-2 border-b border-slate-100 p-5 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                     <h2 class="text-lg font-black text-[#071a3b]">Lock history</h2>
-                    <p class="mt-1 text-sm text-slate-500">Unlock and access records received from TTLock callback.</p>
+                    <p class="mt-1 text-sm text-slate-500">Unlock and access records received from TTLock callback or pulled by manual sync.</p>
                 </div>
                 <span class="rounded-full bg-blue-50 px-3 py-1 text-xs font-black text-blue-700">{{ $events->count() }} latest</span>
             </div>
@@ -114,7 +114,7 @@
                                 <td class="px-5 py-4 text-xs text-slate-500">{{ $event->record_id ?: ($event->keyboard_pwd ? 'Code '.$event->keyboard_pwd : 'Callback') }}</td>
                             </tr>
                         @empty
-                            <tr><td colspan="5" class="px-5 py-12 text-center text-slate-500">No TTLock history received yet. Test the callback in TTLock after setting the callback URL.</td></tr>
+                            <tr><td colspan="5" class="px-5 py-12 text-center text-slate-500">No TTLock history yet. Use Sync history from an API group, or test the callback in TTLock after setting the callback URL.</td></tr>
                         @endforelse
                     </tbody>
                 </table>
@@ -159,6 +159,11 @@
                         <div class="mt-4 flex flex-wrap justify-end gap-2">
                             <form method="POST" action="{{ route('tt-lock-settings.groups.test', $setting) }}">@csrf<button class="rounded-xl bg-emerald-600 px-3 py-2 text-xs font-black text-white">Test connection</button></form>
                             <form method="POST" action="{{ route('tt-lock-settings.groups.sync-locks', $setting) }}">@csrf<button class="rounded-xl bg-blue-600 px-3 py-2 text-xs font-black text-white">Sync locks</button></form>
+                            <form method="POST" action="{{ route('tt-lock-settings.groups.sync-history', $setting) }}" class="flex items-center gap-2">
+                                @csrf
+                                <input type="hidden" name="days" value="30">
+                                <button class="rounded-xl bg-indigo-600 px-3 py-2 text-xs font-black text-white">Sync history</button>
+                            </form>
                             <button type="button" x-data x-on:click="$dispatch('open-modal', 'edit-lock-group-{{ $setting->id }}')" class="rounded-xl border border-slate-200 px-3 py-2 text-xs font-black">Edit</button>
                             <form method="POST" action="{{ route('tt-lock-settings.groups.destroy', $setting) }}" onsubmit="return confirm('Delete this credential group?')">@csrf @method('DELETE')<button class="rounded-xl border border-rose-200 px-3 py-2 text-xs font-black text-rose-600">Delete</button></form>
                         </div>

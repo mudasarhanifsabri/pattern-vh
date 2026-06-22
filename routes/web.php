@@ -303,6 +303,9 @@ Route::middleware('auth')->group(function () {
     Route::post('tt-lock-settings/groups/{ttLockSetting}/sync-locks', [TtLockSettingsController::class, 'syncLocks'])
         ->middleware('permission:users.manage|roles.manage')
         ->name('tt-lock-settings.groups.sync-locks');
+    Route::post('tt-lock-settings/groups/{ttLockSetting}/sync-history', [TtLockSettingsController::class, 'syncHistory'])
+        ->middleware('permission:users.manage|roles.manage')
+        ->name('tt-lock-settings.groups.sync-history');
     Route::post('tt-lock-settings/locks', [TtLockSettingsController::class, 'storeLock'])
         ->middleware('permission:users.manage|roles.manage')
         ->name('tt-lock-settings.locks.store');
