@@ -36,6 +36,7 @@ use App\Http\Controllers\SupportCenterController;
 use App\Http\Controllers\TenantController;
 use App\Http\Controllers\TenantPaymentRequestController;
 use App\Http\Controllers\TaskManagementController;
+use App\Http\Controllers\TtLockCallbackController;
 use App\Http\Controllers\TtLockSettingsController;
 use App\Http\Controllers\UnitController;
 use App\Http\Controllers\UtilityManagementController;
@@ -49,6 +50,7 @@ Route::get('/', function () {
 });
 
 Route::view('/offline', 'offline')->name('offline');
+Route::post('ttlock/callback', TtLockCallbackController::class)->name('ttlock.callback');
 
 Route::get('support/help', [PublicSupportController::class, 'create'])->name('support.public.create');
 Route::post('support/help', [PublicSupportController::class, 'store'])->name('support.public.store');
@@ -289,6 +291,12 @@ Route::middleware('auth')->group(function () {
     Route::delete('tt-lock-settings/groups/{ttLockSetting}', [TtLockSettingsController::class, 'destroySetting'])
         ->middleware('permission:users.manage|roles.manage')
         ->name('tt-lock-settings.groups.destroy');
+    Route::post('tt-lock-settings/groups/{ttLockSetting}/test', [TtLockSettingsController::class, 'testConnection'])
+        ->middleware('permission:users.manage|roles.manage')
+        ->name('tt-lock-settings.groups.test');
+    Route::post('tt-lock-settings/groups/{ttLockSetting}/sync-locks', [TtLockSettingsController::class, 'syncLocks'])
+        ->middleware('permission:users.manage|roles.manage')
+        ->name('tt-lock-settings.groups.sync-locks');
     Route::post('tt-lock-settings/locks', [TtLockSettingsController::class, 'storeLock'])
         ->middleware('permission:users.manage|roles.manage')
         ->name('tt-lock-settings.locks.store');

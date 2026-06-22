@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 #[Fillable([
     'name', 'client_id', 'client_secret', 'username', 'password', 'redirect_uri', 'is_active',
+    'access_token', 'refresh_token', 'token_expires_at', 'last_tested_at', 'last_error',
 ])]
 class TtLockSetting extends Model
 {
@@ -15,6 +16,8 @@ class TtLockSetting extends Model
     {
         return [
             'is_active' => 'boolean',
+            'token_expires_at' => 'datetime',
+            'last_tested_at' => 'datetime',
         ];
     }
 

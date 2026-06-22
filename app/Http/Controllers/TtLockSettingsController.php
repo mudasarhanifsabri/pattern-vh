@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\TtLock;
 use App\Models\TtLockSetting;
 use App\Support\ActivityLogger;
+use App\Support\TtLockApi;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
@@ -16,6 +17,7 @@ class TtLockSettingsController extends Controller
             'settings' => TtLockSetting::query()->withCount('locks')->latest()->get(),
             'locks' => TtLock::query()->with(['setting', 'unit.building'])->orderBy('lock_name')->get(),
             'statuses' => TtLock::STATUSES,
+            'callbackUrl' => route('ttlock.callback'),
         ]);
     }
 
@@ -29,10 +31,44 @@ class TtLockSettingsController extends Controller
 
     public function updateSetting(Request $request, TtLockSetting $ttLockSetting)
     {
-        $ttLockSetting->update($this->validateSetting($request));
+        $ttLockSetting->update($this->validateSetting($request, $ttLockSetting));
         ActivityLogger::log('tt_lock_settings.updated', "Updated TT Lock setting {$ttLockSetting->name}.", $ttLockSetting);
 
         return back()->with('status', 'TT Lock API setting updated.');
+    }
+
+    public function testConnection(TtLockSetting $ttLockSetting, TtLockApi $api)
+    {
+        try {
+            $api->test($ttLockSetting);
+            ActivityLogger::log('tt_lock_settings.tested', "Tested TT Lock setting {$ttLockSetting->name}.", $ttLockSetting);
+
+            return back()->with('status', "TTLock connection successful for {$ttLockSetting->name}.");
+        } catch (\Throwable $exception) {
+            $ttLockSetting->forceFill([
+                'last_tested_at' => now(),
+                'last_error' => $exception->getMessage(),
+            ])->save();
+
+            return back()->withErrors(['ttlock' => 'TTLock test failed: '.$exception->getMessage()]);
+        }
+    }
+
+    public function syncLocks(TtLockSetting $ttLockSetting, TtLockApi $api)
+    {
+        try {
+            $result = $api->syncLocks($ttLockSetting);
+            ActivityLogger::log('tt_locks.synced', "Synced {$result['synced']} TT Locks from {$ttLockSetting->name}.", $ttLockSetting);
+
+            return back()->with('status', "Synced {$result['synced']} lock(s) from TTLock.");
+        } catch (\Throwable $exception) {
+            $ttLockSetting->forceFill([
+                'last_tested_at' => now(),
+                'last_error' => $exception->getMessage(),
+            ])->save();
+
+            return back()->withErrors(['ttlock' => 'TTLock sync failed: '.$exception->getMessage()]);
+        }
     }
 
     public function destroySetting(TtLockSetting $ttLockSetting)
@@ -66,20 +102,29 @@ class TtLockSettingsController extends Controller
         return back()->with('status', 'TT Lock deleted.');
     }
 
-    private function validateSetting(Request $request): array
+    private function validateSetting(Request $request, ?TtLockSetting $setting = null): array
     {
         $validated = $request->validate([
             'name' => ['nullable', 'string', 'max:191'],
             'client_id' => ['required', 'string', 'max:191'],
-            'client_secret' => ['required', 'string', 'max:500'],
+            'client_secret' => [$setting ? 'nullable' : 'required', 'string', 'max:500'],
             'username' => ['required', 'string', 'max:191'],
-            'password' => ['required', 'string', 'max:500'],
+            'password' => [$setting ? 'nullable' : 'required', 'string', 'max:500'],
             'redirect_uri' => ['nullable', 'url', 'max:500'],
             'is_active' => ['nullable', 'boolean'],
         ]);
 
         $validated['name'] = ($validated['name'] ?? null) ?: 'Default';
         $validated['is_active'] = $request->boolean('is_active');
+        $validated['redirect_uri'] = $validated['redirect_uri'] ?: route('ttlock.callback');
+
+        if ($setting && blank($validated['client_secret'] ?? null)) {
+            unset($validated['client_secret']);
+        }
+
+        if ($setting && blank($validated['password'] ?? null)) {
+            unset($validated['password']);
+        }
 
         return $validated;
     }
