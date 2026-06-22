@@ -33,7 +33,10 @@ class AppServiceProvider extends ServiceProvider
             return $user->hasRole('Super Admin') ? true : null;
         });
 
-        View::composer('layouts.topbar', function ($view): void {
+        View::composer([
+            'layouts.topbar',
+            'layouts.tenant.topbar',
+        ], function ($view): void {
             $view->with(NotificationCenterController::topbarData(request()));
         });
     }
