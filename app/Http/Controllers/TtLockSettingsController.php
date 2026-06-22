@@ -15,16 +15,35 @@ class TtLockSettingsController extends Controller
 {
     public function index()
     {
-        $events = Schema::hasTable('tt_lock_events')
-            ? TtLockEvent::query()->with(['ttLock.unit.building', 'unit.building'])->latest('event_at')->latest()->limit(100)->get()
-            : collect();
+        $settings = collect();
+        $locks = collect();
+        $events = collect();
+
+        if (Schema::hasTable('tt_lock_settings')) {
+            $settingsQuery = TtLockSetting::query()->latest();
+
+            if (Schema::hasTable('tt_locks')) {
+                $settingsQuery->withCount('locks');
+            }
+
+            $settings = $settingsQuery->get();
+        }
+
+        if (Schema::hasTable('tt_locks')) {
+            $locks = TtLock::query()->with(['setting', 'unit.building'])->orderBy('lock_name')->get();
+        }
+
+        if (Schema::hasTable('tt_lock_events')) {
+            $events = TtLockEvent::query()->with(['ttLock.unit.building', 'unit.building'])->latest('event_at')->latest()->limit(100)->get();
+        }
 
         return view('tt-lock-settings.index', [
-            'settings' => TtLockSetting::query()->withCount('locks')->latest()->get(),
-            'locks' => TtLock::query()->with(['setting', 'unit.building'])->orderBy('lock_name')->get(),
+            'settings' => $settings,
+            'locks' => $locks,
             'events' => $events,
             'statuses' => TtLock::STATUSES,
             'callbackUrl' => route('ttlock.callback'),
+            'schemaReady' => $this->schemaReady(),
         ]);
     }
 
@@ -172,5 +191,10 @@ class TtLockSettingsController extends Controller
             'last_synced_at' => ['nullable', 'date'],
             'notes' => ['nullable', 'string', 'max:1000'],
         ]);
+    }
+
+    private function schemaReady(): bool
+    {
+        return Schema::hasTable('tt_lock_settings') && Schema::hasTable('tt_locks');
     }
 }

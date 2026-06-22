@@ -15,9 +15,11 @@ class SoftwareUpdateController extends Controller
     {
         return view('software-updates.index', [
             'enabled' => config('erp.web_updater_enabled'),
-            'latestLog' => $this->latestLog(),
-            'productionLogs' => $this->productionLogs(),
+            'latestLog' => rescue(fn () => $this->latestLog(), null, report: true),
+            'productionLogs' => rescue(fn () => $this->productionLogs(), [], report: true),
             'phpBinary' => PHP_BINARY,
+            'composerBinary' => config('erp.composer_binary'),
+            'gitBinary' => config('erp.git_binary'),
         ]);
     }
 
@@ -144,8 +146,8 @@ class SoftwareUpdateController extends Controller
 
     private function processEnvironment(): array
     {
-        $home = env('HOME') ?: base_path();
-        $composerHome = (string) config('erp.composer_home');
+        $home = env('HOME') ?: dirname(base_path()) ?: base_path();
+        $composerHome = trim((string) config('erp.composer_home')) ?: storage_path('app/composer');
         File::ensureDirectoryExists($composerHome);
 
         return [
@@ -174,7 +176,7 @@ class SoftwareUpdateController extends Controller
         return [
             'name' => $file->getFilename(),
             'updated_at' => date('M d, Y H:i:s', $file->getMTime()),
-            'content' => File::get($file->getPathname()),
+            'content' => Str::limit(File::get($file->getPathname()), 120000, "\n... log truncated ..."),
         ];
     }
 

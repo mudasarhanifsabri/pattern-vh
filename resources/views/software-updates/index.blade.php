@@ -52,7 +52,10 @@
                 </div>
 
                 <div class="flex flex-col gap-3 border-t border-slate-100 bg-slate-50 p-5 sm:flex-row sm:items-center sm:justify-between">
-                    <p class="text-xs font-bold text-slate-500">PHP binary: <span class="text-slate-700">{{ $phpBinary }}</span></p>
+                    <div class="space-y-1 text-xs font-bold text-slate-500">
+                        <p>PHP binary: <span class="text-slate-700">{{ $phpBinary }}</span></p>
+                        <p>Git: <span class="text-slate-700">{{ $gitBinary }}</span> / Composer: <span class="text-slate-700">{{ $composerBinary }}</span></p>
+                    </div>
                     <button @disabled(! $enabled) class="rounded-2xl bg-blue-600 px-5 py-3 text-sm font-black text-white shadow-lg shadow-blue-600/20 transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300">
                         Run software update
                     </button>

@@ -21,6 +21,11 @@
     <div class="space-y-5">
         @if(session('status'))<div class="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-700">{{ session('status') }}</div>@endif
         @if($errors->any())<div class="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-bold text-rose-700">{{ $errors->first() }}</div>@endif
+        @if(! $schemaReady)
+            <div class="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-bold leading-6 text-amber-800">
+                TTLock database tables are not fully ready yet. Run the safe migrations from Software Updates, then refresh this page.
+            </div>
+        @endif
 
         <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             @foreach([
