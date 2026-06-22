@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Str;
 use Illuminate\View\View;
 use Symfony\Component\Process\Process;
 
@@ -15,6 +16,7 @@ class SoftwareUpdateController extends Controller
         return view('software-updates.index', [
             'enabled' => config('erp.web_updater_enabled'),
             'latestLog' => $this->latestLog(),
+            'productionLogs' => $this->productionLogs(),
             'phpBinary' => PHP_BINARY,
         ]);
     }
@@ -100,6 +102,7 @@ class SoftwareUpdateController extends Controller
 
         try {
             $process = new Process($command, base_path());
+            $process->setEnv($this->processEnvironment());
             $process->setTimeout(600);
             $process->run(function (string $type, string $buffer) use ($logPath): void {
                 File::append($logPath, $buffer);
@@ -113,6 +116,42 @@ class SoftwareUpdateController extends Controller
 
             return false;
         }
+    }
+
+    public function downloadLog(string $type)
+    {
+        abort_unless(request()->user()?->hasRole('Super Admin') || request()->user()?->can('users.manage'), 403);
+
+        $log = collect($this->productionLogs())->firstWhere('type', $type);
+        abort_unless($log && is_file($log['path']), 404);
+
+        return response()->download($log['path'], $log['filename']);
+    }
+
+    public function copyLog(string $type): RedirectResponse
+    {
+        abort_unless(request()->user()?->hasRole('Super Admin') || request()->user()?->can('users.manage'), 403);
+
+        $log = collect($this->productionLogs())->firstWhere('type', $type);
+        abort_unless($log && is_file($log['path']), 404);
+
+        $sharePath = storage_path('app/support-logs/'.now()->format('Ymd-His').'-'.$log['filename']);
+        File::ensureDirectoryExists(dirname($sharePath));
+        File::put($sharePath, Str::limit(File::get($log['path']), 120000, "\n... log truncated ..."));
+
+        return back()->with('status', 'Log copy created at '.$sharePath);
+    }
+
+    private function processEnvironment(): array
+    {
+        $home = env('HOME') ?: base_path();
+        $composerHome = (string) config('erp.composer_home');
+        File::ensureDirectoryExists($composerHome);
+
+        return [
+            'HOME' => $home,
+            'COMPOSER_HOME' => $composerHome,
+        ];
     }
 
     private function latestLog(): ?array
@@ -137,5 +176,54 @@ class SoftwareUpdateController extends Controller
             'updated_at' => date('M d, Y H:i:s', $file->getMTime()),
             'content' => File::get($file->getPathname()),
         ];
+    }
+
+    private function productionLogs(): array
+    {
+        $latestUpdate = $this->latestLogPath();
+
+        return collect([
+            [
+                'type' => 'laravel',
+                'label' => 'Laravel application log',
+                'path' => storage_path('logs/laravel.log'),
+                'filename' => 'laravel.log',
+            ],
+            [
+                'type' => 'software-update',
+                'label' => 'Latest software update log',
+                'path' => $latestUpdate,
+                'filename' => $latestUpdate ? basename($latestUpdate) : 'software-update.log',
+            ],
+            [
+                'type' => 'ttlock-callback',
+                'label' => 'TTLock callback log',
+                'path' => storage_path('logs/ttlock/callback.log'),
+                'filename' => 'ttlock-callback.log',
+            ],
+        ])
+            ->filter(fn (array $log): bool => $log['path'] && is_file($log['path']))
+            ->map(function (array $log): array {
+                $log['updated_at'] = date('M d, Y H:i:s', filemtime($log['path']));
+                $log['size'] = number_format(filesize($log['path']) / 1024, 1).' KB';
+
+                return $log;
+            })
+            ->values()
+            ->all();
+    }
+
+    private function latestLogPath(): ?string
+    {
+        $directory = storage_path('logs/software-updates');
+        if (! is_dir($directory)) {
+            return null;
+        }
+
+        $file = collect(File::files($directory))
+            ->sortByDesc(fn ($file) => $file->getMTime())
+            ->first();
+
+        return $file?->getPathname();
     }
 }

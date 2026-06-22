@@ -77,6 +77,32 @@
                         <li>After uploading changed files manually.</li>
                     </ul>
                 </div>
+
+                <div class="erp-card p-5">
+                    <h2 class="text-lg font-black text-[#071a3b]">Share production logs</h2>
+                    <p class="mt-1 text-sm leading-6 text-slate-500">Download or create a safe copy of recent logs when you need to send an error to support.</p>
+                    <div class="mt-4 space-y-3">
+                        @forelse($productionLogs as $log)
+                            <div class="rounded-2xl border border-slate-200 p-3">
+                                <div class="flex items-start justify-between gap-3">
+                                    <div>
+                                        <p class="text-sm font-black text-[#071a3b]">{{ $log['label'] }}</p>
+                                        <p class="mt-1 text-xs text-slate-500">{{ $log['updated_at'] }} / {{ $log['size'] }}</p>
+                                    </div>
+                                </div>
+                                <div class="mt-3 flex flex-wrap gap-2">
+                                    <a href="{{ route('software-updates.logs.download', $log['type']) }}" class="rounded-xl bg-blue-600 px-3 py-2 text-xs font-black text-white">Download</a>
+                                    <form method="POST" action="{{ route('software-updates.logs.copy', $log['type']) }}">
+                                        @csrf
+                                        <button class="rounded-xl border border-slate-200 px-3 py-2 text-xs font-black text-slate-600">Create copy</button>
+                                    </form>
+                                </div>
+                            </div>
+                        @empty
+                            <p class="rounded-2xl border border-dashed border-slate-200 px-4 py-6 text-center text-sm text-slate-500">No production logs found yet.</p>
+                        @endforelse
+                    </div>
+                </div>
             </aside>
         </section>
 

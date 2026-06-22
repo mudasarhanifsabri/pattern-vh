@@ -278,6 +278,12 @@ Route::middleware('auth')->group(function () {
     Route::post('software-updates/run', [SoftwareUpdateController::class, 'run'])
         ->middleware('permission:software-updates.manage|users.manage')
         ->name('software-updates.run');
+    Route::get('software-updates/logs/{type}/download', [SoftwareUpdateController::class, 'downloadLog'])
+        ->middleware('permission:software-updates.manage|users.manage')
+        ->name('software-updates.logs.download');
+    Route::post('software-updates/logs/{type}/copy', [SoftwareUpdateController::class, 'copyLog'])
+        ->middleware('permission:software-updates.manage|users.manage')
+        ->name('software-updates.logs.copy');
 
     Route::get('tt-lock-settings', [TtLockSettingsController::class, 'index'])
         ->middleware('permission:users.manage|roles.manage')
