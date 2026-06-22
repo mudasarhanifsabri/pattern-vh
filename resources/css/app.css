@@ -124,6 +124,10 @@
             min-height: 0 !important;
         }
 
+        .support-composer {
+            padding-bottom: max(0.9rem, env(safe-area-inset-bottom));
+        }
+
         body.support-mobile-active {
             overflow: hidden;
         }

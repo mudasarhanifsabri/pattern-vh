@@ -1,4 +1,4 @@
-<nav class="fixed inset-x-0 bottom-0 z-40 mx-auto grid max-w-[430px] grid-cols-4 border-t border-slate-100 bg-white/95 px-4 pb-5 pt-2 shadow-[0_-12px_30px_rgba(15,23,42,0.08)] backdrop-blur">
+<nav class="{{ request()->routeIs('support.*') ? 'hidden' : 'grid' }} fixed inset-x-0 bottom-0 z-40 mx-auto max-w-[430px] grid-cols-4 border-t border-slate-100 bg-white/95 px-4 pb-5 pt-2 shadow-[0_-12px_30px_rgba(15,23,42,0.08)] backdrop-blur">
     @foreach ([
         ['route' => 'dashboard', 'label' => 'My Stay', 'icon' => 'M4 12 12 4l8 8M6 10v10h12V10'],
         ['route' => 'bookings.index', 'label' => 'Bookings', 'icon' => 'M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14H3V6a2 2 0 0 1 2-2z'],
@@ -14,7 +14,7 @@
     @endforeach
 </nav>
 
-<div id="tenant-install-prompt" class="fixed inset-x-3 bottom-24 z-50 hidden rounded-[1.5rem] border border-blue-100 bg-white p-4 shadow-2xl shadow-slate-950/20 sm:left-auto sm:w-[390px]">
+<div id="tenant-install-prompt" class="{{ request()->routeIs('support.*') ? 'hidden' : '' }} fixed inset-x-3 bottom-24 z-50 hidden rounded-[1.5rem] border border-blue-100 bg-white p-4 shadow-2xl shadow-slate-950/20 sm:left-auto sm:w-[390px]">
     <div class="flex gap-3">
         <span class="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-blue-600 text-sm font-black text-white">P</span>
         <div class="min-w-0 flex-1">

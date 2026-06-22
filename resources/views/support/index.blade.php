@@ -31,10 +31,15 @@
             'high' => 'text-amber-600',
             'urgent' => 'text-rose-600',
         ];
-        $supportTopbar = (auth()->user()?->can('portal.tenant') && ! auth()->user()?->can('bookings.manage')) ? '4rem' : '5rem';
+        $tenantChat = auth()->user()?->can('portal.tenant') && ! auth()->user()?->can('bookings.manage');
+        $supportTopbar = $tenantChat ? '5.5rem' : '5rem';
         $selectedOnline = $selected?->requester?->onlineStatus?->is_online
             && $selected->requester->onlineStatus->last_seen_at?->greaterThan(now()->subMinutes(3));
         $selectedName = $selected?->requester_name ?: 'Support customer';
+        $assigneeOnline = $selected?->assignee?->onlineStatus?->is_online
+            && $selected->assignee->onlineStatus->last_seen_at?->greaterThan(now()->subMinutes(3));
+        $chatPartnerName = $tenantChat ? ($selected?->assignee?->name ?: 'Pattern Support') : $selectedName;
+        $chatPartnerOnline = $tenantChat ? $assigneeOnline : $selectedOnline;
     @endphp
 
     <div class="space-y-4" style="--support-topbar-height: {{ $supportTopbar }}">
@@ -110,12 +115,12 @@
                         <div class="flex min-w-0 items-center gap-3">
                             <a href="{{ route('support.index') }}" class="grid h-10 w-10 shrink-0 place-items-center rounded-2xl border border-slate-100 text-xl font-black text-[#071a3b] lg:hidden">&lsaquo;</a>
                             <span class="relative grid h-12 w-12 shrink-0 place-items-center rounded-full bg-gradient-to-br from-blue-100 to-violet-100 text-sm font-black text-blue-700">
-                                {{ str($selectedName)->substr(0, 2)->upper() }}
-                                <span class="absolute bottom-0 right-0 h-3.5 w-3.5 rounded-full border-2 border-white {{ $selectedOnline ? 'bg-emerald-500' : 'bg-slate-300' }}"></span>
+                                {{ str($chatPartnerName)->substr(0, 2)->upper() }}
+                                <span class="absolute bottom-0 right-0 h-3.5 w-3.5 rounded-full border-2 border-white {{ $chatPartnerOnline ? 'bg-emerald-500' : 'bg-emerald-400' }}"></span>
                             </span>
                             <span class="min-w-0">
-                                <h2 class="truncate text-lg font-black text-[#071a3b]">{{ $selectedName }}</h2>
-                                <p class="text-sm font-bold {{ $selectedOnline ? 'text-emerald-600' : 'text-slate-400' }}">{{ $selectedOnline ? 'Active now' : 'Offline' }}</p>
+                                <h2 class="truncate text-lg font-black text-[#071a3b]">{{ $tenantChat ? 'Support Team' : $selectedName }}</h2>
+                                <p class="text-sm font-bold text-emerald-600" data-chat-presence>{{ $tenantChat ? ($selected->assigned_to ? $chatPartnerName.' is connected' : 'Connecting you with an agent') : ($selectedOnline ? 'Active now' : 'Offline') }}</p>
                             </span>
                         </div>
                         <div class="flex items-center gap-2 text-blue-600">
@@ -129,6 +134,19 @@
                     </header>
 
                     <div class="min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden bg-white px-4 py-4" data-support-messages data-message-count="{{ $selected->messages->count() }}">
+                        @if($tenantChat)
+                            <div class="mb-5 rounded-[1.4rem] bg-gradient-to-br from-blue-50 to-slate-50 p-4 text-center">
+                                <div class="mx-auto grid h-12 w-12 place-items-center rounded-full bg-white text-blue-600 shadow-sm">
+                                    <svg class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 10a6 6 0 0 0-12 0v4a3 3 0 0 0 3 3h1" /><path d="M18 14v2a2 2 0 0 1-2 2h-2" /></svg>
+                                </div>
+                                <h3 class="mt-3 text-base font-black text-[#071a3b]">Welcome to Pattern live chat</h3>
+                                <p class="mt-1 text-sm font-semibold leading-6 text-slate-500">We are connecting you with the right team. You can ask about booking, payment, check-in, checkout, deposit, Wi-Fi, or maintenance.</p>
+                                <div class="mt-3 inline-flex items-center gap-2 rounded-full bg-white px-3 py-2 text-xs font-black text-emerald-700">
+                                    <span class="h-2 w-2 rounded-full bg-emerald-500"></span>
+                                    Live chat active
+                                </div>
+                            </div>
+                        @endif
                         @php
                             $lastDate = null;
                         @endphp
@@ -157,19 +175,41 @@
                                 </div>
                             </div>
                         @endforeach
+                        <div data-agent-typing class="mb-3 {{ $tenantChat ? 'flex' : 'hidden' }} justify-start">
+                            <div class="rounded-[1.25rem] border border-slate-100 bg-white px-4 py-3 text-sm font-bold text-slate-500 shadow-sm">
+                                <span data-typing-copy>{{ $selected->assigned_to ? $chatPartnerName.' is typing' : 'Connecting agent' }}</span>
+                                <span class="ml-1 inline-flex gap-1 align-middle">
+                                    <span class="h-1.5 w-1.5 animate-bounce rounded-full bg-blue-500"></span>
+                                    <span class="h-1.5 w-1.5 animate-bounce rounded-full bg-blue-500 [animation-delay:120ms]"></span>
+                                    <span class="h-1.5 w-1.5 animate-bounce rounded-full bg-blue-500 [animation-delay:240ms]"></span>
+                                </span>
+                            </div>
+                        </div>
                     </div>
 
-                    <div class="shrink-0 border-t border-slate-100 bg-white px-4 py-3">
+                    <div class="support-composer shrink-0 border-t border-slate-100 bg-white px-4 py-3">
                         <div class="mb-3 flex gap-2 overflow-x-auto pb-1">
-                            @foreach($quickReplies->take(8) as $reply)
-                                <button type="button" data-quick-reply="{{ $reply->body }}" class="shrink-0 rounded-full border border-blue-100 bg-blue-50 px-4 py-2 text-xs font-black text-blue-700">{{ $reply->title }}</button>
-                            @endforeach
+                            @if($tenantChat)
+                                @foreach([
+                                    'Booking' => 'I need help with my booking.',
+                                    'Payment' => 'I need help with my payment.',
+                                    'Check-in' => 'I need check-in instructions.',
+                                    'Deposit' => 'I need help with my security deposit.',
+                                    'Maintenance' => 'I want to report maintenance.',
+                                ] as $title => $body)
+                                    <button type="button" data-quick-reply="{{ $body }}" class="shrink-0 rounded-full border border-blue-100 bg-blue-50 px-4 py-2 text-xs font-black text-blue-700">{{ $title }}</button>
+                                @endforeach
+                            @else
+                                @foreach($quickReplies->take(8) as $reply)
+                                    <button type="button" data-quick-reply="{{ $reply->body }}" class="shrink-0 rounded-full border border-blue-100 bg-blue-50 px-4 py-2 text-xs font-black text-blue-700">{{ $reply->title }}</button>
+                                @endforeach
+                            @endif
                         </div>
                         <form method="POST" action="{{ route('support.reply', $selected) }}" enctype="multipart/form-data" class="min-w-0">
                             @csrf
                             <div class="flex min-w-0 items-end gap-3">
                                 <label class="grid h-12 w-12 shrink-0 cursor-pointer place-items-center rounded-full border border-slate-100 bg-white text-2xl font-light text-blue-600 shadow-sm">+<input type="file" name="attachment" class="sr-only"></label>
-                                <div class="min-w-0 flex-1 rounded-[1.4rem] border border-slate-100 bg-white px-4 py-2 shadow-sm shadow-slate-200/70">
+                                <div class="min-w-0 flex-1 rounded-[1.4rem] border border-slate-100 bg-white px-4 py-3 shadow-sm shadow-slate-200/70">
                                     <textarea name="body" rows="1" data-message-input class="max-h-32 min-w-0 w-full resize-none border-0 bg-transparent p-0 text-sm font-semibold text-slate-700 placeholder:text-slate-400 focus:ring-0" placeholder="Type a message..." required></textarea>
                                 </div>
                                 <button class="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-blue-600 text-white shadow-lg shadow-blue-200" aria-label="Send message">
