@@ -28,6 +28,7 @@ use App\Http\Controllers\PaymentCollectionRequestController;
 use App\Http\Controllers\OperationsTeamMemberController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\PublicSupportController;
+use App\Http\Controllers\PushSubscriptionController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\SecurityDepositController;
 use App\Http\Controllers\SoftwareUpdateController;
@@ -88,6 +89,8 @@ Route::middleware('auth')->group(function () {
     Route::get('support/{supportTicket}/messages', [SupportCenterController::class, 'messages'])->middleware('permission:support.view|support.manage')->name('support.messages');
     Route::get('support/attachments/{attachment}', [SupportCenterController::class, 'attachment'])->middleware('permission:support.view|support.manage')->name('support.attachments');
     Route::post('support/presence/ping', [SupportCenterController::class, 'ping'])->middleware('permission:support.view|support.manage')->name('support.presence.ping');
+    Route::post('push-subscriptions', [PushSubscriptionController::class, 'store'])->name('push-subscriptions.store');
+    Route::delete('push-subscriptions', [PushSubscriptionController::class, 'destroy'])->name('push-subscriptions.destroy');
     Route::get('support-reports', [SupportCenterController::class, 'reports'])->middleware('permission:support.reports')->name('support.reports');
     Route::get('support-quick-replies', [SupportCenterController::class, 'quickReplies'])->middleware('permission:support.manage')->name('support.quick-replies.index');
     Route::post('support-reports/quick-replies', [SupportCenterController::class, 'storeQuickReply'])->middleware('permission:support.manage')->name('support.quick-replies.store');

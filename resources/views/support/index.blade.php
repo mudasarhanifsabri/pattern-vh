@@ -2,7 +2,7 @@
     <x-slot name="header">
         <div class="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
             <div><p class="text-[11px] font-black uppercase tracking-[0.22em] text-blue-600">Communication workspace</p><h1 class="text-3xl font-black tracking-[-0.04em] text-[#071a3b]">Support Center</h1><p class="mt-2 text-sm text-slate-500">Live chat, tickets, internal notes, and customer context in one inbox.</p></div>
-            <div class="flex flex-wrap gap-2"><a href="{{ route('support.create') }}" class="rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-black text-white">New request</a><a href="{{ route('support.public.create') }}" target="_blank" class="rounded-xl border border-blue-200 px-4 py-2.5 text-sm font-black text-blue-700">Public support link</a>@if($manage && auth()->user()->can('support.reports'))<a href="{{ route('support.reports') }}" class="rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-black text-white">Reports</a>@endif</div>
+            <div class="flex flex-wrap gap-2"><button type="button" data-enable-support-alerts class="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm font-black text-emerald-700">Enable alerts</button><a href="{{ route('support.create') }}" class="rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-black text-white">New request</a><a href="{{ route('support.public.create') }}" target="_blank" class="rounded-xl border border-blue-200 px-4 py-2.5 text-sm font-black text-blue-700">Public support link</a>@if($manage && auth()->user()->can('support.reports'))<a href="{{ route('support.reports') }}" class="rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-black text-white">Reports</a>@endif</div>
         </div>
     </x-slot>
 
@@ -16,10 +16,10 @@
         @if(session('status'))<div class="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-700">{{ session('status') }}</div>@endif
         @if($errors->any())<div class="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-bold text-rose-700">{{ $errors->first() }}</div>@endif
 
-        <div class="grid min-h-[680px] overflow-hidden rounded-[1.75rem] border border-slate-200 bg-white shadow-xl shadow-slate-200/50 lg:grid-cols-[320px_minmax(420px,1fr)_330px]">
-            <aside class="border-b border-slate-200 bg-[#f8faff] lg:border-b-0 lg:border-r">
+        <div class="grid min-h-[calc(100dvh-190px)] overflow-hidden rounded-[1.75rem] border border-slate-200 bg-white shadow-xl shadow-slate-200/50 lg:min-h-[680px] lg:grid-cols-[320px_minmax(420px,1fr)_330px]">
+            <aside class="{{ $selected ? 'hidden lg:block' : 'block' }} border-b border-slate-200 bg-[#f8faff] lg:border-b-0 lg:border-r">
                 <div class="border-b border-slate-200 p-4"><form method="GET" class="space-y-2"><input name="search" value="{{ request('search') }}" class="erp-focus h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm" placeholder="Search conversations..."><div class="grid grid-cols-2 gap-2"><select name="status" class="erp-focus h-9 rounded-xl border border-slate-200 bg-white px-2 text-xs"><option value="">All status</option>@foreach(\App\Models\SupportTicket::STATUSES as $status)<option value="{{ $status }}" @selected(request('status')===$status)>{{ str($status)->replace('_',' ')->headline() }}</option>@endforeach</select><button class="rounded-xl bg-slate-900 text-xs font-black text-white">Filter</button></div></form></div>
-                <div class="max-h-[620px] overflow-y-auto p-2">
+                <div class="max-h-[calc(100dvh-310px)] overflow-y-auto p-2 lg:max-h-[620px]">
                     @forelse($tickets as $ticket)
                         @php($last = $ticket->messages->first())
                         @php($requesterOnline = $ticket->requester?->onlineStatus?->is_online && $ticket->requester->onlineStatus->last_seen_at?->greaterThan(now()->subMinutes(3)))
@@ -30,11 +30,11 @@
                 </div>
             </aside>
 
-            <main class="flex min-h-[680px] flex-col bg-[#eef3f9]">
+            <main class="{{ $selected ? 'flex' : 'hidden lg:flex' }} h-[calc(100dvh-190px)] min-h-[560px] flex-col bg-[#eef3f9] lg:h-auto lg:min-h-[680px]">
                 @if($selected)
-                    <header class="flex items-center justify-between gap-3 border-b border-slate-200 bg-white p-4"><div class="flex items-center gap-3"><span class="relative grid h-11 w-11 place-items-center rounded-full bg-blue-100 text-xs font-black text-blue-700">{{ str($selected->requester_name)->substr(0,2)->upper() }}<span class="absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-white {{ $assigneeOnline ? 'bg-emerald-400' : 'bg-slate-300' }}"></span></span><div><h2 class="font-black text-[#071a3b]">{{ $selected->requester_name }}</h2><p class="text-xs text-slate-500">{{ $selected->ticket_no }} / {{ str($selected->mode)->headline() }} / {{ $selected->category?->name ?: 'General' }}</p></div></div><span class="rounded-full px-3 py-1 text-xs font-black {{ $statusTone[$selected->status] ?? 'bg-slate-100' }}">{{ str($selected->status)->replace('_',' ')->headline() }}</span></header>
+                    <header class="flex items-center justify-between gap-3 border-b border-slate-200 bg-white p-3 md:p-4"><div class="flex min-w-0 items-center gap-3"><a href="{{ route('support.index') }}" class="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-slate-200 text-lg font-black text-[#071a3b] lg:hidden">&lsaquo;</a><span class="relative grid h-11 w-11 shrink-0 place-items-center rounded-full bg-blue-100 text-xs font-black text-blue-700">{{ str($selected->requester_name)->substr(0,2)->upper() }}<span class="absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-white {{ $assigneeOnline ? 'bg-emerald-400' : 'bg-slate-300' }}"></span></span><div class="min-w-0"><h2 class="truncate font-black text-[#071a3b]">{{ $selected->requester_name }}</h2><p class="truncate text-xs text-slate-500">{{ $selected->ticket_no }} / {{ str($selected->mode)->headline() }} / {{ $selected->category?->name ?: 'General' }}</p></div></div><span class="shrink-0 rounded-full px-3 py-1 text-[10px] font-black md:text-xs {{ $statusTone[$selected->status] ?? 'bg-slate-100' }}">{{ str($selected->status)->replace('_',' ')->headline() }}</span></header>
 
-                    <div class="flex-1 space-y-3 overflow-y-auto p-4 md:p-6" data-support-messages data-message-count="{{ $selected->messages->count() }}">
+                    <div class="flex-1 space-y-3 overflow-y-auto p-3 pb-4 md:p-6" data-support-messages data-message-count="{{ $selected->messages->count() }}">
                         @foreach($selected->messages as $message)
                             @php($mine = $message->sender_type === 'staff')
                             <div class="flex {{ $mine ? 'justify-end' : 'justify-start' }}">
@@ -48,14 +48,14 @@
                         @endforeach
                     </div>
 
-                    <div class="border-t border-slate-200 bg-white p-3 md:p-4">
+                    <div class="sticky bottom-0 border-t border-slate-200 bg-white p-3 md:p-4">
                         <div class="mb-3 flex gap-2 overflow-x-auto pb-1">@foreach($quickReplies->take(8) as $reply)<button type="button" data-quick-reply="{{ $reply->body }}" class="shrink-0 rounded-full border border-blue-100 bg-blue-50 px-3 py-1.5 text-[11px] font-black text-blue-700">{{ $reply->title }}</button>@endforeach</div>
-                        <form method="POST" action="{{ route('support.reply', $selected) }}" enctype="multipart/form-data" class="flex items-end gap-2">@csrf<label class="grid h-11 w-11 shrink-0 cursor-pointer place-items-center rounded-xl border border-slate-200 text-lg text-slate-500">+<input type="file" name="attachment" class="sr-only"></label><div class="min-w-0 flex-1"><textarea name="body" rows="2" data-message-input class="erp-focus w-full resize-none rounded-2xl border border-slate-200 px-4 py-3 text-sm" placeholder="Type a message..." required></textarea>@if($manage)<label class="mt-1 inline-flex items-center gap-2 text-[11px] font-bold text-amber-700"><input type="checkbox" name="is_internal_note" value="1" class="rounded border-slate-300"> Private internal note</label>@endif</div><button class="h-11 rounded-xl bg-blue-600 px-5 text-sm font-black text-white">Send</button></form>
+                        <form method="POST" action="{{ route('support.reply', $selected) }}" enctype="multipart/form-data" class="flex items-end gap-2">@csrf<label class="grid h-11 w-11 shrink-0 cursor-pointer place-items-center rounded-full border border-slate-200 text-lg text-slate-500">+<input type="file" name="attachment" class="sr-only"></label><div class="min-w-0 flex-1"><textarea name="body" rows="1" data-message-input class="erp-focus max-h-32 w-full resize-none rounded-2xl border border-slate-200 px-4 py-3 text-sm" placeholder="Type a message..." required></textarea>@if($manage)<label class="mt-1 inline-flex items-center gap-2 text-[11px] font-bold text-amber-700"><input type="checkbox" name="is_internal_note" value="1" class="rounded border-slate-300"> Private internal note</label>@endif</div><button class="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-blue-600 text-sm font-black text-white md:w-auto md:px-5">Send</button></form>
                     </div>
                 @else<div class="grid flex-1 place-items-center p-8 text-center"><div><div class="mx-auto grid h-16 w-16 place-items-center rounded-3xl bg-blue-100 text-2xl text-blue-700">?</div><h2 class="mt-4 text-xl font-black text-[#071a3b]">Select a conversation</h2><p class="mt-2 text-sm text-slate-500">Choose a chat from the inbox or start a new support request.</p></div></div>@endif
             </main>
 
-            <aside class="border-t border-slate-200 bg-white p-4 lg:border-l lg:border-t-0">
+            <aside class="hidden border-t border-slate-200 bg-white p-4 lg:block lg:border-l lg:border-t-0">
                 @if($selected)
                     <div class="space-y-4">
                         <div><p class="text-xs font-black uppercase tracking-[0.16em] text-blue-600">Customer details</p><h3 class="mt-2 text-lg font-black text-[#071a3b]">{{ $selected->requester_name }}</h3><p class="mt-1 text-xs text-slate-500">{{ $selected->requester_email ?: 'No email' }}<br>{{ $selected->requester_mobile ?: 'No mobile' }}</p><span class="mt-3 inline-flex rounded-full bg-blue-50 px-3 py-1 text-xs font-black text-blue-700">{{ $selected->requester_role ?: 'Guest' }}</span></div>
@@ -82,13 +82,39 @@
     </div>
 
     <script>
-        document.querySelectorAll('[data-quick-reply]').forEach(button => button.addEventListener('click', () => { const input = document.querySelector('[data-message-input]'); if (input) { input.value = button.dataset.quickReply; input.focus(); } }));
+        const supportMessageBox = document.querySelector('[data-support-messages]');
+        if (supportMessageBox) supportMessageBox.scrollTop = supportMessageBox.scrollHeight;
+        document.querySelectorAll('[data-quick-reply]').forEach(button => button.addEventListener('click', () => { const input = document.querySelector('[data-message-input]'); if (input) { input.value = button.dataset.quickReply; input.focus(); input.dispatchEvent(new Event('input')); } }));
+        document.querySelectorAll('[data-message-input]').forEach(input => input.addEventListener('input', () => { input.style.height = 'auto'; input.style.height = Math.min(input.scrollHeight, 128) + 'px'; }));
+        const vapidPublicKey = @js(config('services.webpush.public_key'));
+        const csrfToken = '{{ csrf_token() }}';
+        const notifyUser = (title, body) => {
+            if (!('Notification' in window) || Notification.permission !== 'granted') return;
+            try { new Notification(title, { body, icon: '/icons/erp-icon.svg', badge: '/icons/erp-icon.svg' }); } catch (error) {}
+        };
+        const urlBase64ToUint8Array = (base64String) => {
+            const padding = '='.repeat((4 - base64String.length % 4) % 4);
+            const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+            const rawData = window.atob(base64);
+            return Uint8Array.from([...rawData].map((char) => char.charCodeAt(0)));
+        };
+        document.querySelector('[data-enable-support-alerts]')?.addEventListener('click', async (event) => {
+            if (!('Notification' in window)) { event.currentTarget.textContent = 'Alerts not supported'; return; }
+            const permission = await Notification.requestPermission();
+            if (permission !== 'granted') { event.currentTarget.textContent = 'Alerts blocked'; return; }
+            event.currentTarget.textContent = 'Alerts enabled';
+            if ('serviceWorker' in navigator && 'PushManager' in window && vapidPublicKey) {
+                const registration = await navigator.serviceWorker.ready;
+                const subscription = await registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(vapidPublicKey) });
+                await fetch('{{ route('push-subscriptions.store') }}', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken, 'Accept': 'application/json' }, body: JSON.stringify(subscription.toJSON()) });
+            }
+        });
         @auth
         fetch('{{ route('support.presence.ping') }}', { method:'POST', headers:{'X-CSRF-TOKEN':'{{ csrf_token() }}','Accept':'application/json'} });
         setInterval(() => fetch('{{ route('support.presence.ping') }}', { method:'POST', headers:{'X-CSRF-TOKEN':'{{ csrf_token() }}','Accept':'application/json'} }), 60000);
         @endauth
         @if($selected)
-        setInterval(async () => { const box=document.querySelector('[data-support-messages]'); const input=document.querySelector('[data-message-input]'); if(!box || (input && input.value.trim())) return; const response=await fetch('{{ route('support.messages',$selected) }}',{headers:{'Accept':'application/json'}}); if(response.ok){const messages=await response.json(); if(messages.length>Number(box.dataset.messageCount||0)) window.location.reload();}}, 6000);
+        setInterval(async () => { const box=document.querySelector('[data-support-messages]'); const input=document.querySelector('[data-message-input]'); if(!box || (input && input.value.trim())) return; const response=await fetch('{{ route('support.messages',$selected) }}',{headers:{'Accept':'application/json'}}); if(response.ok){const messages=await response.json(); const oldCount=Number(box.dataset.messageCount||0); if(messages.length>oldCount){const latest=messages[messages.length-1]; notifyUser('New support message', latest.body || '{{ $selected->ticket_no }}'); window.location.reload();}}}, 6000);
         @endif
     </script>
 </x-app-layout>

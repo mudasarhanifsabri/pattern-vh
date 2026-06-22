@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Agent;
 use App\Models\AutoReplyRule;
 use App\Models\Booking;
+use App\Models\NotificationLog;
 use App\Models\OperationsTeamMember;
 use App\Models\Owner;
 use App\Models\Payment;
@@ -19,6 +20,7 @@ use App\Models\UserOnlineStatus;
 use App\Support\SupportConversationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Response;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 
@@ -116,7 +118,17 @@ class SupportCenterController extends Controller
         $validated['updated_by'] = $request->user()->id;
         $validated['resolved_at'] = $validated['status'] === 'resolved' ? ($supportTicket->resolved_at ?: now()) : null;
         $validated['closed_at'] = $validated['status'] === 'closed' ? ($supportTicket->closed_at ?: now()) : null;
+        $originalStatus = $supportTicket->status;
+        $originalAssignee = $supportTicket->assigned_to;
         $supportTicket->update($validated);
+
+        if ($originalStatus !== $supportTicket->status) {
+            $this->logPushEvent($supportTicket, 'Support status updated', "{$supportTicket->ticket_no} is now ".str($supportTicket->status)->replace('_', ' ')->headline(), collect([$supportTicket->requester_user_id, $supportTicket->assigned_to]));
+        }
+
+        if ($supportTicket->assigned_to && $originalAssignee !== $supportTicket->assigned_to) {
+            $this->logPushEvent($supportTicket, 'Support ticket assigned', "{$supportTicket->ticket_no}: {$supportTicket->subject}", collect([$supportTicket->assigned_to]));
+        }
 
         return back()->with('status', 'Ticket details updated.');
     }
@@ -275,5 +287,28 @@ class SupportCenterController extends Controller
             try { return redirect()->away($disk->temporaryUrl($attachment->path, now()->addMinutes(10))); } catch (\Throwable) {}
         }
         return Response::streamDownload(fn () => print $disk->get($attachment->path), $attachment->original_name);
+    }
+
+    private function logPushEvent(SupportTicket $ticket, string $title, string $body, $userIds): void
+    {
+        if (! Schema::hasTable('notification_logs')) {
+            return;
+        }
+
+        collect($userIds)->filter()->unique()->each(function ($userId) use ($ticket, $title, $body): void {
+            NotificationLog::create([
+                'channel' => 'push',
+                'recipient' => 'user:'.$userId,
+                'subject' => $title,
+                'message' => $body,
+                'status' => 'pending',
+                'payload' => [
+                    'type' => 'support',
+                    'ticket_id' => $ticket->id,
+                    'ticket_no' => $ticket->ticket_no,
+                    'url' => route('support.index', ['ticket' => $ticket->id]),
+                ],
+            ]);
+        });
     }
 }

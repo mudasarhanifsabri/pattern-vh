@@ -124,10 +124,11 @@ class DatabaseSeeder extends Seeder
         $user->syncRoles([$role]);
 
         $this->call(CeoUserSeeder::class);
-        $this->call(SupportCenterSeeder::class);
 
         if ((bool) env('SEED_DEMO_DATA', app()->environment(['local', 'testing']))) {
             $this->call(DemoPortfolioSeeder::class);
         }
+
+        $this->call(SupportCenterSeeder::class);
     }
 }

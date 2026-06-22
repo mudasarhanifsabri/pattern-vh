@@ -3,11 +3,13 @@
 namespace App\Support;
 
 use App\Mail\SupportConversationMail;
+use App\Models\NotificationLog;
 use App\Models\SupportMessage;
 use App\Models\SupportTicket;
 use App\Models\User;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
@@ -42,6 +44,8 @@ class SupportConversationService
         if ($ticket->requester_email) {
             Mail::to($ticket->requester_email)->queue(new SupportConversationMail($ticket, $message, true));
         }
+
+        $this->logPushEvent($ticket, 'New support request', "{$ticket->ticket_no}: {$ticket->subject}", $this->supportManagers());
 
         ActivityLogger::log('support.created', "Created support conversation {$ticket->ticket_no}.", $ticket);
 
@@ -79,6 +83,10 @@ class SupportConversationService
                 Mail::to($ticket->requester_email)->queue(new SupportConversationMail($ticket, $message));
                 $message->update(['emailed_at' => now()]);
             }
+
+            if ($ticket->requester_user_id) {
+                $this->logPushEvent($ticket, 'Support replied', Str::limit($message->body, 120), collect([$ticket->requester_user_id]));
+            }
         } elseif (! $internal) {
             $ticket->forceFill(['status' => $ticket->status === 'waiting_for_customer' ? 'in_progress' : $ticket->status])->save();
             $this->autoReply->respond($ticket, $message->body);
@@ -87,6 +95,8 @@ class SupportConversationService
             if ($staffEmail && $staffEmail !== $ticket->requester_email) {
                 Mail::to($staffEmail)->queue(new SupportConversationMail($ticket, $message));
             }
+
+            $this->logPushEvent($ticket, 'Customer replied', Str::limit($message->body, 120), $ticket->assigned_to ? collect([$ticket->assigned_to]) : $this->supportManagers());
         }
 
         ActivityLogger::log($internal ? 'support.note_added' : 'support.replied', "Updated support conversation {$ticket->ticket_no}.", $ticket);
@@ -114,5 +124,33 @@ class SupportConversationService
     private function nextTicketNo(): string
     {
         return 'SUP-'.now()->format('Ymd').'-'.str_pad((string) (SupportTicket::withTrashed()->whereDate('created_at', today())->count() + 1), 4, '0', STR_PAD_LEFT);
+    }
+
+    private function supportManagers()
+    {
+        return User::permission('support.manage')->pluck('id');
+    }
+
+    private function logPushEvent(SupportTicket $ticket, string $title, string $body, $userIds): void
+    {
+        if (! Schema::hasTable('notification_logs')) {
+            return;
+        }
+
+        collect($userIds)->filter()->unique()->each(function ($userId) use ($ticket, $title, $body): void {
+            NotificationLog::create([
+                'channel' => 'push',
+                'recipient' => 'user:'.$userId,
+                'subject' => $title,
+                'message' => $body,
+                'status' => 'pending',
+                'payload' => [
+                    'type' => 'support',
+                    'ticket_id' => $ticket->id,
+                    'ticket_no' => $ticket->ticket_no,
+                    'url' => route('support.index', ['ticket' => $ticket->id]),
+                ],
+            ]);
+        });
     }
 }
