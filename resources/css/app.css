@@ -56,6 +56,16 @@
     }
 
     @media (min-width: 1024px) {
+        .support-desktop-shell {
+            height: calc(100dvh - 210px);
+            max-height: calc(100dvh - 210px);
+            min-height: min(560px, calc(100dvh - 210px)) !important;
+        }
+
+        body.support-page-active {
+            overflow: hidden;
+        }
+
         .sidebar-collapsed .sidebar-head {
             @apply justify-center px-3;
         }

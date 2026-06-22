@@ -45,7 +45,7 @@
             <div class="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-bold text-rose-700">{{ $errors->first() }}</div>
         @endif
 
-        <div data-support-shell class="support-mobile-shell grid min-h-[calc(100dvh-190px)] overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-xl shadow-slate-200/70 lg:relative lg:z-auto lg:min-h-[720px] lg:grid-cols-[390px_minmax(460px,1fr)_360px]">
+        <div data-support-shell class="support-mobile-shell support-desktop-shell grid min-h-[calc(100dvh-190px)] overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-xl shadow-slate-200/70 lg:relative lg:z-auto lg:min-h-0 lg:grid-cols-[390px_minmax(460px,1fr)_360px]">
             <aside class="support-mobile-pane {{ $selected ? 'hidden lg:flex' : 'flex' }} min-h-0 flex-col border-b border-slate-100 bg-white lg:border-b-0 lg:border-r">
                 <div class="shrink-0 p-5">
                     <div class="flex items-center justify-between gap-3">
@@ -326,8 +326,12 @@
     </div>
 
     <script>
+        document.body.classList.add('support-page-active');
         if (window.matchMedia('(max-width: 1023px)').matches) document.body.classList.add('support-mobile-active');
-        window.addEventListener('beforeunload', () => document.body.classList.remove('support-mobile-active'));
+        window.addEventListener('beforeunload', () => {
+            document.body.classList.remove('support-page-active');
+            document.body.classList.remove('support-mobile-active');
+        });
 
         const supportMessageBox = document.querySelector('[data-support-messages]');
         if (supportMessageBox) supportMessageBox.scrollTop = supportMessageBox.scrollHeight;
