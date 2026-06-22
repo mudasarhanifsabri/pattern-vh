@@ -1,8 +1,8 @@
 @php
-    $tenantOnly = $tenantOnly ?? false;
+    $tenantOnly = false;
 @endphp
 
-<header class="sticky top-0 z-20 mx-auto flex {{ $tenantOnly ? 'h-[88px] max-w-[430px] border-b-0 bg-[#f7f9fe] px-4 pt-4' : 'h-20 border-b border-[#dfe7f1] bg-white/95 px-4 sm:px-6 lg:px-8' }} items-center gap-3 backdrop-blur">
+<header class="sticky top-0 z-20 flex h-20 w-full items-center gap-3 border-b border-[#dfe7f1] bg-white/95 px-4 backdrop-blur sm:px-6 lg:px-8">
     @unless ($tenantOnly)
         <button class="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 lg:hidden" @click="sidebarOpen = true" aria-label="Open menu">
             <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
