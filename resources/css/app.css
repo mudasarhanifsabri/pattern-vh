@@ -101,6 +101,8 @@
             z-index: 35;
             height: calc(100dvh - var(--support-topbar-height, 5rem));
             min-height: 0 !important;
+            min-width: 0;
+            overflow-x: hidden;
             border-right-width: 0;
             border-left-width: 0;
             border-radius: 0;

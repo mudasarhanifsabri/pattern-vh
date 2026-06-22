@@ -31,27 +31,34 @@
                 </div>
             </aside>
 
-            <main class="support-mobile-pane {{ $selected ? 'flex' : 'hidden lg:flex' }} min-h-[560px] flex-col bg-[#eef3f9] lg:h-auto lg:min-h-[680px]">
+            <main class="support-mobile-pane {{ $selected ? 'flex' : 'hidden lg:flex' }} min-w-0 min-h-[560px] flex-col overflow-hidden bg-[#eef3f9] lg:h-auto lg:min-h-[680px]">
                 @if($selected)
                     <header class="flex items-center justify-between gap-3 border-b border-slate-200 bg-white p-3 md:p-4"><div class="flex min-w-0 items-center gap-3"><a href="{{ route('support.index') }}" class="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-slate-200 text-lg font-black text-[#071a3b] lg:hidden">&lsaquo;</a><span class="relative grid h-11 w-11 shrink-0 place-items-center rounded-full bg-blue-100 text-xs font-black text-blue-700">{{ str($selected->requester_name)->substr(0,2)->upper() }}<span class="absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-white {{ $assigneeOnline ? 'bg-emerald-400' : 'bg-slate-300' }}"></span></span><div class="min-w-0"><h2 class="truncate font-black text-[#071a3b]">{{ $selected->requester_name }}</h2><p class="truncate text-xs text-slate-500">{{ $selected->ticket_no }} / {{ str($selected->mode)->headline() }} / {{ $selected->category?->name ?: 'General' }}</p></div></div><span class="shrink-0 rounded-full px-3 py-1 text-[10px] font-black md:text-xs {{ $statusTone[$selected->status] ?? 'bg-slate-100' }}">{{ str($selected->status)->replace('_',' ')->headline() }}</span></header>
 
-                    <div class="min-h-0 flex-1 space-y-3 overflow-y-auto p-3 pb-4 md:p-6" data-support-messages data-message-count="{{ $selected->messages->count() }}">
+                    <div class="min-h-0 min-w-0 flex-1 space-y-3 overflow-y-auto overflow-x-hidden p-3 pb-4 md:p-6" data-support-messages data-message-count="{{ $selected->messages->count() }}">
                         @foreach($selected->messages as $message)
                             @php($mine = $message->sender_type === 'staff')
                             <div class="flex {{ $mine ? 'justify-end' : 'justify-start' }}">
-                                <div class="max-w-[86%] rounded-[1.4rem] px-4 py-3 shadow-sm {{ $message->is_internal_note ? 'border border-amber-200 bg-amber-50' : ($mine ? 'bg-blue-600 text-white' : ($message->sender_type === 'bot' ? 'border border-violet-100 bg-violet-50 text-slate-700' : 'bg-white text-slate-700')) }}">
-                                    <div class="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.12em] {{ $mine && !$message->is_internal_note ? 'text-blue-100' : 'text-slate-400' }}"><span>{{ $message->is_internal_note ? 'Private note' : ($message->sender_name ?: str($message->sender_type)->headline()) }}</span>@if($message->is_auto_reply)<span>Help Bot</span>@endif</div>
-                                    <p class="mt-1 whitespace-pre-line text-sm leading-6">{{ $message->body }}</p>
-                                    @foreach($message->attachments as $attachment)<a href="{{ route('support.attachments', $attachment) }}" class="mt-2 block rounded-xl bg-white/80 px-3 py-2 text-xs font-bold text-blue-700">Attachment: {{ $attachment->original_name }}</a>@endforeach
+                                <div class="min-w-0 max-w-[82vw] overflow-hidden rounded-[1.4rem] px-4 py-3 shadow-sm sm:max-w-[86%] {{ $message->is_internal_note ? 'border border-amber-200 bg-amber-50' : ($mine ? 'bg-blue-600 text-white' : ($message->sender_type === 'bot' ? 'border border-violet-100 bg-violet-50 text-slate-700' : 'bg-white text-slate-700')) }}">
+                                    <div class="flex min-w-0 flex-wrap items-center gap-2 text-[10px] font-black uppercase tracking-[0.12em] {{ $mine && !$message->is_internal_note ? 'text-blue-100' : 'text-slate-400' }}"><span class="min-w-0 break-words">{{ $message->is_internal_note ? 'Private note' : ($message->sender_name ?: str($message->sender_type)->headline()) }}</span>@if($message->is_auto_reply)<span>Help Bot</span>@endif</div>
+                                    <p class="mt-1 whitespace-pre-wrap break-words text-sm leading-6">{{ $message->body }}</p>
+                                    @foreach($message->attachments as $attachment)<a href="{{ route('support.attachments', $attachment) }}" class="mt-2 block rounded-xl bg-white/80 px-3 py-2 text-xs font-bold text-blue-700 break-words">Attachment: {{ $attachment->original_name }}</a>@endforeach
                                     <p class="mt-1 text-right text-[9px] opacity-60">{{ $message->created_at->format('M d, H:i') }}</p>
                                 </div>
                             </div>
                         @endforeach
                     </div>
 
-                    <div class="sticky bottom-0 border-t border-slate-200 bg-white p-3 md:p-4">
-                        <div class="mb-3 flex gap-2 overflow-x-auto pb-1">@foreach($quickReplies->take(8) as $reply)<button type="button" data-quick-reply="{{ $reply->body }}" class="shrink-0 rounded-full border border-blue-100 bg-blue-50 px-3 py-1.5 text-[11px] font-black text-blue-700">{{ $reply->title }}</button>@endforeach</div>
-                        <form method="POST" action="{{ route('support.reply', $selected) }}" enctype="multipart/form-data" class="flex items-end gap-2">@csrf<label class="grid h-11 w-11 shrink-0 cursor-pointer place-items-center rounded-full border border-slate-200 text-lg text-slate-500">+<input type="file" name="attachment" class="sr-only"></label><div class="min-w-0 flex-1"><textarea name="body" rows="1" data-message-input class="erp-focus max-h-32 w-full resize-none rounded-2xl border border-slate-200 px-4 py-3 text-sm" placeholder="Type a message..." required></textarea>@if($manage)<label class="mt-1 inline-flex items-center gap-2 text-[11px] font-bold text-amber-700"><input type="checkbox" name="is_internal_note" value="1" class="rounded border-slate-300"> Private internal note</label>@endif</div><button class="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-blue-600 text-sm font-black text-white md:w-auto md:px-5">Send</button></form>
+                    <div class="sticky bottom-0 min-w-0 border-t border-slate-200 bg-white p-2 md:p-4">
+                        <div class="mb-2 flex gap-2 overflow-x-auto pb-1">@foreach($quickReplies->take(8) as $reply)<button type="button" data-quick-reply="{{ $reply->body }}" class="shrink-0 rounded-full border border-blue-100 bg-blue-50 px-3 py-1.5 text-[11px] font-black text-blue-700">{{ $reply->title }}</button>@endforeach</div>
+                        <form method="POST" action="{{ route('support.reply', $selected) }}" enctype="multipart/form-data" class="min-w-0">@csrf
+                            <div class="flex min-w-0 items-end gap-2">
+                                <label class="grid h-11 w-11 shrink-0 cursor-pointer place-items-center rounded-full border border-slate-200 text-lg text-slate-500">+<input type="file" name="attachment" class="sr-only"></label>
+                                <textarea name="body" rows="1" data-message-input class="erp-focus max-h-32 min-w-0 flex-1 resize-none rounded-2xl border border-slate-200 px-4 py-3 text-sm" placeholder="Type a message..." required></textarea>
+                                <button class="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-blue-600 text-[11px] font-black text-white md:w-auto md:px-5">Send</button>
+                            </div>
+                            @if($manage)<label class="mt-2 ml-14 inline-flex items-center gap-2 text-[11px] font-bold text-amber-700"><input type="checkbox" name="is_internal_note" value="1" class="rounded border-slate-300"> Private internal note</label>@endif
+                        </form>
                     </div>
                 @else<div class="grid flex-1 place-items-center p-8 text-center"><div><div class="mx-auto grid h-16 w-16 place-items-center rounded-3xl bg-blue-100 text-2xl text-blue-700">?</div><h2 class="mt-4 text-xl font-black text-[#071a3b]">Select a conversation</h2><p class="mt-2 text-sm text-slate-500">Choose a chat from the inbox or start a new support request.</p></div></div>@endif
             </main>
