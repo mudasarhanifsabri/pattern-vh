@@ -30,7 +30,7 @@
                 localStorage.setItem('patternSidebarCollapsed', this.sidebarCollapsed ? '1' : '0');
             }
         }"
-        class="min-h-screen {{ $tenantOnly ? '' : 'lg:flex' }}"
+        class="min-h-screen {{ $tenantOnly ? 'bg-[#f7f9fe]' : 'lg:flex' }}"
     >
         @unless ($tenantOnly)
             <div x-show="sidebarOpen" x-transition.opacity class="fixed inset-0 z-30 bg-slate-950/60 lg:hidden" @click="sidebarOpen = false"></div>
@@ -39,10 +39,13 @@
 
         <div class="flex min-h-screen min-w-0 flex-1 flex-col {{ $tenantOnly ? '' : 'transition-[padding] duration-300 ease-out' }}" @unless($tenantOnly) :class="sidebarCollapsed ? 'lg:pl-[92px]' : 'lg:pl-[292px]'" @endunless>
             @include('layouts.topbar', ['tenantOnly' => $tenantOnly])
-            <main class="flex-1 p-3 pb-24 sm:p-6 {{ $tenantOnly ? 'mx-auto w-full max-w-6xl mobile-app-safe' : 'lg:p-8 xl:p-9' }}">
+            <main class="flex-1 {{ $tenantOnly ? 'mx-auto w-full max-w-[430px] px-4 pb-28 pt-4 mobile-app-safe' : 'p-3 pb-24 sm:p-6 lg:p-8 xl:p-9' }}">
+                @if(! $tenantOnly)
                 @isset($header)
                     <div class="mb-5 md:mb-7">
-                        @php($headerHtml = trim($header->toHtml()))
+                        @php
+                            $headerHtml = trim($header->toHtml());
+                        @endphp
                         @if (str_contains($headerHtml, '<'))
                             {!! $headerHtml !!}
                         @else
@@ -50,6 +53,7 @@
                         @endif
                     </div>
                 @endisset
+                @endif
                 {{ $slot }}
             </main>
             <div class="@can('portal.tenant') hidden md:block @endcan">
@@ -58,16 +62,17 @@
         </div>
     </div>
     @can('portal.tenant')
-        <nav class="fixed inset-x-3 bottom-3 z-40 grid grid-cols-5 rounded-[1.35rem] border border-slate-200 bg-white/95 p-2 shadow-2xl shadow-slate-950/20 backdrop-blur md:hidden">
+        <nav class="fixed inset-x-0 bottom-0 z-40 mx-auto grid max-w-[430px] grid-cols-4 border-t border-slate-100 bg-white/95 px-4 pb-5 pt-2 shadow-[0_-12px_30px_rgba(15,23,42,0.08)] backdrop-blur">
             @foreach ([
-                ['route' => 'dashboard', 'label' => 'Home', 'icon' => 'M4 12 12 4l8 8M6 10v10h12V10'],
-                ['route' => 'bookings.index', 'label' => 'Stays', 'icon' => 'M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14H3V6a2 2 0 0 1 2-2z'],
-                ['route' => 'tenant.payment-requests.index', 'label' => 'Pay', 'icon' => 'M3 7h18v10H3zM7 14h.01M11 14h3'],
-                ['route' => 'support.index', 'label' => 'Support', 'icon' => 'M4 5h16v11H8l-4 4V5zm4 4h8m-8 3h5'],
+                ['route' => 'dashboard', 'label' => 'My Stay', 'icon' => 'M4 12 12 4l8 8M6 10v10h12V10'],
+                ['route' => 'bookings.index', 'label' => 'Bookings', 'icon' => 'M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14H3V6a2 2 0 0 1 2-2z'],
+                ['route' => 'support.index', 'label' => 'Messages', 'icon' => 'M4 5h16v11H8l-4 4V5zm4 4h8m-8 3h5'],
                 ['route' => 'profile.edit', 'label' => 'Profile', 'icon' => 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21a8 8 0 0 1 16 0'],
             ] as $tab)
-                <a href="{{ route($tab['route']) }}" class="flex flex-col items-center gap-1 rounded-2xl px-2 py-2 text-[10px] font-black {{ request()->routeIs($tab['route']) || ($tab['route'] === 'bookings.index' && request()->routeIs('bookings.*')) ? 'bg-blue-600 text-white' : 'text-slate-500' }}">
-                    <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="{{ $tab['icon'] }}"/></svg>
+                <a href="{{ route($tab['route']) }}" class="flex flex-col items-center gap-1 px-2 py-2 text-[11px] font-bold {{ request()->routeIs($tab['route']) || ($tab['route'] === 'bookings.index' && request()->routeIs('bookings.*')) || ($tab['route'] === 'support.index' && request()->routeIs('support.*')) ? 'text-blue-600' : 'text-slate-500' }}">
+                    <span class="{{ request()->routeIs($tab['route']) || ($tab['route'] === 'bookings.index' && request()->routeIs('bookings.*')) || ($tab['route'] === 'support.index' && request()->routeIs('support.*')) ? 'bg-blue-50' : '' }} grid h-8 w-8 place-items-center rounded-2xl">
+                        <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="{{ $tab['icon'] }}"/></svg>
+                    </span>
                     {{ $tab['label'] }}
                 </a>
             @endforeach

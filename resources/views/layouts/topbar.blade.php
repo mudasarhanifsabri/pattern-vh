@@ -2,7 +2,7 @@
     $tenantOnly = $tenantOnly ?? false;
 @endphp
 
-<header class="sticky top-0 z-20 flex {{ $tenantOnly ? 'h-16' : 'h-20' }} items-center gap-3 border-b border-[#dfe7f1] bg-white/95 px-4 backdrop-blur sm:px-6 lg:px-8">
+<header class="sticky top-0 z-20 mx-auto flex {{ $tenantOnly ? 'h-[88px] max-w-[430px] border-b-0 bg-[#f7f9fe] px-4 pt-4' : 'h-20 border-b border-[#dfe7f1] bg-white/95 px-4 sm:px-6 lg:px-8' }} items-center gap-3 backdrop-blur">
     @unless ($tenantOnly)
         <button class="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 lg:hidden" @click="sidebarOpen = true" aria-label="Open menu">
             <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
@@ -10,12 +10,11 @@
     @endunless
 
     @if ($tenantOnly)
-        <a href="{{ route('dashboard') }}" class="flex min-w-0 items-center gap-3">
-            <span class="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-blue-600 text-sm font-black text-white shadow-lg shadow-blue-600/20">P</span>
-            <span class="min-w-0">
-                <span class="block truncate text-sm font-black text-[#071a3b]">Pattern RMS</span>
-                <span class="block truncate text-[11px] font-semibold text-slate-500">My stay workspace</span>
-            </span>
+        <button class="grid h-10 w-10 shrink-0 place-items-center rounded-2xl text-[#071a3b]" type="button" aria-label="Menu">
+            <svg class="h-7 w-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M4 12h12M4 17h16"/></svg>
+        </button>
+        <a href="{{ route('dashboard') }}" class="absolute left-1/2 -translate-x-1/2 text-lg font-black text-[#071a3b]">
+            {{ request()->routeIs('bookings.*') ? 'Bookings' : (request()->routeIs('support.*') ? 'Messages' : (request()->routeIs('profile.*') ? 'Profile' : 'My Stay')) }}
         </a>
     @else
         <div class="relative hidden w-full max-w-[405px] sm:block">

@@ -1,6 +1,55 @@
 <x-app-layout>
     <x-slot name="header"><div><p class="text-[11px] font-bold uppercase tracking-[0.22em] text-blue-600">Reservations</p><h1 class="text-2xl font-bold text-[#071a3b]">Bookings</h1></div></x-slot>
 
+    @php
+        $tenantPortal = auth()->user()->can('portal.tenant') && ! auth()->user()->can('bookings.manage');
+    @endphp
+
+    @if($tenantPortal)
+        <div class="tenant-app-screen space-y-5">
+            @if (session('status'))
+                <div class="rounded-3xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-700">{{ session('status') }}</div>
+            @endif
+            <div class="flex items-center justify-between">
+                <h1 class="text-3xl font-black tracking-[-0.04em] text-[#071a3b]">Bookings</h1>
+                <a href="{{ route('support.index') }}" class="grid h-11 w-11 place-items-center rounded-2xl bg-white text-[#071a3b] shadow-sm">
+                    <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></svg>
+                </a>
+            </div>
+            <div class="flex gap-3 overflow-x-auto pb-1">
+                @foreach(['' => 'Upcoming', 'checked_in' => 'Current', 'checked_out' => 'Past', 'cancelled' => 'Cancelled'] as $status => $label)
+                    <a href="{{ route('bookings.index', $status ? ['status' => $status] : []) }}" class="shrink-0 rounded-2xl px-4 py-2 text-sm font-black {{ request('status') === $status || (!request('status') && $status === '') ? 'bg-blue-100 text-blue-600' : 'text-slate-500' }}">{{ $label }}</a>
+                @endforeach
+            </div>
+            <div class="space-y-5">
+                @forelse ($bookings as $booking)
+                    @php
+                        $nights = $booking->check_in_date->diffInDays($booking->check_out_date);
+                    @endphp
+                    <article class="overflow-hidden rounded-[1.55rem] bg-white shadow-[0_18px_45px_rgba(15,23,42,0.08)]">
+                        <div class="relative h-40 bg-gradient-to-br from-slate-900 via-slate-700 to-blue-500">
+                            <div class="absolute inset-0 opacity-35" style="background-image: radial-gradient(circle at 78% 18%, rgba(255,255,255,.65), transparent 24%), linear-gradient(135deg, rgba(255,255,255,.1) 0 25%, transparent 25% 50%, rgba(255,255,255,.07) 50% 75%, transparent 75%); background-size: auto, 42px 42px;"></div>
+                            <span class="absolute right-4 top-4 rounded-xl {{ $booking->booking_status === 'confirmed' ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700' }} px-3 py-1 text-xs font-black">{{ str($booking->booking_status)->replace('_', ' ')->headline() }}</span>
+                        </div>
+                        <div class="p-5">
+                            <h2 class="text-xl font-black text-[#071a3b]">{{ $booking->unit->building->name }}</h2>
+                            <p class="mt-1 text-sm font-semibold text-slate-500">Dubai, UAE</p>
+                            <div class="mt-5 grid grid-cols-2 gap-4 border-b border-slate-100 pb-4">
+                                <div><p class="text-sm font-semibold text-slate-500">Check-in</p><p class="font-black text-blue-600">{{ $booking->check_in_date->format('d M Y') }}</p><p class="text-sm text-slate-500">{{ $booking->check_in_time ? \Illuminate\Support\Carbon::parse($booking->check_in_time)->format('h:i A') : '03:00 PM' }}</p></div>
+                                <div><p class="text-sm font-semibold text-slate-500">Check-out</p><p class="font-black text-blue-600">{{ $booking->check_out_date->format('d M Y') }}</p><p class="text-sm text-slate-500">{{ $booking->check_out_time ? \Illuminate\Support\Carbon::parse($booking->check_out_time)->format('h:i A') : '11:00 AM' }}</p></div>
+                                <div><p class="text-sm font-semibold text-slate-500">Booking ID</p><p class="font-black text-blue-600">{{ $booking->booking_no }}</p></div>
+                                <div><p class="text-sm font-semibold text-slate-500">Nights</p><p class="font-black text-[#071a3b]">{{ $nights }} Nights</p></div>
+                            </div>
+                            <a href="{{ route('bookings.show', $booking) }}" class="mt-4 flex h-12 items-center justify-center rounded-2xl bg-blue-50 text-sm font-black text-blue-600">View Details</a>
+                        </div>
+                    </article>
+                @empty
+                    <p class="rounded-3xl border border-dashed border-slate-200 bg-white px-4 py-10 text-center text-sm text-slate-500">No bookings found.</p>
+                @endforelse
+            </div>
+            <div>{{ $bookings->links() }}</div>
+        </div>
+    @else
     <div class="space-y-6">
         @if (session('status'))<div class="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700">{{ session('status') }}</div>@endif
         <div class="erp-card p-5">
@@ -64,4 +113,5 @@
             <div class="mt-5">{{ $bookings->links() }}</div>
         </div>
     </div>
+    @endif
 </x-app-layout>

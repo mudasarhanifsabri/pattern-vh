@@ -17,7 +17,7 @@
     ];
 @endphp
 
-<div class="mx-auto max-w-5xl space-y-5 mobile-app-safe">
+<div class="space-y-5">
     @if (session('status'))
         <div class="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700">{{ session('status') }}</div>
     @endif
@@ -26,22 +26,32 @@
         <div class="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{{ $errors->first() }}</div>
     @endif
 
-    <div class="overflow-hidden rounded-[2rem] bg-gradient-to-br from-[#061a38] via-[#12346c] to-[#2563eb] p-5 text-white shadow-2xl shadow-blue-950/20 md:hidden">
-        <p class="text-xs font-bold uppercase tracking-[0.22em] text-blue-200">Tenant payments</p>
-        <h2 class="mt-3 text-2xl font-black tracking-[-0.04em]">Request doorstep collection</h2>
-        <p class="mt-2 text-sm leading-6 text-blue-100">Cash or debit card machine collection from your apartment.</p>
+    <div class="flex items-center justify-between">
+        <a href="{{ route('dashboard') }}" class="grid h-11 w-11 place-items-center rounded-2xl bg-white text-slate-700 shadow-sm ring-1 ring-slate-200">
+            <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M15 19l-7-7 7-7" /></svg>
+        </a>
+        <h1 class="text-base font-black text-[#0b1736]">Payment Collection</h1>
+        <span class="grid h-11 w-11 place-items-center rounded-2xl bg-white text-blue-600 shadow-sm ring-1 ring-slate-200">
+            <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 10h18M7 15h.01M11 15h2M5 6h14a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z" /></svg>
+        </span>
     </div>
 
-    <div class="grid gap-5 lg:grid-cols-[1fr_360px]">
-        <div class="erp-card p-5 sm:p-6">
-            <h2 class="hidden text-lg font-bold text-[#071a3b] md:block">Doorstep collection request</h2>
-            <p class="hidden mt-1 text-sm text-slate-500 md:block">Ask Pattern team to collect rent by cash or debit card machine from your apartment.</p>
+    <section class="overflow-hidden rounded-[1.8rem] bg-gradient-to-br from-blue-600 via-blue-600 to-[#061a38] p-5 text-white shadow-2xl shadow-blue-600/20">
+        <p class="text-xs font-bold uppercase tracking-[0.22em] text-blue-100">Tenant payments</p>
+        <h2 class="mt-3 text-2xl font-black tracking-[-0.04em]">Request doorstep collection</h2>
+        <p class="mt-2 text-sm leading-6 text-blue-100">Cash or debit card machine collection from your apartment. Finance will approve after payment proof is verified.</p>
+    </section>
+
+    <div class="space-y-5">
+        <div class="rounded-[1.8rem] bg-white p-5 shadow-[0_16px_40px_rgba(15,23,42,0.08)] ring-1 ring-slate-100">
+            <h2 class="text-lg font-black text-[#0b1736]">Collection request</h2>
+            <p class="mt-1 text-sm font-semibold text-slate-500">Choose invoice, method, and your preferred visit time.</p>
 
             <form method="POST" action="{{ route('tenant.payment-requests.store') }}" class="mt-5 space-y-4">
                 @csrf
                 <div>
                     <x-input-label for="invoice_id" value="Invoice" />
-                    <select id="invoice_id" name="invoice_id" class="erp-focus mt-1 h-12 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm" required>
+                    <select id="invoice_id" name="invoice_id" class="erp-focus mt-1 h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm font-semibold" required>
                         <option value="">Select unpaid invoice</option>
                         @foreach ($invoices as $invoice)
                             <option value="{{ $invoice->id }}" @selected(old('invoice_id') == $invoice->id)>
@@ -51,10 +61,10 @@
                     </select>
                 </div>
 
-                <div class="grid gap-4 sm:grid-cols-2">
+                <div class="grid gap-4">
                     <div>
                         <x-input-label for="collection_method" value="Collection method" />
-                        <select id="collection_method" name="collection_method" class="erp-focus mt-1 h-12 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm" required>
+                        <select id="collection_method" name="collection_method" class="erp-focus mt-1 h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm font-semibold" required>
                             <option value="cash">Cash from doorstep</option>
                             <option value="card_machine">Debit/card machine at doorstep</option>
                         </select>
@@ -73,7 +83,7 @@
                     </div>
                 </div>
 
-                <div class="grid gap-4 sm:grid-cols-2">
+                <div class="grid gap-4">
                     <div>
                         <x-input-label for="contact_mobile" value="Mobile / WhatsApp" />
                         <x-text-input id="contact_mobile" name="contact_mobile" class="mt-1 block h-12 w-full" :value="old('contact_mobile', $tenant->mobile_no)" required />
@@ -98,37 +108,34 @@
             </form>
         </div>
 
-        <div class="space-y-4">
-            <div class="erp-card p-5">
-                <h2 class="text-lg font-bold text-[#071a3b]">How it works</h2>
-                <div class="mt-4 space-y-3 text-sm text-slate-600">
-                    <p class="rounded-2xl bg-blue-50 p-4">1. Submit request from mobile PWA.</p>
-                    <p class="rounded-2xl bg-amber-50 p-4">2. Pattern schedules a team member with cash/card machine.</p>
-                    <p class="rounded-2xl bg-emerald-50 p-4">3. Finance confirms payment after collection proof is verified.</p>
-                </div>
+        <div class="rounded-[1.8rem] bg-white p-5 shadow-sm ring-1 ring-slate-100">
+            <h2 class="text-lg font-black text-[#0b1736]">How it works</h2>
+            <div class="mt-4 space-y-3 text-sm font-semibold text-slate-600">
+                <p class="rounded-2xl bg-blue-50 p-4">1. Submit request from your tenant app.</p>
+                <p class="rounded-2xl bg-amber-50 p-4">2. Pattern schedules a team member with cash/card machine.</p>
+                <p class="rounded-2xl bg-emerald-50 p-4">3. Receipt is issued after finance verifies collection.</p>
             </div>
         </div>
     </div>
 
-    <div class="erp-card overflow-hidden">
+    <div class="overflow-hidden rounded-[1.8rem] bg-white shadow-sm ring-1 ring-slate-100">
         <div class="border-b border-slate-100 p-5">
-            <h2 class="text-lg font-bold text-[#071a3b]">My requests</h2>
+            <h2 class="text-lg font-black text-[#0b1736]">My requests</h2>
         </div>
-        <div class="space-y-3 p-4 md:divide-y md:divide-slate-100 md:space-y-0 md:p-0">
+        <div class="space-y-3 p-4">
             @forelse ($requests as $requestRecord)
-                <div class="rounded-[1.5rem] border border-slate-200 bg-white p-4 shadow-sm md:rounded-none md:border-0 md:p-5 md:shadow-none">
+                <div class="rounded-[1.5rem] border border-slate-200 bg-white p-4 shadow-sm">
                     <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                         <div>
-                            <h3 class="text-base font-black text-[#071a3b]">{{ $requestRecord->request_no }}</h3>
+                            <h3 class="text-base font-black text-[#0b1736]">{{ $requestRecord->request_no }}</h3>
                             <p class="mt-1 text-sm text-slate-500">{{ str($requestRecord->collection_method)->replace('_', ' ')->headline() }} / AED {{ number_format((float) $requestRecord->amount, 2) }}</p>
                         </div>
                         <span class="w-fit rounded-full px-2.5 py-1 text-xs font-bold {{ $statusClasses[$requestRecord->status] ?? 'bg-slate-100 text-slate-600' }}">{{ str($requestRecord->status)->replace('_', ' ')->headline() }}</span>
                     </div>
-                    <div class="mt-4 grid grid-cols-2 gap-3 md:hidden">
+                    <div class="mt-4 grid grid-cols-2 gap-3">
                         <div class="rounded-2xl bg-slate-50 p-3"><p class="text-[10px] font-bold uppercase text-slate-400">Invoice</p><p class="mt-1 text-sm font-bold text-[#071a3b]">{{ $requestRecord->invoice->invoice_no }}</p></div>
                         <div class="rounded-2xl bg-slate-50 p-3"><p class="text-[10px] font-bold uppercase text-slate-400">Unit</p><p class="mt-1 text-sm font-bold text-[#071a3b]">{{ $requestRecord->booking->unit->unit_no }}</p></div>
                     </div>
-                    <p class="mt-3 hidden text-xs text-slate-500 md:block">{{ $requestRecord->invoice->invoice_no }} / {{ $requestRecord->booking->unit->building->name }} / {{ $requestRecord->booking->unit->unit_no }}</p>
                     @if ($requestRecord->payment?->receipt)
                         <a href="{{ route('receipts.pdf', $requestRecord->payment->receipt) }}" target="_blank" class="mt-3 inline-flex rounded-xl bg-emerald-600 px-3 py-2 text-xs font-bold text-white">Receipt PDF / {{ $requestRecord->payment->receipt->check_in_code }}</a>
                     @endif

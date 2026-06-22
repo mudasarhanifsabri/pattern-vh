@@ -9,7 +9,99 @@
         </div>
     </x-slot>
 
-    @if ($operationsDashboard)
+    @if ($tenant)
+        @php
+            $booking = $currentBooking;
+            $nights = $booking ? $booking->check_in_date->diffInDays($booking->check_out_date) : 0;
+            $balanceDue = (float) \App\Models\Invoice::where('tenant_id', $tenant->id)->where('balance_amount', '>', 0)->sum('balance_amount');
+            $openRefund = \App\Models\BookingDepositRefund::where('tenant_id', $tenant->id)->latest()->first();
+        @endphp
+
+        <div class="tenant-app-screen space-y-5">
+            @if (session('status'))
+                <div class="rounded-3xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-700">{{ session('status') }}</div>
+            @endif
+
+            @if ($booking)
+                <section class="overflow-hidden rounded-[1.6rem] bg-white shadow-[0_18px_45px_rgba(15,23,42,0.08)]">
+                    <div class="relative h-48 bg-gradient-to-br from-slate-950 via-slate-800 to-blue-700 p-6 text-white">
+                        <div class="absolute inset-0 opacity-35" style="background-image: radial-gradient(circle at 80% 10%, rgba(255,255,255,.55), transparent 22%), linear-gradient(135deg, rgba(255,255,255,.08) 0 25%, transparent 25% 50%, rgba(255,255,255,.06) 50% 75%, transparent 75%); background-size: auto, 42px 42px;"></div>
+                        <div class="relative flex h-full flex-col justify-end">
+                            <h2 class="max-w-[260px] text-3xl font-black leading-tight tracking-[-0.04em]">{{ $booking->unit->building->name }}<br>Unit {{ $booking->unit->unit_no }}</h2>
+                            <p class="mt-2 text-sm font-bold text-white/80">Dubai, UAE</p>
+                            <span class="mt-4 inline-flex w-fit items-center gap-2 rounded-full bg-emerald-500/90 px-3 py-1.5 text-sm font-black"><span class="grid h-5 w-5 place-items-center rounded-full bg-white/20">✓</span>{{ str($booking->booking_status)->replace('_', ' ')->headline() }}</span>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-3 divide-x divide-slate-100 px-3 py-4 text-center">
+                        <div><p class="text-sm font-semibold text-slate-500">Check-in</p><p class="mt-1 text-base font-black text-blue-600">{{ $booking->check_in_date->format('d M Y') }}</p><p class="text-sm font-semibold text-slate-500">{{ $booking->check_in_time ? \Illuminate\Support\Carbon::parse($booking->check_in_time)->format('h:i A') : '03:00 PM' }}</p></div>
+                        <div><p class="text-sm font-semibold text-slate-500">Check-out</p><p class="mt-1 text-base font-black text-blue-600">{{ $booking->check_out_date->format('d M Y') }}</p><p class="text-sm font-semibold text-slate-500">{{ $booking->check_out_time ? \Illuminate\Support\Carbon::parse($booking->check_out_time)->format('h:i A') : '11:00 AM' }}</p></div>
+                        <div><p class="text-sm font-semibold text-slate-500">Booking ID</p><p class="mt-1 text-base font-black text-blue-600">{{ $booking->booking_no }}</p><p class="text-sm font-semibold text-slate-500">{{ $nights }} Nights</p></div>
+                    </div>
+                </section>
+
+                <section class="rounded-[1.6rem] bg-white p-5 shadow-[0_18px_45px_rgba(15,23,42,0.08)]">
+                    <div class="flex items-center justify-between border-b border-slate-100 pb-4">
+                        <h2 class="text-lg font-black text-[#071a3b]">Smart Lock Access</h2>
+                        <a href="{{ route('support.index') }}" class="text-sm font-black text-blue-600">How it works?</a>
+                    </div>
+                    <div class="mt-5 grid grid-cols-[130px_1fr] gap-5">
+                        <div class="text-center">
+                            <div class="mx-auto grid h-28 w-28 place-items-center rounded-full bg-blue-50 shadow-[inset_0_0_0_18px_rgba(37,99,235,0.04)]">
+                                <div class="grid h-16 w-16 place-items-center rounded-3xl bg-blue-600 text-white shadow-xl shadow-blue-600/30">
+                                    <svg class="h-8 w-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+                                </div>
+                            </div>
+                            <p class="mt-3 text-lg font-black text-blue-600">Tap to Unlock</p>
+                            <p class="text-xs font-semibold text-slate-500">Ensure you are near the door</p>
+                        </div>
+                        <div>
+                            <div class="flex items-center justify-between"><h3 class="text-lg font-black text-[#071a3b]">Main Door</h3><span class="rounded-xl bg-emerald-50 px-3 py-1 text-sm font-black text-emerald-700">Active</span></div>
+                            <p class="mt-4 text-sm font-semibold text-slate-500">Access Code</p>
+                            <div class="mt-2 flex items-center justify-between rounded-2xl bg-blue-50 px-4 py-3 text-3xl font-black tracking-[0.35em] text-blue-600">784512 <span class="text-base tracking-normal">⧉</span></div>
+                            <p class="mt-4 text-sm font-semibold text-slate-500">Valid From</p>
+                            <p class="font-black text-blue-600">{{ $booking->check_in_date->format('d M Y') }}, {{ $booking->check_in_time ? \Illuminate\Support\Carbon::parse($booking->check_in_time)->format('h:i A') : '03:00 PM' }}</p>
+                            <p class="mt-3 text-sm font-semibold text-slate-500">Valid Until</p>
+                            <p class="font-black text-blue-600">{{ $booking->check_out_date->format('d M Y') }}, {{ $booking->check_out_time ? \Illuminate\Support\Carbon::parse($booking->check_out_time)->format('h:i A') : '11:00 AM' }}</p>
+                        </div>
+                    </div>
+                    <p class="mt-5 border-t border-slate-100 pt-4 text-sm font-semibold text-slate-600">This code is only valid during your stay.</p>
+                </section>
+            @else
+                <section class="rounded-[1.6rem] bg-white p-6 text-center shadow-[0_18px_45px_rgba(15,23,42,0.08)]">
+                    <h2 class="text-2xl font-black text-[#071a3b]">No active stay</h2>
+                    <p class="mt-2 text-sm text-slate-500">Your current booking will appear here once confirmed.</p>
+                </section>
+            @endif
+
+            <section class="grid grid-cols-2 gap-4">
+                @foreach([
+                    ['label' => 'Check-in Guide', 'note' => 'Step by step instructions', 'route' => $booking ? route('bookings.show', $booking) : route('bookings.index'), 'icon' => 'M7 4h10v16H7zM10 8h4M10 12h4M10 16h4'],
+                    ['label' => 'Wi-Fi Details', 'note' => 'Get apartment Wi-Fi information', 'route' => $booking ? route('bookings.show', $booking) : route('support.index'), 'icon' => 'M5 12a10 10 0 0 1 14 0M8.5 15.5a5 5 0 0 1 7 0M12 19h.01'],
+                    ['label' => 'House Rules', 'note' => 'Important rules to follow', 'route' => $booking ? route('bookings.show', $booking) : route('support.index'), 'icon' => 'M12 3 5 6v5c0 5 3 8 7 10 4-2 7-5 7-10V6l-7-3z'],
+                    ['label' => 'Need Help?', 'note' => 'Contact support 24/7', 'route' => route('support.index'), 'icon' => 'M4 12a8 8 0 0 1 16 0v4a2 2 0 0 1-2 2h-2v-6h4M4 16a2 2 0 0 0 2 2h2v-6H4v4z'],
+                ] as $tile)
+                    <a href="{{ $tile['route'] }}" class="flex items-center gap-4 rounded-[1.4rem] bg-white p-4 shadow-[0_14px_30px_rgba(15,23,42,0.07)]">
+                        <span class="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-blue-50 text-blue-600"><svg class="h-7 w-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="{{ $tile['icon'] }}"/></svg></span>
+                        <span class="min-w-0"><span class="block text-base font-black text-[#071a3b]">{{ $tile['label'] }}</span><span class="mt-1 block text-sm leading-5 text-slate-500">{{ $tile['note'] }}</span></span>
+                        <span class="ml-auto text-2xl text-slate-400">›</span>
+                    </a>
+                @endforeach
+            </section>
+
+            <section class="overflow-hidden rounded-[1.6rem] bg-gradient-to-br from-blue-50 to-white p-5 shadow-[0_18px_45px_rgba(15,23,42,0.08)]">
+                <h2 class="text-xl font-black text-[#071a3b]">Enhance Your Stay</h2>
+                <p class="mt-2 max-w-[250px] text-sm leading-6 text-slate-600">Book services, request collection, or contact our team to make your stay smoother.</p>
+                <div class="mt-5 flex gap-3">
+                    <a href="{{ route('tenant.payment-requests.index') }}" class="rounded-2xl bg-blue-600 px-5 py-3 text-sm font-black text-white shadow-lg shadow-blue-600/25">Request Collection</a>
+                    <a href="{{ route('support.index') }}" class="rounded-2xl bg-white px-5 py-3 text-sm font-black text-blue-600">Support</a>
+                </div>
+                <div class="mt-5 grid grid-cols-2 gap-3 text-sm">
+                    <div class="rounded-2xl bg-white/80 p-3"><p class="font-semibold text-slate-500">Balance due</p><p class="mt-1 text-lg font-black text-[#071a3b]">AED {{ number_format($balanceDue, 0) }}</p></div>
+                    <div class="rounded-2xl bg-white/80 p-3"><p class="font-semibold text-slate-500">Deposit status</p><p class="mt-1 text-lg font-black text-[#071a3b]">{{ $openRefund ? str($openRefund->status)->replace('_', ' ')->headline() : 'Clear' }}</p></div>
+                </div>
+            </section>
+        </div>
+    @elseif ($operationsDashboard)
         @php
             $toneClasses = [
                 'blue' => 'bg-blue-50 text-blue-700',

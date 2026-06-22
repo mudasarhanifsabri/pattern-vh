@@ -16,6 +16,124 @@
     </div>
 </x-slot>
 
+@if($tenantPortal)
+    @php
+        $nights = $booking->check_in_date->diffInDays($booking->check_out_date);
+        $wifiName = $booking->unit->wifi_name ?: 'Pattern_Guest';
+        $wifiPassword = $booking->unit->wifi_password ?: 'Ask support';
+    @endphp
+
+    <div class="space-y-5">
+        @if (session('status'))
+            <div class="rounded-[1.35rem] border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700">{{ session('status') }}</div>
+        @endif
+        @if ($errors->any())
+            <div class="rounded-[1.35rem] border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700">{{ $errors->first() }}</div>
+        @endif
+
+        <div class="flex items-center justify-between">
+            <a href="{{ route('bookings.index') }}" class="grid h-11 w-11 place-items-center rounded-2xl bg-white text-slate-700 shadow-sm ring-1 ring-slate-200">
+                <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M15 19l-7-7 7-7" /></svg>
+            </a>
+            <h1 class="text-base font-black text-[#0b1736]">Booking Details</h1>
+            <a href="{{ route('bookings.confirmation-pdf', $booking) }}" target="_blank" class="grid h-11 w-11 place-items-center rounded-2xl bg-white text-slate-700 shadow-sm ring-1 ring-slate-200">
+                <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M6 9V2h12v7" /><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" /><path d="M6 14h12v8H6z" /></svg>
+            </a>
+        </div>
+
+        <section class="overflow-hidden rounded-[1.8rem] bg-white p-4 shadow-[0_16px_40px_rgba(15,23,42,0.08)] ring-1 ring-slate-100">
+            <div class="grid grid-cols-[120px_1fr] gap-4">
+                <div class="h-28 overflow-hidden rounded-[1.35rem] bg-[linear-gradient(135deg,rgba(15,23,42,.18),rgba(37,99,235,.18)),url('https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=600&q=80')] bg-cover bg-center"></div>
+                <div class="min-w-0">
+                    <span class="inline-flex rounded-full bg-emerald-50 px-3 py-1 text-xs font-black text-emerald-700">{{ str($booking->booking_status)->replace('_', ' ')->headline() }}</span>
+                    <h2 class="mt-3 text-lg font-black leading-tight text-[#0b1736]">{{ $booking->unit->building->name }} Apartment</h2>
+                    <p class="mt-1 text-sm font-semibold text-slate-500">Dubai, UAE</p>
+                </div>
+            </div>
+        </section>
+
+        <section class="rounded-[1.8rem] bg-white p-4 shadow-[0_16px_40px_rgba(15,23,42,0.08)] ring-1 ring-slate-100">
+            <div class="space-y-3">
+                @foreach([
+                    ['Check-in', $booking->check_in_date->format('d M Y, h:i A'), 'M8 7V3m8 0V3M7 11h10M5 21h14a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2z'],
+                    ['Check-out', $booking->check_out_date->format('d M Y, h:i A'), 'M8 7V3m8 0V3M7 11h10M5 21h14a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2z'],
+                    ['Guests', ($booking->guest_count ?: 1).' guest(s)', 'M17 20h5v-2a4 4 0 0 0-4-4h-1M9 20H4v-2a4 4 0 0 1 4-4h1m4-4a4 4 0 1 0-8 0 4 4 0 0 0 8 0zm8 0a4 4 0 1 0-8 0 4 4 0 0 0 8 0z'],
+                    ['Nights', $nights.' Nights', 'M12 8v4l3 3m6-3a9 9 0 1 1-18 0 9 9 0 0 1 18 0z'],
+                    ['Booking ID', $booking->booking_no, 'M9 12h6m-6 4h6m2 5H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l5 5v11a2 2 0 0 1-2 2z'],
+                ] as [$label, $value, $path])
+                    <div class="flex items-center gap-3 rounded-2xl bg-slate-50 px-3 py-3">
+                        <span class="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-blue-50 text-blue-600">
+                            <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="{{ $path }}" /></svg>
+                        </span>
+                        <span class="text-sm font-semibold text-slate-500">{{ $label }}</span>
+                        <span class="ml-auto text-right text-sm font-black text-[#0b1736]">{{ $value }}</span>
+                    </div>
+                @endforeach
+            </div>
+        </section>
+
+        <section class="rounded-[1.8rem] bg-white p-5 shadow-[0_16px_40px_rgba(15,23,42,0.08)] ring-1 ring-slate-100">
+            <div class="flex items-center justify-between border-b border-slate-100 pb-4">
+                <h2 class="text-lg font-black text-[#0b1736]">Smart Lock Access</h2>
+                <span class="rounded-full bg-emerald-50 px-3 py-1 text-xs font-black text-emerald-700">Active</span>
+            </div>
+            <div class="mt-5 grid grid-cols-[110px_1fr] gap-4">
+                <div class="text-center">
+                    <div class="grid h-24 w-24 place-items-center rounded-full bg-blue-50 ring-[16px] ring-blue-50/60">
+                        <svg class="h-12 w-12 text-blue-600" fill="currentColor" viewBox="0 0 24 24"><path d="M17 8h-1V6a4 4 0 0 0-8 0v2H7a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-9a2 2 0 0 0-2-2Zm-7-2a2 2 0 1 1 4 0v2h-4V6Z" /></svg>
+                    </div>
+                    <p class="mt-3 text-sm font-black text-blue-600">Tap to Unlock</p>
+                </div>
+                <div>
+                    <p class="text-sm font-black text-[#0b1736]">Main Door</p>
+                    <p class="mt-4 text-xs font-semibold text-slate-500">Access Code</p>
+                    <div class="mt-2 flex items-center justify-between rounded-2xl bg-blue-50 px-4 py-3 text-3xl font-black tracking-[0.35em] text-blue-600">784512 <span class="text-blue-500"><svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M8 16H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v2" /><path d="M10 8h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-8a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2z" /></svg></span></div>
+                    <p class="mt-4 text-xs font-semibold text-slate-500">Valid From</p>
+                    <p class="text-sm font-black text-blue-600">{{ $booking->check_in_date->format('d M Y, h:i A') }}</p>
+                    <p class="mt-3 text-xs font-semibold text-slate-500">Valid Until</p>
+                    <p class="text-sm font-black text-blue-600">{{ $booking->check_out_date->format('d M Y, h:i A') }}</p>
+                </div>
+            </div>
+            <button class="mt-5 h-12 w-full rounded-2xl bg-blue-600 px-4 py-3 text-sm font-black text-white shadow-xl shadow-blue-600/20">Open Smart Lock</button>
+        </section>
+
+        <div class="grid grid-cols-2 gap-4">
+            <a href="{{ route('bookings.inspection', $booking) }}" class="rounded-[1.45rem] bg-white p-4 shadow-sm ring-1 ring-slate-100">
+                <span class="grid h-12 w-12 place-items-center rounded-2xl bg-blue-50 text-blue-600"><svg class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 12h6m-6 4h6M7 3h10a2 2 0 0 1 2 2v14l-4-2-4 2-4-2-4 2V5a2 2 0 0 1 2-2z" /></svg></span>
+                <h3 class="mt-3 font-black text-[#0b1736]">Check-in Guide</h3>
+                <p class="mt-1 text-sm font-semibold leading-5 text-slate-500">Step by step instructions</p>
+            </a>
+            <div class="rounded-[1.45rem] bg-white p-4 shadow-sm ring-1 ring-slate-100">
+                <span class="grid h-12 w-12 place-items-center rounded-2xl bg-blue-50 text-blue-600"><svg class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M5 13a10 10 0 0 1 14 0M8.5 16.5a5 5 0 0 1 7 0M12 20h.01M2 10a15 15 0 0 1 20 0" /></svg></span>
+                <h3 class="mt-3 font-black text-[#0b1736]">Wi-Fi Details</h3>
+                <p class="mt-1 text-sm font-semibold leading-5 text-slate-500">{{ $wifiName }} / {{ $wifiPassword }}</p>
+            </div>
+            <a href="{{ route('dashboard') }}" class="rounded-[1.45rem] bg-white p-4 shadow-sm ring-1 ring-slate-100">
+                <span class="grid h-12 w-12 place-items-center rounded-2xl bg-blue-50 text-blue-600"><svg class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 12l2 2 4-4" /><path d="M12 3l7 4v5c0 5-3.5 8-7 9-3.5-1-7-4-7-9V7l7-4z" /></svg></span>
+                <h3 class="mt-3 font-black text-[#0b1736]">House Rules</h3>
+                <p class="mt-1 text-sm font-semibold leading-5 text-slate-500">Important rules to follow</p>
+            </a>
+            <a href="{{ route('support.index') }}" class="rounded-[1.45rem] bg-white p-4 shadow-sm ring-1 ring-slate-100">
+                <span class="grid h-12 w-12 place-items-center rounded-2xl bg-blue-50 text-blue-600"><svg class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 10a6 6 0 0 0-12 0v4a3 3 0 0 0 3 3h1" /><path d="M18 14v2a2 2 0 0 1-2 2h-2" /></svg></span>
+                <h3 class="mt-3 font-black text-[#0b1736]">Need Help?</h3>
+                <p class="mt-1 text-sm font-semibold leading-5 text-slate-500">Contact support 24/7</p>
+            </a>
+        </div>
+
+        <section class="rounded-[1.8rem] bg-white p-5 shadow-[0_16px_40px_rgba(15,23,42,0.08)] ring-1 ring-slate-100">
+            <div class="flex items-center justify-between">
+                <h2 class="text-lg font-black text-[#0b1736]">Booking Summary</h2>
+                <a href="{{ route('bookings.confirmation-pdf', $booking) }}" target="_blank" class="text-sm font-black text-blue-600">View PDF</a>
+            </div>
+            <div class="mt-4 divide-y divide-slate-100 text-sm">
+                <div class="flex justify-between py-3"><span class="font-semibold text-slate-500">Rent</span><span class="font-black text-[#0b1736]">AED {{ number_format((float) $booking->rent_amount, 2) }}</span></div>
+                <div class="flex justify-between py-3"><span class="font-semibold text-slate-500">VAT 5% on rent</span><span class="font-black text-[#0b1736]">AED {{ number_format((float) $booking->vat_amount, 2) }}</span></div>
+                <div class="flex justify-between py-3"><span class="font-semibold text-slate-500">Security deposit</span><span class="font-black text-[#0b1736]">AED {{ number_format((float) $booking->deposit_amount, 2) }}</span></div>
+                <div class="flex justify-between py-3 text-base"><span class="font-black text-[#0b1736]">Total</span><span class="font-black text-blue-600">AED {{ number_format((float) $booking->total_amount, 2) }}</span></div>
+            </div>
+        </section>
+    </div>
+@else
 <div class="space-y-5">
     @if (session('status'))<div class="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700">{{ session('status') }}</div>@endif
     @if ($errors->any())<div class="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{{ $errors->first() }}</div>@endif
@@ -140,7 +258,9 @@
             <section class="erp-card p-5" data-record-panel="refund">
                 <h2 class="text-lg font-bold text-[#071a3b]">Checkout, inspection, and deposit refund</h2>
                 @if ($booking->depositRefund)
-                    @php($refund = $booking->depositRefund)
+                    @php
+                        $refund = $booking->depositRefund;
+                    @endphp
                     <dl class="mt-5 grid gap-3 md:grid-cols-4">
                         <div class="rounded-2xl bg-slate-50 p-4"><dt class="text-xs font-bold uppercase text-slate-400">Status</dt><dd class="font-bold text-[#071a3b]">{{ str($refund->status)->replace('_', ' ')->headline() }}</dd></div>
                         <div class="rounded-2xl bg-slate-50 p-4"><dt class="text-xs font-bold uppercase text-slate-400">Deposit</dt><dd class="font-bold text-[#071a3b]">AED {{ number_format((float) $refund->deposit_amount, 2) }}</dd></div>
@@ -200,11 +320,31 @@
 
             @unless($tenantPortal)
                 <div class="erp-card p-5"><h2 class="text-lg font-bold text-[#071a3b]">People</h2><dl class="mt-5 space-y-4"><div><dt class="text-xs font-bold uppercase text-slate-400">Tenant</dt><dd class="font-bold text-[#071a3b]">{{ $booking->tenant->full_name }}</dd><dd class="text-xs text-slate-500">{{ $booking->tenant->mobile_no }} / {{ $booking->tenant->email }}</dd></div><div><dt class="text-xs font-bold uppercase text-slate-400">Agent</dt><dd class="font-bold text-[#071a3b]">{{ $booking->agent?->full_name ?: 'Direct booking' }}</dd></div><div><dt class="text-xs font-bold uppercase text-slate-400">Source</dt><dd class="font-bold text-[#071a3b]">{{ $booking->source ?: 'Not set' }}</dd></div></dl></div>
-                <div class="erp-card p-5"><h2 class="text-lg font-bold text-[#071a3b]">Notification log</h2><div class="mt-4 space-y-3">@forelse ($booking->notificationLogs->take(6) as $log)@php($displayStatus = $log->sent_at ? 'sent' : $log->status)<div class="rounded-2xl border border-slate-200 p-4"><div class="flex items-center justify-between gap-3"><div class="font-bold text-[#071a3b]">{{ str($log->subject ?: $log->channel)->headline() }}</div><span class="rounded-full {{ $displayStatus === 'sent' ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700' }} px-2.5 py-1 text-xs font-bold">{{ str($displayStatus)->headline() }}</span></div><p class="mt-1 text-xs text-slate-500">{{ $log->recipient ?: 'No recipient' }}</p><p class="mt-2 text-sm text-slate-600">{{ $log->message }}</p></div>@empty<p class="rounded-2xl border border-dashed border-slate-200 px-4 py-6 text-center text-sm text-slate-500">No notifications logged yet.</p>@endforelse</div></div>
+                <div class="erp-card p-5">
+                    <h2 class="text-lg font-bold text-[#071a3b]">Notification log</h2>
+                    <div class="mt-4 space-y-3">
+                        @forelse ($booking->notificationLogs->take(6) as $log)
+                            @php
+                                $displayStatus = $log->sent_at ? 'sent' : $log->status;
+                            @endphp
+                            <div class="rounded-2xl border border-slate-200 p-4">
+                                <div class="flex items-center justify-between gap-3">
+                                    <div class="font-bold text-[#071a3b]">{{ str($log->subject ?: $log->channel)->headline() }}</div>
+                                    <span class="rounded-full {{ $displayStatus === 'sent' ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700' }} px-2.5 py-1 text-xs font-bold">{{ str($displayStatus)->headline() }}</span>
+                                </div>
+                                <p class="mt-1 text-xs text-slate-500">{{ $log->recipient ?: 'No recipient' }}</p>
+                                <p class="mt-2 text-sm text-slate-600">{{ $log->message }}</p>
+                            </div>
+                        @empty
+                            <p class="rounded-2xl border border-dashed border-slate-200 px-4 py-6 text-center text-sm text-slate-500">No notifications logged yet.</p>
+                        @endforelse
+                    </div>
+                </div>
             @endunless
         </aside>
     </div>
 </div>
+@endif
 
 <script>
     document.addEventListener('DOMContentLoaded', () => {
