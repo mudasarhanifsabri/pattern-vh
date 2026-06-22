@@ -10,16 +10,17 @@
         $statusTone = ['open'=>'bg-blue-50 text-blue-700','waiting_for_customer'=>'bg-amber-50 text-amber-700','in_progress'=>'bg-violet-50 text-violet-700','resolved'=>'bg-emerald-50 text-emerald-700','closed'=>'bg-slate-100 text-slate-600'];
         $priorityTone = ['low'=>'text-slate-500','medium'=>'text-blue-600','high'=>'text-amber-600','urgent'=>'text-rose-600'];
         $assigneeOnline = $selected?->assignee?->onlineStatus?->is_online && $selected->assignee->onlineStatus->last_seen_at?->greaterThan(now()->subMinutes(3));
+        $supportTopbar = (auth()->user()?->can('portal.tenant') && ! auth()->user()?->can('bookings.manage')) ? '4rem' : '5rem';
     @endphp
 
-    <div class="space-y-4">
+    <div class="space-y-4" style="--support-topbar-height: {{ $supportTopbar }}">
         @if(session('status'))<div class="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-700">{{ session('status') }}</div>@endif
         @if($errors->any())<div class="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-bold text-rose-700">{{ $errors->first() }}</div>@endif
 
-        <div class="grid min-h-[calc(100dvh-190px)] overflow-hidden rounded-[1.75rem] border border-slate-200 bg-white shadow-xl shadow-slate-200/50 lg:min-h-[680px] lg:grid-cols-[320px_minmax(420px,1fr)_330px]">
-            <aside class="{{ $selected ? 'hidden lg:block' : 'block' }} border-b border-slate-200 bg-[#f8faff] lg:border-b-0 lg:border-r">
+        <div data-support-shell class="support-mobile-shell grid min-h-[calc(100dvh-190px)] overflow-hidden rounded-[1.75rem] border border-slate-200 bg-white shadow-xl shadow-slate-200/50 lg:relative lg:z-auto lg:min-h-[680px] lg:grid-cols-[320px_minmax(420px,1fr)_330px]">
+            <aside class="support-mobile-pane {{ $selected ? 'hidden lg:block' : 'block' }} border-b border-slate-200 bg-[#f8faff] lg:border-b-0 lg:border-r">
                 <div class="border-b border-slate-200 p-4"><form method="GET" class="space-y-2"><input name="search" value="{{ request('search') }}" class="erp-focus h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm" placeholder="Search conversations..."><div class="grid grid-cols-2 gap-2"><select name="status" class="erp-focus h-9 rounded-xl border border-slate-200 bg-white px-2 text-xs"><option value="">All status</option>@foreach(\App\Models\SupportTicket::STATUSES as $status)<option value="{{ $status }}" @selected(request('status')===$status)>{{ str($status)->replace('_',' ')->headline() }}</option>@endforeach</select><button class="rounded-xl bg-slate-900 text-xs font-black text-white">Filter</button></div></form></div>
-                <div class="max-h-[calc(100dvh-310px)] overflow-y-auto p-2 lg:max-h-[620px]">
+                <div class="h-[calc(100%-93px)] overflow-y-auto p-2 lg:h-auto lg:max-h-[620px]">
                     @forelse($tickets as $ticket)
                         @php($last = $ticket->messages->first())
                         @php($requesterOnline = $ticket->requester?->onlineStatus?->is_online && $ticket->requester->onlineStatus->last_seen_at?->greaterThan(now()->subMinutes(3)))
@@ -30,11 +31,11 @@
                 </div>
             </aside>
 
-            <main class="{{ $selected ? 'flex' : 'hidden lg:flex' }} h-[calc(100dvh-190px)] min-h-[560px] flex-col bg-[#eef3f9] lg:h-auto lg:min-h-[680px]">
+            <main class="support-mobile-pane {{ $selected ? 'flex' : 'hidden lg:flex' }} min-h-[560px] flex-col bg-[#eef3f9] lg:h-auto lg:min-h-[680px]">
                 @if($selected)
                     <header class="flex items-center justify-between gap-3 border-b border-slate-200 bg-white p-3 md:p-4"><div class="flex min-w-0 items-center gap-3"><a href="{{ route('support.index') }}" class="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-slate-200 text-lg font-black text-[#071a3b] lg:hidden">&lsaquo;</a><span class="relative grid h-11 w-11 shrink-0 place-items-center rounded-full bg-blue-100 text-xs font-black text-blue-700">{{ str($selected->requester_name)->substr(0,2)->upper() }}<span class="absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-white {{ $assigneeOnline ? 'bg-emerald-400' : 'bg-slate-300' }}"></span></span><div class="min-w-0"><h2 class="truncate font-black text-[#071a3b]">{{ $selected->requester_name }}</h2><p class="truncate text-xs text-slate-500">{{ $selected->ticket_no }} / {{ str($selected->mode)->headline() }} / {{ $selected->category?->name ?: 'General' }}</p></div></div><span class="shrink-0 rounded-full px-3 py-1 text-[10px] font-black md:text-xs {{ $statusTone[$selected->status] ?? 'bg-slate-100' }}">{{ str($selected->status)->replace('_',' ')->headline() }}</span></header>
 
-                    <div class="flex-1 space-y-3 overflow-y-auto p-3 pb-4 md:p-6" data-support-messages data-message-count="{{ $selected->messages->count() }}">
+                    <div class="min-h-0 flex-1 space-y-3 overflow-y-auto p-3 pb-4 md:p-6" data-support-messages data-message-count="{{ $selected->messages->count() }}">
                         @foreach($selected->messages as $message)
                             @php($mine = $message->sender_type === 'staff')
                             <div class="flex {{ $mine ? 'justify-end' : 'justify-start' }}">
@@ -79,16 +80,32 @@
                 @else<p class="text-center text-sm text-slate-500">Customer and linked record details appear here.</p>@endif
             </aside>
         </div>
+        <div data-support-toast class="fixed left-3 right-3 top-24 z-[80] hidden rounded-2xl border border-blue-100 bg-white p-4 shadow-2xl shadow-slate-950/20 sm:left-auto sm:w-[390px]">
+            <p data-support-toast-title class="text-sm font-black text-[#071a3b]">Support alert</p>
+            <p data-support-toast-body class="mt-1 text-xs leading-5 text-slate-500">New support update received.</p>
+        </div>
     </div>
 
     <script>
+        if (window.matchMedia('(max-width: 1023px)').matches) document.body.classList.add('support-mobile-active');
+        window.addEventListener('beforeunload', () => document.body.classList.remove('support-mobile-active'));
         const supportMessageBox = document.querySelector('[data-support-messages]');
         if (supportMessageBox) supportMessageBox.scrollTop = supportMessageBox.scrollHeight;
         document.querySelectorAll('[data-quick-reply]').forEach(button => button.addEventListener('click', () => { const input = document.querySelector('[data-message-input]'); if (input) { input.value = button.dataset.quickReply; input.focus(); input.dispatchEvent(new Event('input')); } }));
         document.querySelectorAll('[data-message-input]').forEach(input => input.addEventListener('input', () => { input.style.height = 'auto'; input.style.height = Math.min(input.scrollHeight, 128) + 'px'; }));
         const vapidPublicKey = @js(config('services.webpush.public_key'));
         const csrfToken = '{{ csrf_token() }}';
+        const showSupportToast = (title, body) => {
+            const toast = document.querySelector('[data-support-toast]');
+            if (!toast) return;
+            toast.querySelector('[data-support-toast-title]').textContent = title;
+            toast.querySelector('[data-support-toast-body]').textContent = body;
+            toast.classList.remove('hidden');
+            clearTimeout(window.supportToastTimer);
+            window.supportToastTimer = setTimeout(() => toast.classList.add('hidden'), 4500);
+        };
         const notifyUser = (title, body) => {
+            showSupportToast(title, body);
             if (!('Notification' in window) || Notification.permission !== 'granted') return;
             try { new Notification(title, { body, icon: '/icons/erp-icon.svg', badge: '/icons/erp-icon.svg' }); } catch (error) {}
         };
@@ -103,6 +120,13 @@
             const permission = await Notification.requestPermission();
             if (permission !== 'granted') { event.currentTarget.textContent = 'Alerts blocked'; return; }
             event.currentTarget.textContent = 'Alerts enabled';
+            showSupportToast('Support alerts enabled', 'You will see support popups on this screen.');
+            if ('serviceWorker' in navigator) {
+                try {
+                    const registration = await navigator.serviceWorker.ready;
+                    await registration.showNotification('Support alerts enabled', { body: 'Pattern RMS support notifications are ready.', icon: '/icons/erp-icon.svg', badge: '/icons/erp-icon.svg', data: { url: '{{ route('support.index') }}' } });
+                } catch (error) {}
+            }
             if ('serviceWorker' in navigator && 'PushManager' in window && vapidPublicKey) {
                 const registration = await navigator.serviceWorker.ready;
                 const subscription = await registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(vapidPublicKey) });
@@ -114,7 +138,7 @@
         setInterval(() => fetch('{{ route('support.presence.ping') }}', { method:'POST', headers:{'X-CSRF-TOKEN':'{{ csrf_token() }}','Accept':'application/json'} }), 60000);
         @endauth
         @if($selected)
-        setInterval(async () => { const box=document.querySelector('[data-support-messages]'); const input=document.querySelector('[data-message-input]'); if(!box || (input && input.value.trim())) return; const response=await fetch('{{ route('support.messages',$selected) }}',{headers:{'Accept':'application/json'}}); if(response.ok){const messages=await response.json(); const oldCount=Number(box.dataset.messageCount||0); if(messages.length>oldCount){const latest=messages[messages.length-1]; notifyUser('New support message', latest.body || '{{ $selected->ticket_no }}'); window.location.reload();}}}, 6000);
+        setInterval(async () => { const box=document.querySelector('[data-support-messages]'); const input=document.querySelector('[data-message-input]'); if(!box || (input && input.value.trim())) return; const response=await fetch('{{ route('support.messages',$selected) }}',{headers:{'Accept':'application/json'}}); if(response.ok){const messages=await response.json(); const oldCount=Number(box.dataset.messageCount||0); if(messages.length>oldCount){const latest=messages[messages.length-1]; notifyUser('New support message', latest.body || '{{ $selected->ticket_no }}'); setTimeout(() => window.location.reload(), 1200);}}}, 6000);
         @endif
     </script>
 </x-app-layout>

@@ -90,4 +90,30 @@
             @apply bg-white/[0.04];
         }
     }
+
+    @media (max-width: 1023px) {
+        .support-mobile-shell {
+            position: fixed;
+            top: var(--support-topbar-height, 5rem);
+            right: 0;
+            bottom: 0;
+            left: 0;
+            z-index: 35;
+            height: calc(100dvh - var(--support-topbar-height, 5rem));
+            min-height: 0 !important;
+            border-right-width: 0;
+            border-left-width: 0;
+            border-radius: 0;
+            box-shadow: none;
+        }
+
+        .support-mobile-pane {
+            height: 100%;
+            min-height: 0 !important;
+        }
+
+        body.support-mobile-active {
+            overflow: hidden;
+        }
+    }
 }
