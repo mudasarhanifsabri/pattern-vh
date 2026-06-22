@@ -198,23 +198,13 @@
                     </div>
 
                     <div class="support-composer shrink-0 border-t border-slate-100 bg-white px-4 py-3">
-                        <div class="mb-3 flex gap-2 overflow-x-auto pb-1">
-                            @if($tenantChat)
-                                @foreach([
-                                    'Booking' => 'I need help with my booking.',
-                                    'Payment' => 'I need help with my payment.',
-                                    'Check-in' => 'I need check-in instructions.',
-                                    'Deposit' => 'I need help with my security deposit.',
-                                    'Maintenance' => 'I want to report maintenance.',
-                                ] as $title => $body)
-                                    <button type="button" data-quick-reply="{{ $body }}" class="shrink-0 rounded-full border border-blue-100 bg-blue-50 px-4 py-2 text-xs font-black text-blue-700">{{ $title }}</button>
-                                @endforeach
-                            @else
+                        @unless($tenantChat)
+                            <div class="mb-3 flex gap-2 overflow-x-auto pb-1">
                                 @foreach($quickReplies->take(8) as $reply)
                                     <button type="button" data-quick-reply="{{ $reply->body }}" class="shrink-0 rounded-full border border-blue-100 bg-blue-50 px-4 py-2 text-xs font-black text-blue-700">{{ $reply->title }}</button>
                                 @endforeach
-                            @endif
-                        </div>
+                            </div>
+                        @endunless
                         <form method="POST" action="{{ route('support.reply', $selected) }}" enctype="multipart/form-data" class="min-w-0">
                             @csrf
                             <div class="flex min-w-0 items-end gap-3">
