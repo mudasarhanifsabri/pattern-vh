@@ -13,6 +13,8 @@
 
     body {
         @apply bg-[#f4f7fb] text-[#071a3b];
+        -webkit-text-size-adjust: 100%;
+        touch-action: manipulation;
     }
 
     * {

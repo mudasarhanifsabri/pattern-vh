@@ -67,33 +67,35 @@
                     <p class="mt-5 border-t border-slate-100 pt-4 text-sm font-semibold text-slate-600">This code is only valid during your stay.</p>
                 </section>
             @else
-                <section class="rounded-[1.6rem] bg-white p-6 text-center shadow-[0_18px_45px_rgba(15,23,42,0.08)]">
-                    <h2 class="text-2xl font-black text-[#071a3b]">No active stay</h2>
-                    <p class="mt-2 text-sm text-slate-500">Your current booking will appear here once confirmed.</p>
+                <section class="rounded-[1.6rem] bg-white px-5 py-7 text-center shadow-[0_18px_45px_rgba(15,23,42,0.08)]">
+                    <h2 class="text-[1.7rem] font-black leading-tight text-[#071a3b]">No active stay</h2>
+                    <p class="mx-auto mt-2 max-w-[280px] text-sm leading-6 text-slate-500">Your current booking will appear here once confirmed.</p>
                 </section>
             @endif
 
-            <section class="grid grid-cols-2 gap-4">
+            <section class="grid grid-cols-2 gap-3">
                 @foreach([
                     ['label' => 'Check-in Guide', 'note' => 'Step by step instructions', 'route' => $booking ? route('bookings.show', $booking) : route('bookings.index'), 'icon' => 'M7 4h10v16H7zM10 8h4M10 12h4M10 16h4'],
                     ['label' => 'Wi-Fi Details', 'note' => 'Get apartment Wi-Fi information', 'route' => $booking ? route('bookings.show', $booking) : route('support.index'), 'icon' => 'M5 12a10 10 0 0 1 14 0M8.5 15.5a5 5 0 0 1 7 0M12 19h.01'],
                     ['label' => 'House Rules', 'note' => 'Important rules to follow', 'route' => $booking ? route('bookings.show', $booking) : route('support.index'), 'icon' => 'M12 3 5 6v5c0 5 3 8 7 10 4-2 7-5 7-10V6l-7-3z'],
                     ['label' => 'Need Help?', 'note' => 'Contact support 24/7', 'route' => route('support.index'), 'icon' => 'M4 12a8 8 0 0 1 16 0v4a2 2 0 0 1-2 2h-2v-6h4M4 16a2 2 0 0 0 2 2h2v-6H4v4z'],
                 ] as $tile)
-                    <a href="{{ $tile['route'] }}" class="flex items-center gap-4 rounded-[1.4rem] bg-white p-4 shadow-[0_14px_30px_rgba(15,23,42,0.07)]">
-                        <span class="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-blue-50 text-blue-600"><svg class="h-7 w-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="{{ $tile['icon'] }}"/></svg></span>
-                        <span class="min-w-0"><span class="block text-base font-black text-[#071a3b]">{{ $tile['label'] }}</span><span class="mt-1 block text-sm leading-5 text-slate-500">{{ $tile['note'] }}</span></span>
+                    <a href="{{ $tile['route'] }}" class="relative min-h-[156px] rounded-[1.35rem] bg-white p-4 shadow-[0_14px_30px_rgba(15,23,42,0.07)] [&>.ml-auto]:hidden max-[380px]:min-h-[142px] max-[380px]:p-3">
+                        <span class="grid h-14 w-14 place-items-center rounded-2xl bg-blue-50 text-blue-600 max-[380px]:h-12 max-[380px]:w-12"><svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="{{ $tile['icon'] }}"/></svg></span>
+                        <span class="mt-4 block text-[15px] font-black leading-tight text-[#071a3b] max-[380px]:mt-3 max-[380px]:text-sm">{{ $tile['label'] }}</span>
+                        <span class="mt-1 block pr-4 text-[13px] font-semibold leading-5 text-slate-500 max-[380px]:text-xs max-[380px]:leading-4">{{ $tile['note'] }}</span>
+                        <span class="absolute right-4 top-1/2 -translate-y-1/2 text-2xl text-slate-300 max-[380px]:right-3">›</span>
                         <span class="ml-auto text-2xl text-slate-400">›</span>
                     </a>
                 @endforeach
             </section>
 
             <section class="overflow-hidden rounded-[1.6rem] bg-gradient-to-br from-blue-50 to-white p-5 shadow-[0_18px_45px_rgba(15,23,42,0.08)]">
-                <h2 class="text-xl font-black text-[#071a3b]">Enhance Your Stay</h2>
-                <p class="mt-2 max-w-[250px] text-sm leading-6 text-slate-600">Book services, request collection, or contact our team to make your stay smoother.</p>
-                <div class="mt-5 flex gap-3">
-                    <a href="{{ route('tenant.payment-requests.index') }}" class="rounded-2xl bg-blue-600 px-5 py-3 text-sm font-black text-white shadow-lg shadow-blue-600/25">Request Collection</a>
-                    <a href="{{ route('support.index') }}" class="rounded-2xl bg-white px-5 py-3 text-sm font-black text-blue-600">Support</a>
+                <h2 class="text-xl font-black leading-tight text-[#071a3b]">Enhance Your Stay</h2>
+                <p class="mt-2 text-sm leading-6 text-slate-600">Book services, request collection, or contact our team.</p>
+                <div class="mt-5 grid grid-cols-2 gap-3">
+                    <a href="{{ route('tenant.payment-requests.index') }}" class="rounded-2xl bg-blue-600 px-4 py-3 text-center text-sm font-black text-white shadow-lg shadow-blue-600/25">Request Collection</a>
+                    <a href="{{ route('support.index') }}" class="rounded-2xl bg-white px-4 py-3 text-center text-sm font-black text-blue-600">Support</a>
                 </div>
                 <div class="mt-5 grid grid-cols-2 gap-3 text-sm">
                     <div class="rounded-2xl bg-white/80 p-3"><p class="font-semibold text-slate-500">Balance due</p><p class="mt-1 text-lg font-black text-[#071a3b]">AED {{ number_format($balanceDue, 0) }}</p></div>

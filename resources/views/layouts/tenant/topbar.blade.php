@@ -1,8 +1,8 @@
-<header class="sticky top-0 z-20 mx-auto flex h-[88px] w-full max-w-[430px] items-center gap-3 border-b-0 bg-[#f7f9fe] px-4 pt-4 backdrop-blur">
+<header class="sticky top-0 z-20 mx-auto flex h-[76px] w-full max-w-[430px] items-center gap-3 border-b-0 bg-[#f7f9fe] px-4 pt-3 backdrop-blur max-[380px]:px-3">
     <button class="grid h-10 w-10 shrink-0 place-items-center rounded-2xl text-[#071a3b]" type="button" aria-label="Menu">
         <svg class="h-7 w-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M4 12h12M4 17h16"/></svg>
     </button>
-    <a href="{{ route('dashboard') }}" class="absolute left-1/2 -translate-x-1/2 text-lg font-black text-[#071a3b]">
+    <a href="{{ route('dashboard') }}" class="absolute left-1/2 -translate-x-1/2 text-lg font-black text-[#071a3b] max-[380px]:text-base">
         {{ request()->routeIs('bookings.*') ? 'Bookings' : (request()->routeIs('support.*') ? 'Messages' : (request()->routeIs('profile.*') ? 'Profile' : 'My Stay')) }}
     </a>
 
