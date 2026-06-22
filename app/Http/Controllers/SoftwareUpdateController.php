@@ -80,7 +80,7 @@ class SoftwareUpdateController extends Controller
         }
 
         if (! empty($validated['npm_build'])) {
-            $steps['Build frontend assets'] = [config('erp.npm_binary'), 'run', 'build'];
+            $steps['Build frontend assets'] = $this->frontendBuildCommand();
         }
 
         if (! empty($validated['clear_cache'])) {
@@ -100,6 +100,12 @@ class SoftwareUpdateController extends Controller
 
     private function runStep(string $label, array $command, string $logPath): bool
     {
+        if (($command[0] ?? null) === '__skip__') {
+            File::append($logPath, "===== {$label} =====\nSKIPPED: {$command[1]}\n\nExit code: 0\n\n");
+
+            return true;
+        }
+
         File::append($logPath, "===== {$label} =====\n$ ".implode(' ', array_map('escapeshellarg', $command))."\n");
 
         try {
@@ -118,6 +124,17 @@ class SoftwareUpdateController extends Controller
 
             return false;
         }
+    }
+
+    private function frontendBuildCommand(): array
+    {
+        $npm = trim((string) config('erp.npm_binary'));
+
+        if ($npm === '' || strtolower($npm) === 'false' || strtolower($npm) === 'none') {
+            return ['__skip__', 'NPM_BINARY is disabled. Using committed public/build assets.'];
+        }
+
+        return [$npm, 'run', 'build'];
     }
 
     public function downloadLog(string $type)
