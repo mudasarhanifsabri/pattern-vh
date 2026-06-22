@@ -56,12 +56,12 @@
                 @endif
                 {{ $slot }}
             </main>
-            <div class="@can('portal.tenant') hidden md:block @endcan">
+            <div class="{{ $tenantOnly ? 'hidden md:block' : '' }}">
                 @include('layouts.footer')
             </div>
         </div>
     </div>
-    @can('portal.tenant')
+    @if($tenantOnly)
         <nav class="fixed inset-x-0 bottom-0 z-40 mx-auto grid max-w-[430px] grid-cols-4 border-t border-slate-100 bg-white/95 px-4 pb-5 pt-2 shadow-[0_-12px_30px_rgba(15,23,42,0.08)] backdrop-blur">
             @foreach ([
                 ['route' => 'dashboard', 'label' => 'My Stay', 'icon' => 'M4 12 12 4l8 8M6 10v10h12V10'],
@@ -90,7 +90,7 @@
                 </div>
             </div>
         </div>
-    @endcan
+    @endif
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => navigator.serviceWorker.register('{{ asset('service-worker.js') }}'));
