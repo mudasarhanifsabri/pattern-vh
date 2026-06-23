@@ -69,10 +69,11 @@
             'label' => 'Accounting',
             'caption' => 'Money and reports',
             'icon' => 'M4 19V5m0 14h16M8 16v-5m4 5V8m4 8v-8',
-            'active' => ['accounting.*', 'invoices.*', 'payments.*', 'expenses.*', 'owner-payouts.*', 'owner-statements.*', 'payment-collection-requests.*', 'security-deposits.*', 'reports.*'],
-            'permissions' => ['accounting.view', 'accounting.manage', 'invoices.view', 'invoices.manage', 'payments.view', 'payments.manage', 'expenses.view', 'expenses.manage', 'owner-payouts.view', 'owner-payouts.manage', 'owner-statements.view', 'owner-statements.manage', 'payment-collection-requests.view', 'payment-collection-requests.manage', 'security-deposits.view', 'security-deposits.manage', 'reports.view', 'reports.export'],
+            'active' => ['accounting.*', 'bank-reconciliation.*', 'invoices.*', 'payments.*', 'expenses.*', 'owner-payouts.*', 'owner-statements.*', 'payment-collection-requests.*', 'security-deposits.*', 'reports.*'],
+            'permissions' => ['accounting.view', 'accounting.manage', 'bank-reconciliation.view', 'bank-reconciliation.manage', 'invoices.view', 'invoices.manage', 'payments.view', 'payments.manage', 'expenses.view', 'expenses.manage', 'owner-payouts.view', 'owner-payouts.manage', 'owner-statements.view', 'owner-statements.manage', 'payment-collection-requests.view', 'payment-collection-requests.manage', 'security-deposits.view', 'security-deposits.manage', 'reports.view', 'reports.export'],
             'items' => [
                 ['label' => 'Accounting dashboard', 'route' => 'accounting.index', 'active' => 'accounting.*', 'permissions' => ['accounting.view', 'accounting.manage']],
+                ['label' => 'Bank reconciliation', 'route' => 'bank-reconciliation.index', 'active' => 'bank-reconciliation.*', 'permissions' => ['bank-reconciliation.view', 'bank-reconciliation.manage']],
                 ['label' => 'Invoices', 'route' => 'invoices.index', 'active' => 'invoices.*', 'permissions' => ['invoices.view', 'invoices.manage']],
                 ['label' => 'Payments', 'route' => 'payments.index', 'active' => 'payments.*', 'permissions' => ['payments.view', 'payments.manage']],
                 ['label' => 'Expenses', 'route' => 'expenses.index', 'active' => 'expenses.*', 'permissions' => ['expenses.view', 'expenses.manage']],

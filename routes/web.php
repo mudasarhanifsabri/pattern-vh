@@ -7,6 +7,7 @@ use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\AccountingController;
 use App\Http\Controllers\AgentController;
 use App\Http\Controllers\AvailabilityCalendarController;
+use App\Http\Controllers\BankReconciliationController;
 use App\Http\Controllers\BookingController;
 use App\Http\Controllers\BookingConfirmationSigningController;
 use App\Http\Controllers\BookingLifecycleController;
@@ -250,6 +251,27 @@ Route::middleware('auth')->group(function () {
     Route::get('accounting', AccountingController::class)
         ->middleware('permission:accounting.view|accounting.manage')
         ->name('accounting.index');
+    Route::get('bank-reconciliation', [BankReconciliationController::class, 'index'])
+        ->middleware('permission:bank-reconciliation.view|bank-reconciliation.manage')
+        ->name('bank-reconciliation.index');
+    Route::post('bank-reconciliation/accounts', [BankReconciliationController::class, 'storeAccount'])
+        ->middleware('permission:bank-reconciliation.manage')
+        ->name('bank-reconciliation.accounts.store');
+    Route::post('bank-reconciliation/import', [BankReconciliationController::class, 'import'])
+        ->middleware('permission:bank-reconciliation.manage')
+        ->name('bank-reconciliation.import');
+    Route::post('bank-reconciliation/transactions/{bankTransaction}/confirm', [BankReconciliationController::class, 'confirm'])
+        ->middleware('permission:bank-reconciliation.manage')
+        ->name('bank-reconciliation.confirm');
+    Route::post('bank-reconciliation/transactions/{bankTransaction}/manual-match', [BankReconciliationController::class, 'manualMatch'])
+        ->middleware('permission:bank-reconciliation.manage')
+        ->name('bank-reconciliation.manual-match');
+    Route::post('bank-reconciliation/matches/{match}/reject', [BankReconciliationController::class, 'reject'])
+        ->middleware('permission:bank-reconciliation.manage')
+        ->name('bank-reconciliation.reject');
+    Route::post('bank-reconciliation/transactions/{bankTransaction}/ignore', [BankReconciliationController::class, 'ignore'])
+        ->middleware('permission:bank-reconciliation.manage')
+        ->name('bank-reconciliation.ignore');
     Route::resource('expenses', ExpenseController::class)->except(['index', 'show'])->middleware('permission:expenses.manage');
     Route::resource('expenses', ExpenseController::class)->only(['index', 'show'])->middleware('permission:expenses.view|expenses.manage');
     Route::get('expenses/{expense}/receipt', [ExpenseController::class, 'receipt'])

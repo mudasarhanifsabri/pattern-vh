@@ -3,7 +3,11 @@
 namespace Tests\Feature;
 
 use App\Models\Expense;
+use App\Models\BankAccount;
+use App\Models\BankTransaction;
+use App\Models\Invoice;
 use App\Models\Owner;
+use App\Models\Payment;
 use App\Models\Tenant;
 use App\Models\Unit;
 use App\Models\User;
@@ -61,7 +65,7 @@ class AccountingModuleTest extends TestCase
         $this->actingAs($admin)->get(route('owner-statements.index', ['owner_id' => $owner->id]))->assertOk()->assertSee('Owner Account Statement')->assertSee('Statement PDF');
         $this->actingAs($admin)->get(route('owner-statements.pdf', ['owner_id' => $owner->id]))->assertOk()->assertHeader('content-type', 'application/pdf');
         $this->actingAs($admin)->get(route('owner-payouts.index', ['owner_id' => $owner->id]))->assertOk()->assertSee('Owner Payouts')->assertSee('30 days');
-        $this->actingAs($admin)->get(route('reports.index'))->assertOk()->assertSeeText('Reports & Exports');
+        $this->actingAs($admin)->get(route('reports.index'))->assertOk()->assertSeeText('Reports & Profit/Loss');
         $this->actingAs($admin)->get(route('reports.export', ['type' => 'expenses']))->assertOk()->assertHeader('content-type', 'text/csv; charset=UTF-8');
     }
 
@@ -113,5 +117,64 @@ class AccountingModuleTest extends TestCase
             'owner_id' => null,
             'unit_id' => null,
         ]);
+    }
+
+    public function test_bank_statement_import_suggests_and_confirms_payment_match(): void
+    {
+        $this->seed();
+
+        $admin = User::where('email', 'admin@example.com')->firstOrFail();
+        $invoice = Invoice::where('invoice_no', 'INV-DEMO-0001')->firstOrFail();
+        $invoice->update([
+            'status' => 'sent',
+            'paid_amount' => 0,
+            'balance_amount' => $invoice->total_amount,
+        ]);
+
+        $payment = Payment::create([
+            'invoice_id' => $invoice->id,
+            'booking_id' => $invoice->booking_id,
+            'payment_no' => 'PAY-TEST-BANK',
+            'method' => 'bank_transfer',
+            'status' => 'pending',
+            'amount' => 11175,
+            'paid_at' => now(),
+            'reference_no' => 'BANK-REF-001',
+            'created_by' => $admin->id,
+        ]);
+
+        $this->actingAs($admin)
+            ->post(route('bank-reconciliation.accounts.store'), [
+                'name' => 'Main Collections',
+                'bank_name' => 'Test Bank',
+                'currency' => 'AED',
+            ])
+            ->assertRedirect();
+
+        $account = BankAccount::firstOrFail();
+        $csv = "Date,Description,Reference,Credit,Debit,Balance\n".
+            now()->format('Y-m-d').",Tenant payment {$invoice->invoice_no} BANK-REF-001,BANK-REF-001,11175.00,,50000.00\n";
+        $path = tempnam(sys_get_temp_dir(), 'bank').'.csv';
+        file_put_contents($path, $csv);
+
+        $this->actingAs($admin)
+            ->post(route('bank-reconciliation.import'), [
+                'bank_account_id' => $account->id,
+                'statement' => new UploadedFile($path, 'statement.csv', 'text/csv', null, true),
+            ])
+            ->assertRedirect();
+
+        $transaction = BankTransaction::with('matches')->firstOrFail();
+        $this->assertSame('suggested', $transaction->status);
+        $this->assertTrue($transaction->matches->contains('matchable_id', $payment->id));
+
+        $match = $transaction->matches->firstWhere('matchable_id', $payment->id);
+
+        $this->actingAs($admin)
+            ->post(route('bank-reconciliation.confirm', $transaction), ['match_id' => $match->id])
+            ->assertRedirect();
+
+        $this->assertSame('matched', $transaction->fresh()->status);
+        $this->assertSame('approved', $payment->fresh()->status);
     }
 }

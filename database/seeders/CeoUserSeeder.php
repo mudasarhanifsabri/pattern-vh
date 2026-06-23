@@ -14,7 +14,7 @@ class CeoUserSeeder extends Seeder
     public function run(): void
     {
         $permissions = [
-            'ceo.dashboard', 'dashboard.view', 'profile.manage', 'accounting.view', 'expenses.view',
+            'ceo.dashboard', 'dashboard.view', 'profile.manage', 'accounting.view', 'bank-reconciliation.view', 'expenses.view',
             'owner-statements.view', 'owner-payouts.view', 'reports.view', 'reports.export',
             'invoices.view', 'payments.view', 'bookings.view', 'availability-calendar.view',
             'booking-tasks.view', 'units.view', 'owners.view',

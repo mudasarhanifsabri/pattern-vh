@@ -19,6 +19,7 @@
             <div class="mt-5 grid gap-3 md:grid-cols-3">
                 @foreach ([
                     ['label' => 'Add expense', 'route' => 'expenses.create', 'can' => 'expenses.manage'],
+                    ['label' => 'Bank reconciliation', 'route' => 'bank-reconciliation.index', 'can' => 'bank-reconciliation.view'],
                     ['label' => 'Owner statements', 'route' => 'owner-statements.index', 'can' => 'owner-statements.view'],
                     ['label' => 'Owner payouts', 'route' => 'owner-payouts.index', 'can' => 'owner-payouts.view'],
                     ['label' => 'Reports & export', 'route' => 'reports.index', 'can' => 'reports.view'],
