@@ -49,15 +49,6 @@ class IdentityDocumentOcr
             ];
         }
 
-        if ($file->getClientOriginalExtension() && strtolower($file->getClientOriginalExtension()) === 'pdf') {
-            return [
-                'ok' => false,
-                'message' => 'Instant OCR supports clear JPG, PNG, or WEBP images. PDF can be uploaded and saved, but please use an image file for Scan & fill.',
-                'fields' => [],
-                'raw_text' => '',
-            ];
-        }
-
         $bytes = file_get_contents($file->getRealPath());
         $textract = $this->textract();
         $identityFields = [];
@@ -65,8 +56,10 @@ class IdentityDocumentOcr
         $usedTextFallback = false;
         $startedAt = microtime(true);
         $mode = config('ocr.textract_mode', 'detect_text');
+        $isPdf = strtolower((string) $file->getClientOriginalExtension()) === 'pdf'
+            || $file->getMimeType() === 'application/pdf';
 
-        if ($mode === 'detect_text') {
+        if ($mode === 'detect_text' || $isPdf) {
             try {
                 $rawText = $this->detectDocumentText($textract, $bytes);
                 $usedTextFallback = (bool) $rawText;
@@ -126,6 +119,7 @@ class IdentityDocumentOcr
             'meta' => [
                 'duration_ms' => $durationMs,
                 'text_fallback_used' => $usedTextFallback,
+                'pdf_text_detection_used' => $isPdf,
             ],
         ];
     }
@@ -154,7 +148,7 @@ class IdentityDocumentOcr
             }
 
             if (Str::contains(Str::lower($awsMessage), ['unsupported document', 'request has unsupported document format'])) {
-                return 'Textract could not read this file format. Please upload a clear JPG, PNG, or WEBP image for instant OCR.';
+                return 'Textract could not read this file format. Please try a clearer PDF or upload a JPG, PNG, or WEBP image.';
             }
 
             return 'AWS Textract error: '.$awsMessage;

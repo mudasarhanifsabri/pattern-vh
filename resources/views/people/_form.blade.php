@@ -63,7 +63,7 @@
                     <x-input-label for="document" value="Upload document" />
                     <label for="document" class="mt-1 flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-blue-100 bg-blue-50/40 px-4 py-6 text-center transition hover:border-blue-300 hover:bg-blue-50">
                         <span class="text-sm font-bold text-[#071a3b]">Choose passport or Emirates ID file</span>
-                        <span class="mt-1 text-xs text-slate-500">Upload PDF/JPG/PNG/WEBP. OCR scan works best with image files.</span>
+                        <span class="mt-1 text-xs text-slate-500">PDF, JPG, PNG, or WEBP up to 5 MB</span>
                         <span class="mt-3 rounded-full bg-white px-3 py-1 text-xs font-bold text-blue-700">Browse file</span>
                     </label>
                     <input id="document" name="document" type="file" accept=".pdf,.jpg,.jpeg,.png,.webp" class="sr-only" @change="fileName = $event.target.files[0]?.name || ''">
