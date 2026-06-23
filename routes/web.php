@@ -17,6 +17,7 @@ use App\Http\Controllers\DtcmCheckinController;
 use App\Http\Controllers\ExpenseController;
 use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\InvoiceController;
+use App\Http\Controllers\IdentityDocumentOcrController;
 use App\Http\Controllers\NotificationCenterController;
 use App\Http\Controllers\OwnerController;
 use App\Http\Controllers\OwnerNoteController;
@@ -97,6 +98,7 @@ Route::middleware('auth')->group(function () {
     Route::get('notifications/feed', [NotificationCenterController::class, 'feed'])->name('notifications.feed');
     Route::post('notifications/{notificationLog}/read', [NotificationCenterController::class, 'read'])->name('notifications.read');
     Route::post('notifications/read-all', [NotificationCenterController::class, 'readAll'])->name('notifications.read-all');
+    Route::post('identity-documents/ocr', IdentityDocumentOcrController::class)->name('identity-documents.ocr');
     Route::get('support-reports', [SupportCenterController::class, 'reports'])->middleware('permission:support.reports')->name('support.reports');
     Route::get('support-quick-replies', [SupportCenterController::class, 'quickReplies'])->middleware('permission:support.manage')->name('support.quick-replies.index');
     Route::post('support-reports/quick-replies', [SupportCenterController::class, 'storeQuickReply'])->middleware('permission:support.manage')->name('support.quick-replies.store');

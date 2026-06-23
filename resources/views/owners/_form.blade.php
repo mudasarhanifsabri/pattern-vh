@@ -63,7 +63,7 @@
                     <x-input-error :messages="$errors->get('identity_expiry_date')" class="mt-2" />
                 </div>
 
-                <div x-data="{ fileName: '' }">
+                <div x-data="{ fileName: '' }" data-identity-ocr>
                     <x-input-label for="document" value="Upload document" />
                     <label for="document" class="mt-1 flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-blue-100 bg-blue-50/40 px-4 py-6 text-center transition hover:border-blue-300 hover:bg-blue-50">
                         <span class="grid h-12 w-12 place-items-center rounded-2xl bg-white text-blue-600 shadow-sm">
@@ -80,6 +80,8 @@
                             <p class="mt-1 break-all text-sm font-medium text-blue-900" x-text="fileName"></p>
                         </div>
                     </template>
+                    <button type="button" data-ocr-scan class="mt-3 w-full rounded-xl border border-blue-200 bg-white px-4 py-2.5 text-xs font-black text-blue-700 hover:bg-blue-50">Scan & fill form</button>
+                    <div data-ocr-status class="hidden"></div>
                     <x-input-error :messages="$errors->get('document')" class="mt-2" />
                     @if (! empty($owner?->document_original_name))
                         <div class="mt-3 rounded-xl border border-slate-200 bg-white px-3 py-2">
@@ -164,3 +166,5 @@
     <a href="{{ route('owners.index') }}" class="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-600 hover:bg-slate-50">Cancel</a>
     <x-primary-button>{{ $submitLabel }}</x-primary-button>
 </div>
+
+<x-identity-ocr-script />
