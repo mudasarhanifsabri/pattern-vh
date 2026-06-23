@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 #[Fillable([
     'full_name', 'user_id', 'mobile_no', 'mobile_has_whatsapp', 'email', 'identity_type', 'identity_no',
-    'identity_expiry_date', 'date_of_birth', 'document_disk', 'document_path', 'document_original_name',
+    'identity_issue_date', 'identity_expiry_date', 'date_of_birth', 'document_disk', 'document_path', 'document_original_name',
     'is_blacklisted', 'blacklist_reason', 'bank_name', 'bank_account_name', 'bank_account_no', 'iban', 'swift_code',
     'emergency_contact_name', 'emergency_contact_mobile', 'nationality', 'created_by', 'updated_by',
     'portal_invitation_sent_at',

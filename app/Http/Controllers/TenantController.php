@@ -31,7 +31,6 @@ class TenantController extends Controller
             'rules' => [
                 'emergency_contact_name' => ['nullable', 'string', 'max:191'],
                 'emergency_contact_mobile' => ['nullable', 'string', 'max:30'],
-                'nationality' => ['nullable', 'string', 'max:100'],
             ],
         ];
     }

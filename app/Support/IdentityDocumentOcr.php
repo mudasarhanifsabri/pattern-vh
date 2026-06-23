@@ -9,6 +9,34 @@ use Illuminate\Support\Str;
 
 class IdentityDocumentOcr
 {
+    private const TEXT_FIELD_LABELS = [
+        'name',
+        'full name',
+        'surname',
+        'date of birth',
+        'birth',
+        'dob',
+        'nationality',
+        'nationalite',
+        'issuing date',
+        'issue date',
+        'date of issue',
+        'expiry date',
+        'expiry',
+        'expiration date',
+        'expiration',
+        'valid until',
+        'date of expiry',
+        'sex',
+        'gender',
+        'id number',
+        'identity number',
+        'document number',
+        'passport number',
+        'passport no',
+        'signature',
+    ];
+
     public function extract(UploadedFile $file): array
     {
         if (! config('ocr.enabled')) {
@@ -86,19 +114,25 @@ class IdentityDocumentOcr
 
     private function normalize(array $identityFields, string $rawText): array
     {
+        $mrzFields = $this->extractMrzFields($rawText);
+        $identityType = $this->detectIdentityType($rawText, $mrzFields['identity_no'] ?? null) ?? ($mrzFields['identity_type'] ?? null);
         $documentNumber = $identityFields['DOCUMENT_NUMBER']
             ?? $identityFields['ID_NUMBER']
+            ?? ($identityType === 'passport' ? ($mrzFields['identity_no'] ?? null) : null)
             ?? $identityFields['PASSPORT_NUMBER']
-            ?? $this->extractIdentityNumber($rawText);
+            ?? $this->extractIdentityNumber($rawText)
+            ?? ($mrzFields['identity_no'] ?? null);
 
-        $identityType = $this->detectIdentityType($rawText, $documentNumber);
-        $fullName = $this->extractName($identityFields, $rawText);
+        $fullName = $identityType === 'passport'
+            ? (($mrzFields['full_name'] ?? null) ?: $this->extractName($identityFields, $rawText))
+            : ($this->extractName($identityFields, $rawText) ?? ($mrzFields['full_name'] ?? null));
         $nationality = $this->normalizeNationality(
             $identityFields['NATIONALITY']
                 ?? $identityFields['NATIONALITY_CODE']
                 ?? $identityFields['COUNTRY']
                 ?? $identityFields['COUNTRY_OF_ISSUE']
                 ?? $identityFields['ISSUING_COUNTRY']
+                ?? ($mrzFields['nationality'] ?? null)
                 ?? $this->extractNationality($rawText)
         );
 
@@ -107,8 +141,9 @@ class IdentityDocumentOcr
             'identity_no' => $documentNumber ? $this->cleanDocumentNumber($documentNumber, $identityType) : null,
             'full_name' => $fullName,
             'nationality' => $nationality,
-            'date_of_birth' => $this->normalizeDate($identityFields['DATE_OF_BIRTH'] ?? $this->extractDateNear($rawText, ['date of birth', 'birth', 'dob'])),
-            'identity_expiry_date' => $this->normalizeDate($identityFields['EXPIRATION_DATE'] ?? $identityFields['EXPIRY_DATE'] ?? $this->extractDateNear($rawText, ['expiry', 'expiration', 'valid until'])),
+            'date_of_birth' => $this->normalizeDate($identityFields['DATE_OF_BIRTH'] ?? $this->extractDateNear($rawText, ['date of birth', 'birth', 'dob']) ?? ($mrzFields['date_of_birth'] ?? null)),
+            'identity_issue_date' => $this->normalizeDate($identityFields['ISSUE_DATE'] ?? $identityFields['ISSUING_DATE'] ?? $this->extractDateNear($rawText, ['issuing date', 'issue date', 'date of issue'])),
+            'identity_expiry_date' => $this->normalizeDate($identityFields['EXPIRATION_DATE'] ?? $identityFields['EXPIRY_DATE'] ?? $this->extractDateNear($rawText, ['expiry date', 'expiry', 'expiration date', 'expiration', 'valid until', 'date of expiry']) ?? ($mrzFields['identity_expiry_date'] ?? null)),
         ];
     }
 
@@ -125,8 +160,9 @@ class IdentityDocumentOcr
             return $this->cleanName($name);
         }
 
-        if (preg_match('/(?:name|full name|surname)\s*[:\-]?\s*([A-Z][A-Z\s]{4,})/i', $rawText, $match)) {
-            return $this->cleanName($match[1]);
+        $name = $this->extractTextAfterLabel($rawText, ['full name', 'name', 'surname']);
+        if ($name) {
+            return $this->cleanName($name);
         }
 
         return null;
@@ -142,8 +178,9 @@ class IdentityDocumentOcr
             }
 
             $window = trim($line.' '.($lines[$index + 1] ?? ''));
-            if (preg_match('/(?:nationality|nationalite|الجنسية)\s*[:\-]?\s*([A-Z][A-Z\s]{2,}|[A-Z]{3})/iu', $window, $match)) {
-                return $match[1];
+            $nationality = $this->extractTextAfterLabel($window, ['nationality', 'nationalite', 'الجنسية'], ['issuing date', 'issue date', 'date of issue', 'expiry date', 'expiration date']);
+            if ($nationality) {
+                return $nationality;
             }
 
             if (! empty($lines[$index + 1]) && preg_match('/^[A-Z][A-Z\s]{2,}$/i', trim($lines[$index + 1]))) {
@@ -160,7 +197,7 @@ class IdentityDocumentOcr
             return $match[0];
         }
 
-        if (preg_match('/(?:passport|document|id)\s*(?:no|number|#)?\s*[:\-]?\s*([A-Z0-9]{6,15})/i', $rawText, $match)) {
+        if (preg_match('/(?:passport|document|id|identity)\s*(?:no|number|#)\s*[:\-]?\s*([A-Z0-9]{6,15})/i', $rawText, $match)) {
             return $match[1];
         }
 
@@ -186,15 +223,23 @@ class IdentityDocumentOcr
 
     private function extractDateNear(string $rawText, array $labels): ?string
     {
+        $value = $this->extractTextAfterLabel($rawText, $labels, self::TEXT_FIELD_LABELS);
+        $date = $this->extractFirstDate($value ?: '');
+        if ($date) {
+            return $date;
+        }
+
         $lines = preg_split('/\R+/', $rawText) ?: [];
         foreach ($lines as $index => $line) {
             if (! Str::contains(Str::lower($line), $labels)) {
                 continue;
             }
 
-            $window = trim($line.' '.($lines[$index + 1] ?? ''));
-            if (preg_match('/\b(\d{1,2}[\/\-.]\d{1,2}[\/\-.]\d{2,4}|\d{4}[\/\-.]\d{1,2}[\/\-.]\d{1,2})\b/', $window, $match)) {
-                return $match[1];
+            $window = trim(implode(' ', array_slice($lines, $index, 5)));
+            $value = $this->extractTextAfterLabel($window, $labels, self::TEXT_FIELD_LABELS);
+            $date = $this->extractFirstDate($value ?: $window);
+            if ($date) {
+                return $date;
             }
         }
 
@@ -208,6 +253,11 @@ class IdentityDocumentOcr
         }
 
         $value = trim(str_replace(['.', '\\'], ['/', '/'], $value));
+        $date = $this->extractFirstDate($value);
+        if ($date) {
+            $value = $date;
+        }
+
         foreach (['d/m/Y', 'd-m-Y', 'Y-m-d', 'Y/m/d', 'm/d/Y', 'd/m/y', 'd-m-y'] as $format) {
             try {
                 $date = Carbon::createFromFormat($format, $value);
@@ -242,6 +292,8 @@ class IdentityDocumentOcr
 
     private function cleanName(string $value): string
     {
+        $value = $this->stripTrailingLabels($value);
+
         return Str::of($value)
             ->replaceMatches('/[^A-Z\s.\'-]/i', ' ')
             ->squish()
@@ -254,6 +306,8 @@ class IdentityDocumentOcr
         if (! $value) {
             return null;
         }
+
+        $value = $this->stripTrailingLabels($value);
 
         $value = Str::of($value)
             ->replaceMatches('/[^A-Z\s]/i', ' ')
@@ -297,6 +351,111 @@ class IdentityDocumentOcr
         ];
 
         return $map[$value] ?? Str::of($value)->lower()->title()->toString();
+    }
+
+    private function extractTextAfterLabel(string $rawText, array $labels, ?array $stopLabels = null): ?string
+    {
+        $text = Str::of($rawText)
+            ->replaceMatches('/\s+/u', ' ')
+            ->squish()
+            ->toString();
+
+        if (! $text) {
+            return null;
+        }
+
+        $labelPattern = $this->labelsPattern($labels);
+        $stopPattern = $this->labelsPattern(array_values(array_unique(array_diff($stopLabels ?? self::TEXT_FIELD_LABELS, $labels))));
+
+        if (preg_match('/(?:^|\s)(?:'.$labelPattern.')\s*[:\-]?\s*(.+?)(?=\s+(?:'.$stopPattern.')\b|$)/iu', $text, $match)) {
+            return trim($match[1]);
+        }
+
+        return null;
+    }
+
+    private function stripTrailingLabels(string $value): string
+    {
+        return trim(preg_replace('/\b(?:'.$this->labelsPattern(self::TEXT_FIELD_LABELS).')\b.*$/iu', '', $value) ?? $value);
+    }
+
+    private function extractFirstDate(string $value): ?string
+    {
+        if (! $value) {
+            return null;
+        }
+
+        if (preg_match('/\b(\d{1,2}[\/\-.]\d{1,2}[\/\-.]\d{2,4}|\d{4}[\/\-.]\d{1,2}[\/\-.]\d{1,2})\b/', $value, $match)) {
+            return $match[1];
+        }
+
+        if (preg_match('/\b(\d{1,2}\s+[A-Z]{3,9}\s+\d{2,4}|[A-Z]{3,9}\s+\d{1,2},?\s+\d{2,4})\b/i', $value, $match)) {
+            return $match[1];
+        }
+
+        return null;
+    }
+
+    private function extractMrzFields(string $rawText): array
+    {
+        $lines = collect(preg_split('/\R+/', $rawText) ?: [])
+            ->map(fn (string $line) => strtoupper(preg_replace('/[^A-Z0-9<]/', '', $line) ?? ''))
+            ->filter(fn (string $line) => strlen($line) >= 25 && Str::contains($line, '<'))
+            ->values();
+
+        for ($index = 0; $index < $lines->count() - 1; $index++) {
+            $line1 = $lines[$index];
+            $line2 = $lines[$index + 1];
+
+            if (! str_starts_with($line1, 'P<') || strlen($line2) < 30) {
+                continue;
+            }
+
+            $names = explode('<<', substr($line1, 5), 2);
+            $surname = str_replace('<', ' ', $names[0] ?? '');
+            $givenNames = str_replace('<', ' ', $names[1] ?? '');
+            $passportNo = rtrim(substr($line2, 0, 9), '<');
+            $nationality = substr($line2, 10, 3);
+            $birth = substr($line2, 13, 6);
+            $expiry = substr($line2, 21, 6);
+
+            return array_filter([
+                'identity_type' => 'passport',
+                'identity_no' => $passportNo ?: null,
+                'full_name' => $this->cleanName(trim($givenNames.' '.$surname)),
+                'nationality' => $nationality,
+                'date_of_birth' => $this->normalizeMrzDate($birth),
+                'identity_expiry_date' => $this->normalizeMrzDate($expiry, futurePreferred: true),
+            ]);
+        }
+
+        return [];
+    }
+
+    private function normalizeMrzDate(string $value, bool $futurePreferred = false): ?string
+    {
+        if (! preg_match('/^\d{6}$/', $value)) {
+            return null;
+        }
+
+        $year = (int) substr($value, 0, 2);
+        $month = substr($value, 2, 2);
+        $day = substr($value, 4, 2);
+        $century = $futurePreferred || $year <= (int) now()->format('y') + 10 ? 2000 : 1900;
+
+        try {
+            return Carbon::create($century + $year, (int) $month, (int) $day)->format('Y-m-d');
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
+    private function labelsPattern(array $labels): string
+    {
+        return collect($labels)
+            ->filter()
+            ->map(fn (string $label) => preg_quote($label, '/'))
+            ->implode('|');
     }
 
     private function detectDocumentText(TextractClient $textract, string $bytes): string

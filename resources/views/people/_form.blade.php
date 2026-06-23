@@ -30,6 +30,10 @@
                     <x-input-label for="date_of_birth" value="Date of birth" />
                     <x-text-input id="date_of_birth" name="date_of_birth" type="date" class="mt-1 block w-full" :value="old('date_of_birth', isset($record) && $record->date_of_birth ? $record->date_of_birth->format('Y-m-d') : '')" />
                 </div>
+                <div>
+                    <x-input-label for="nationality" value="Nationality" />
+                    <x-text-input id="nationality" name="nationality" class="mt-1 block w-full" :value="old('nationality', $record->nationality ?? '')" />
+                </div>
             </div>
         </div>
 
@@ -50,6 +54,10 @@
                 <div>
                     <x-input-label for="identity_expiry_date" value="Expiry date" />
                     <x-text-input id="identity_expiry_date" name="identity_expiry_date" type="date" class="mt-1 block w-full" :value="old('identity_expiry_date', isset($record) && $record->identity_expiry_date ? $record->identity_expiry_date->format('Y-m-d') : '')" />
+                </div>
+                <div>
+                    <x-input-label for="identity_issue_date" value="Issuing date" />
+                    <x-text-input id="identity_issue_date" name="identity_issue_date" type="date" class="mt-1 block w-full" :value="old('identity_issue_date', isset($record) && $record->identity_issue_date ? $record->identity_issue_date->format('Y-m-d') : '')" />
                 </div>
                 <div x-data="{ fileName: '' }" data-identity-ocr>
                     <x-input-label for="document" value="Upload document" />
@@ -105,8 +113,7 @@
         @else
             <div class="erp-card p-5">
                 <h2 class="text-lg font-bold text-[#071a3b]">Tenant stay details</h2>
-                <div class="mt-5 grid gap-4 md:grid-cols-3">
-                    <div><x-input-label for="nationality" value="Nationality" /><x-text-input id="nationality" name="nationality" class="mt-1 block w-full" :value="old('nationality', $record->nationality ?? '')" /></div>
+                <div class="mt-5 grid gap-4 md:grid-cols-2">
                     <div><x-input-label for="emergency_contact_name" value="Emergency contact" /><x-text-input id="emergency_contact_name" name="emergency_contact_name" class="mt-1 block w-full" :value="old('emergency_contact_name', $record->emergency_contact_name ?? '')" /></div>
                     <div><x-input-label for="emergency_contact_mobile" value="Emergency mobile" /><x-text-input id="emergency_contact_mobile" name="emergency_contact_mobile" class="mt-1 block w-full" :value="old('emergency_contact_mobile', $record->emergency_contact_mobile ?? '')" /></div>
                 </div>

@@ -268,7 +268,7 @@ class OwnerUnitContractController extends Controller
             'company_email' => 'customerservice@pattern.ae',
             'company_address' => 'Office 413, Al Attar Business Centre, Al Barsha, Dubai, UAE',
             'owner_name' => $owner->full_name,
-            'owner_nationality' => null,
+            'owner_nationality' => $owner->nationality,
             'owner_passport_no' => $owner->identity_no,
             'owner_contact_no' => $owner->mobile_no,
             'owner_email' => $owner->email,

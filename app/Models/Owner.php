@@ -18,8 +18,10 @@ use Illuminate\Support\Facades\Storage;
     'email',
     'identity_type',
     'identity_no',
+    'identity_issue_date',
     'identity_expiry_date',
     'date_of_birth',
+    'nationality',
     'document_disk',
     'document_path',
     'document_original_name',
@@ -42,6 +44,7 @@ class Owner extends Model
     {
         return [
             'mobile_has_whatsapp' => 'boolean',
+            'identity_issue_date' => 'date',
             'identity_expiry_date' => 'date',
             'date_of_birth' => 'date',
             'is_blacklisted' => 'boolean',

@@ -14,6 +14,7 @@ trait HasPeopleProfile
     {
         return [
             'mobile_has_whatsapp' => 'boolean',
+            'identity_issue_date' => 'date',
             'identity_expiry_date' => 'date',
             'date_of_birth' => 'date',
             'is_blacklisted' => 'boolean',

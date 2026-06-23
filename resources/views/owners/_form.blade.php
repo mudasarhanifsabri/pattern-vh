@@ -34,6 +34,12 @@
                     <x-text-input id="date_of_birth" name="date_of_birth" type="date" class="mt-1 block w-full" :value="old('date_of_birth', isset($owner) && $owner->date_of_birth ? $owner->date_of_birth->format('Y-m-d') : '')" />
                     <x-input-error :messages="$errors->get('date_of_birth')" class="mt-2" />
                 </div>
+
+                <div>
+                    <x-input-label for="nationality" value="Nationality" />
+                    <x-text-input id="nationality" name="nationality" type="text" class="mt-1 block w-full" :value="old('nationality', $owner->nationality ?? '')" />
+                    <x-input-error :messages="$errors->get('nationality')" class="mt-2" />
+                </div>
             </div>
         </div>
 
@@ -61,6 +67,12 @@
                     <x-input-label for="identity_expiry_date" value="Expiry date" />
                     <x-text-input id="identity_expiry_date" name="identity_expiry_date" type="date" class="mt-1 block w-full" :value="old('identity_expiry_date', isset($owner) && $owner->identity_expiry_date ? $owner->identity_expiry_date->format('Y-m-d') : '')" />
                     <x-input-error :messages="$errors->get('identity_expiry_date')" class="mt-2" />
+                </div>
+
+                <div>
+                    <x-input-label for="identity_issue_date" value="Issuing date" />
+                    <x-text-input id="identity_issue_date" name="identity_issue_date" type="date" class="mt-1 block w-full" :value="old('identity_issue_date', isset($owner) && $owner->identity_issue_date ? $owner->identity_issue_date->format('Y-m-d') : '')" />
+                    <x-input-error :messages="$errors->get('identity_issue_date')" class="mt-2" />
                 </div>
 
                 <div x-data="{ fileName: '' }" data-identity-ocr>

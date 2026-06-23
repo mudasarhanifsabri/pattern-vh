@@ -71,11 +71,11 @@
                         <div class="rounded-2xl bg-slate-50 p-4">
                             <dt class="text-xs font-bold uppercase tracking-[0.16em] text-slate-400">Identity</dt>
                             <dd class="mt-1 font-bold text-[#071a3b]">{{ str($owner->identity_type)->replace('_', ' ')->headline() }} {{ $owner->identity_no }}</dd>
-                            <dd class="mt-1 text-xs text-slate-500">Expires {{ $owner->identity_expiry_date?->format('M d, Y') ?? 'Not set' }}</dd>
+                            <dd class="mt-1 text-xs text-slate-500">Issued {{ $owner->identity_issue_date?->format('M d, Y') ?? 'Not set' }} / Expires {{ $owner->identity_expiry_date?->format('M d, Y') ?? 'Not set' }}</dd>
                         </div>
                         <div class="rounded-2xl bg-slate-50 p-4">
-                            <dt class="text-xs font-bold uppercase tracking-[0.16em] text-slate-400">Date of birth</dt>
-                            <dd class="mt-1 font-bold text-[#071a3b]">{{ $owner->date_of_birth?->format('M d, Y') ?? 'Not added' }}</dd>
+                            <dt class="text-xs font-bold uppercase tracking-[0.16em] text-slate-400">DOB / nationality</dt>
+                            <dd class="mt-1 font-bold text-[#071a3b]">{{ $owner->date_of_birth?->format('M d, Y') ?? 'Not added' }} / {{ $owner->nationality ?: 'Nationality not added' }}</dd>
                         </div>
                     </dl>
 
