@@ -13,7 +13,24 @@ class IdentityDocumentOcr
     private const TEXT_FIELD_LABELS = [
         'name',
         'full name',
+        'given name',
+        'given names',
+        'first name',
+        'forename',
+        'forenames',
         'surname',
+        'last name',
+        'family name',
+        'nom',
+        'prenoms',
+        'prénoms',
+        'apellido',
+        'apellidos',
+        'nombres',
+        'cognome',
+        'nome',
+        'nachname',
+        'vorname',
         'date of birth',
         'birth',
         'dob',
@@ -36,6 +53,30 @@ class IdentityDocumentOcr
         'passport number',
         'passport no',
         'signature',
+    ];
+
+    private const SURNAME_LABELS = [
+        'surname',
+        'last name',
+        'family name',
+        'nom',
+        'apellido',
+        'apellidos',
+        'cognome',
+        'nachname',
+    ];
+
+    private const GIVEN_NAME_LABELS = [
+        'given name',
+        'given names',
+        'first name',
+        'forename',
+        'forenames',
+        'prenoms',
+        'prénoms',
+        'nombres',
+        'nome',
+        'vorname',
     ];
 
     public function extract(UploadedFile $file): array
@@ -227,18 +268,65 @@ class IdentityDocumentOcr
         foreach ($lines as $index => $line) {
             $lower = Str::lower($line);
 
-            if (! $surname && Str::contains($lower, ['surname', 'last name'])) {
-                $surname = $this->extractValueFromLineWindow($lines, $index, ['surname', 'last name']);
+            if (! $surname && Str::contains($lower, self::SURNAME_LABELS)) {
+                $surname = $this->extractValueFromLineWindow($lines, $index, self::SURNAME_LABELS);
             }
 
-            if (! $givenNames && Str::contains($lower, ['given name', 'given names', 'first name'])) {
-                $givenNames = $this->extractValueFromLineWindow($lines, $index, ['given names', 'given name', 'first name']);
+            if (! $givenNames && Str::contains($lower, self::GIVEN_NAME_LABELS)) {
+                $givenNames = $this->extractValueFromLineWindow($lines, $index, self::GIVEN_NAME_LABELS);
             }
         }
 
         $combined = trim(($givenNames ?: '').' '.($surname ?: ''));
         if ($combined) {
             return $this->validName($this->cleanName($combined));
+        }
+
+        foreach ($lines as $index => $line) {
+            $lower = Str::lower($line);
+
+            if (! preg_match('/\bname\b/i', $line) || Str::contains($lower, ['father', 'mother', 'authority', 'government', 'president'])) {
+                continue;
+            }
+
+            $nameParts = [];
+            $inlineValue = $this->extractTextAfterLabel($line, ['full name', 'name'], self::TEXT_FIELD_LABELS);
+            if ($inlineValue && $this->validName($this->cleanName($inlineValue))) {
+                $nameParts[] = $inlineValue;
+            }
+
+            for ($offset = 1; $offset <= 4; $offset++) {
+                $candidate = trim((string) ($lines[$index + $offset] ?? ''));
+                $candidateLower = Str::lower($candidate);
+
+                if (! $candidate || Str::contains($candidateLower, [
+                    'nationality',
+                    'date of birth',
+                    'passport',
+                    'country',
+                    'sex',
+                    'father',
+                    'place of birth',
+                ])) {
+                    break;
+                }
+
+                if ($this->validName($this->cleanName($candidate))) {
+                    $nameParts[] = $candidate;
+                }
+
+                if (count($nameParts) >= 2) {
+                    break;
+                }
+            }
+
+            if ($nameParts) {
+                $name = count($nameParts) > 1 && str_word_count($nameParts[0]) <= str_word_count($nameParts[1])
+                    ? trim(implode(' ', array_reverse($nameParts)))
+                    : trim(implode(' ', $nameParts));
+
+                return $this->validName($this->cleanName($name));
+            }
         }
 
         return null;

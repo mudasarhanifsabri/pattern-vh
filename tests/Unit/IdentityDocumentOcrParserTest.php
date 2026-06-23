@@ -16,9 +16,8 @@ class IdentityDocumentOcrParserTest extends TestCase
             to allow the bearer to pass freely without let or hindrance and to afford the bearer such assistance and protection as may be necessary
             Passport No
             CJ5023062
-            Surname
+            Name
             SABRI
-            Given Names
             MUDASAR HANIF
             Nationality
             PAKISTANI
@@ -63,6 +62,35 @@ class IdentityDocumentOcrParserTest extends TestCase
         $this->assertSame('1981-06-10', $fields['date_of_birth']);
         $this->assertSame('2025-10-23', $fields['identity_issue_date']);
         $this->assertSame('2027-10-22', $fields['identity_expiry_date']);
+    }
+
+    public function test_global_passport_labels_extract_family_and_given_names(): void
+    {
+        $fields = $this->normalize(<<<'TEXT'
+            PASSPORT
+            Passport Number
+            X12345678
+            Family Name
+            GARCIA LOPEZ
+            Given Names
+            MARIA ELENA
+            Nationality
+            SPAIN
+            Date of Birth
+            03/04/1990
+            Date of Issue
+            12/01/2024
+            Date of Expiry
+            11/01/2034
+            TEXT);
+
+        $this->assertSame('passport', $fields['identity_type']);
+        $this->assertSame('X12345678', $fields['identity_no']);
+        $this->assertSame('Maria Elena Garcia Lopez', $fields['full_name']);
+        $this->assertSame('Spain', $fields['nationality']);
+        $this->assertSame('1990-04-03', $fields['date_of_birth']);
+        $this->assertSame('2024-01-12', $fields['identity_issue_date']);
+        $this->assertSame('2034-01-11', $fields['identity_expiry_date']);
     }
 
     private function normalize(string $rawText): array
