@@ -45,7 +45,7 @@
 
         <div class="erp-card p-5">
             <h2 class="text-lg font-bold text-[#071a3b]">Passport / Emirates ID</h2>
-            <p class="mt-1 text-sm text-slate-500">Upload scans or PDFs. Files use the default storage disk.</p>
+            <p class="mt-1 text-sm text-slate-500">Upload scans or PDFs. For Scan & fill, use a clear JPG, PNG, or WEBP image.</p>
 
             <div class="mt-5 grid gap-4 md:grid-cols-2">
                 <div>
@@ -82,7 +82,7 @@
                             <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 16V4"/><path d="m7 9 5-5 5 5"/><path d="M20 16.5V19a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-2.5"/></svg>
                         </span>
                         <span class="mt-3 text-sm font-bold text-[#071a3b]">Choose passport or Emirates ID file</span>
-                        <span class="mt-1 text-xs text-slate-500">PDF, JPG, PNG, or WEBP up to 5 MB</span>
+                        <span class="mt-1 text-xs text-slate-500">Upload PDF/JPG/PNG/WEBP. OCR scan works best with image files.</span>
                         <span class="mt-3 rounded-full bg-white px-3 py-1 text-xs font-bold text-blue-700">Browse file</span>
                     </label>
                     <input id="document" name="document" type="file" accept=".pdf,.jpg,.jpeg,.png,.webp" class="sr-only" @change="fileName = $event.target.files[0]?.name || ''">

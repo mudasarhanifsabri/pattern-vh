@@ -52,7 +52,15 @@
                             body: formData,
                         });
 
-                        const data = await response.json();
+                        const responseText = await response.text();
+                        let data = {};
+
+                        try {
+                            data = responseText ? JSON.parse(responseText) : {};
+                        } catch (error) {
+                            data = { message: responseText || 'OCR scan failed. Please fill manually.' };
+                        }
+
                         if (!response.ok) {
                             setStatus(data.message || 'OCR scan failed. Please fill manually.', 'rose');
                             return;

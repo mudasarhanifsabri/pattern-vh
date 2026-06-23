@@ -3,6 +3,7 @@
 namespace App\Support;
 
 use Aws\Textract\TextractClient;
+use Aws\Exception\AwsException;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
@@ -48,6 +49,15 @@ class IdentityDocumentOcr
             ];
         }
 
+        if ($file->getClientOriginalExtension() && strtolower($file->getClientOriginalExtension()) === 'pdf') {
+            return [
+                'ok' => false,
+                'message' => 'Instant OCR supports clear JPG, PNG, or WEBP images. PDF can be uploaded and saved, but please use an image file for Scan & fill.',
+                'fields' => [],
+                'raw_text' => '',
+            ];
+        }
+
         $bytes = file_get_contents($file->getRealPath());
         $textract = $this->textract();
         $identityFields = [];
@@ -57,8 +67,14 @@ class IdentityDocumentOcr
         $mode = config('ocr.textract_mode', 'detect_text');
 
         if ($mode === 'detect_text') {
-            $rawText = $this->detectDocumentText($textract, $bytes);
-            $usedTextFallback = (bool) $rawText;
+            try {
+                $rawText = $this->detectDocumentText($textract, $bytes);
+                $usedTextFallback = (bool) $rawText;
+            } catch (\Throwable $exception) {
+                report($exception);
+
+                return $this->failure($exception);
+            }
         } else {
             try {
                 $result = $textract->analyzeID([
@@ -80,6 +96,8 @@ class IdentityDocumentOcr
                 $rawText = implode("\n", array_filter($identityFields));
             } catch (\Throwable $exception) {
                 report($exception);
+
+                return $this->failure($exception);
             }
 
             if (config('ocr.text_fallback') || empty($identityFields)) {
@@ -110,6 +128,39 @@ class IdentityDocumentOcr
                 'text_fallback_used' => $usedTextFallback,
             ],
         ];
+    }
+
+    private function failure(\Throwable $exception): array
+    {
+        return [
+            'ok' => false,
+            'message' => $this->failureMessage($exception),
+            'fields' => [],
+            'raw_text' => '',
+        ];
+    }
+
+    private function failureMessage(\Throwable $exception): string
+    {
+        if ($exception instanceof AwsException) {
+            $awsMessage = trim($exception->getAwsErrorMessage() ?: $exception->getMessage());
+
+            if ($exception->getAwsErrorCode() === 'UnrecognizedClientException') {
+                return 'AWS Textract rejected the access key. Please check OCR_AWS_ACCESS_KEY_ID and OCR_AWS_SECRET_ACCESS_KEY.';
+            }
+
+            if (Str::contains(Str::lower($awsMessage), ['security token', 'access key'])) {
+                return 'AWS Textract credentials are not valid. Please update OCR AWS keys in settings.';
+            }
+
+            if (Str::contains(Str::lower($awsMessage), ['unsupported document', 'request has unsupported document format'])) {
+                return 'Textract could not read this file format. Please upload a clear JPG, PNG, or WEBP image for instant OCR.';
+            }
+
+            return 'AWS Textract error: '.$awsMessage;
+        }
+
+        return 'OCR scan failed: '.$exception->getMessage();
     }
 
     private function normalize(array $identityFields, string $rawText): array

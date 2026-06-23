@@ -150,6 +150,21 @@ class OwnerModuleTest extends TestCase
         $this->assertContains($response->getStatusCode(), [200, 302]);
     }
 
+    public function test_identity_ocr_explains_pdf_instant_scan_limitation(): void
+    {
+        $this->seed();
+        $admin = User::where('email', 'admin@example.com')->firstOrFail();
+
+        $this->actingAs($admin)
+            ->postJson(route('identity-documents.ocr'), [
+                'document' => UploadedFile::fake()->create('Passport.pdf', 120, 'application/pdf'),
+            ])
+            ->assertOk()
+            ->assertJsonPath('ok', false)
+            ->assertJsonPath('fields', [])
+            ->assertJsonFragment(['message' => 'Instant OCR supports clear JPG, PNG, or WEBP images. PDF can be uploaded and saved, but please use an image file for Scan & fill.']);
+    }
+
     public function test_owner_notes_can_be_added_from_profile(): void
     {
         $this->seed();
