@@ -9,6 +9,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Schema;
+use App\Support\WebPushSender;
 
 class NotificationCenterController extends Controller
 {
@@ -56,6 +57,19 @@ class NotificationCenterController extends Controller
         $this->forgetTopbarCache($request);
 
         return back()->with('status', 'Notifications marked as read.');
+    }
+
+    public function testPush(Request $request, WebPushSender $sender): JsonResponse
+    {
+        $sent = $sender->sendTest($request->user());
+
+        return response()->json([
+            'ok' => $sent > 0,
+            'sent' => $sent,
+            'message' => $sent > 0
+                ? 'Test push notification sent to this device.'
+                : 'No active push subscription found for this device yet.',
+        ]);
     }
 
     public static function topbarData(Request $request): array

@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\NotificationLog;
 use App\Models\User;
+use App\Support\WebPushSender;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Permission\PermissionRegistrar;
 use Tests\TestCase;
@@ -62,5 +63,24 @@ class NotificationCenterTest extends TestCase
             ->assertOk()
             ->assertJsonFragment(['title' => 'Tenant booking update'])
             ->assertJsonFragment(['title' => 'Other user update']);
+    }
+
+    public function test_user_can_send_test_push_to_registered_device(): void
+    {
+        $this->seed();
+
+        $user = User::where('email', 'admin@example.com')->firstOrFail();
+        $this->app->instance(WebPushSender::class, new class extends WebPushSender {
+            public function sendTest(User $user): int
+            {
+                return 1;
+            }
+        });
+
+        $this->actingAs($user)
+            ->postJson(route('notifications.test-push'))
+            ->assertOk()
+            ->assertJsonPath('ok', true)
+            ->assertJsonPath('sent', 1);
     }
 }

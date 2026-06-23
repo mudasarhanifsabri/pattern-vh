@@ -5,10 +5,28 @@ use Illuminate\Support\Facades\Artisan;
 use App\Models\Booking;
 use App\Models\Invoice;
 use Illuminate\Support\Facades\Schedule;
+use Minishlink\WebPush\VAPID;
 
 Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
+
+Artisan::command('webpush:vapid', function () {
+    try {
+        $keys = VAPID::createVapidKeys();
+    } catch (Throwable $exception) {
+        $this->error('VAPID key generation failed on this PHP/OpenSSL build: '.$exception->getMessage());
+        $this->warn('On cPanel this usually works. If it fails there too, generate keys from a machine with OpenSSL P-256 support and paste them into .env.');
+
+        return 1;
+    }
+
+    $this->line('Add these values to your .env:');
+    $this->newLine();
+    $this->line('VAPID_PUBLIC_KEY='.$keys['publicKey']);
+    $this->line('VAPID_PRIVATE_KEY='.$keys['privateKey']);
+    $this->line('VAPID_SUBJECT='.config('app.url'));
+})->purpose('Generate VAPID keys for browser push notifications');
 
 Artisan::command('bookings:send-reminders', function () {
     $count = 0;
@@ -23,13 +41,18 @@ Artisan::command('bookings:send-reminders', function () {
                 $booking->notificationLogs()->firstOrCreate(
                     ['channel' => $channel, 'subject' => "Checkout reminder {$days} days"],
                     [
-                        'recipient' => $channel === 'email' ? $booking->tenant->email : $booking->tenant->mobile_no,
+                        'recipient' => match ($channel) {
+                            'email' => $booking->tenant->email,
+                            'push' => $booking->tenant->user_id ? 'user:'.$booking->tenant->user_id : $booking->tenant->email,
+                            default => $booking->tenant->mobile_no,
+                        },
                         'message' => "Your booking {$booking->booking_no} checks out in {$days} days. Please confirm checkout or request an extension in your tenant portal.",
                         'status' => $channel === 'email' ? 'queued' : 'pending',
                         'payload' => [
                             'booking_id' => $booking->id,
                             'days_before_checkout' => $days,
                             'actions' => ['request_extension', 'confirm_checkout'],
+                            'url' => route('dashboard'),
                             'integration_ready' => true,
                         ],
                         'sent_at' => $channel === 'email' ? now() : null,

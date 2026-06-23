@@ -81,13 +81,18 @@ class BookingWorkflow
             $booking->notificationLogs()->firstOrCreate(
                 ['channel' => $channel, 'subject' => 'Booking confirmation'],
                 [
-                    'recipient' => $channel === 'email' ? $booking->tenant->email : $booking->tenant->mobile_no,
+                    'recipient' => match ($channel) {
+                        'email' => $booking->tenant->email,
+                        'push' => $booking->tenant->user_id ? 'user:'.$booking->tenant->user_id : $booking->tenant->email,
+                        default => $booking->tenant->mobile_no,
+                    },
                     'message' => "Booking {$booking->booking_no} confirmed for {$booking->unit->building->name} Unit {$booking->unit->unit_no}.",
                     'status' => 'pending',
                     'payload' => [
                         'booking_no' => $booking->booking_no,
                         'unit_id' => $booking->unit_id,
                         'tenant_id' => $booking->tenant_id,
+                        'url' => route('dashboard'),
                         'integration_ready' => true,
                     ],
                 ],

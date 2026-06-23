@@ -44,12 +44,29 @@
                             <h2 class="text-sm font-black text-[#071a3b]">Notifications</h2>
                             <p data-notification-summary class="mt-1 text-xs text-slate-500">{{ $topbarNotificationCount ? $topbarNotificationCount.' unread workspace update'.($topbarNotificationCount === 1 ? '' : 's') : 'You are all caught up.' }}</p>
                         </div>
-                        <form method="POST" action="{{ route('notifications.read-all') }}">
-                            @csrf
-                            <button class="rounded-xl bg-blue-50 px-3 py-2 text-[11px] font-black text-blue-700">Mark all read</button>
-                        </form>
-                    </div>
+                    <form method="POST" action="{{ route('notifications.read-all') }}">
+                        @csrf
+                        <button class="rounded-xl bg-blue-50 px-3 py-2 text-[11px] font-black text-blue-700">Mark all read</button>
+                    </form>
                 </div>
+                @if(config('services.webpush.public_key'))
+                    <div class="mt-3 rounded-2xl bg-blue-50 p-3">
+                        <div class="flex items-center gap-3">
+                            <div class="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-white text-blue-600">
+                                <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M15 17h5l-1.4-1.4A2 2 0 0 1 18 14.2V11a6 6 0 1 0-12 0v3.2a2 2 0 0 1-.6 1.4L4 17h5m6 0a3 3 0 0 1-6 0" /></svg>
+                            </div>
+                            <div class="min-w-0 flex-1">
+                                <p class="text-xs font-black text-[#071a3b]">Device push alerts</p>
+                                <p data-push-status class="mt-0.5 text-[11px] font-semibold text-slate-500">Enable alerts for this browser/app.</p>
+                            </div>
+                            <button type="button" data-push-enable class="rounded-xl bg-blue-600 px-3 py-2 text-[11px] font-black text-white">Enable</button>
+                            <button type="button" data-push-test class="hidden rounded-xl bg-white px-3 py-2 text-[11px] font-black text-blue-700">Test</button>
+                        </div>
+                    </div>
+                @else
+                    <p class="mt-3 rounded-2xl bg-amber-50 px-3 py-2 text-[11px] font-bold text-amber-700">Push keys are not configured yet. Run <span class="font-black">php artisan webpush:vapid</span>.</p>
+                @endif
+            </div>
                 <div data-notification-list class="max-h-[420px] overflow-y-auto p-2">
                     @php
                         $safeTopbarNotifications = collect($topbarNotifications ?? [])->filter(

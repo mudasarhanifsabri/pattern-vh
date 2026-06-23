@@ -97,6 +97,7 @@ Route::middleware('auth')->group(function () {
     Route::post('push-subscriptions', [PushSubscriptionController::class, 'store'])->name('push-subscriptions.store');
     Route::delete('push-subscriptions', [PushSubscriptionController::class, 'destroy'])->name('push-subscriptions.destroy');
     Route::get('notifications/feed', [NotificationCenterController::class, 'feed'])->name('notifications.feed');
+    Route::post('notifications/test-push', [NotificationCenterController::class, 'testPush'])->name('notifications.test-push');
     Route::post('notifications/{notificationLog}/read', [NotificationCenterController::class, 'read'])->name('notifications.read');
     Route::post('notifications/read-all', [NotificationCenterController::class, 'readAll'])->name('notifications.read-all');
     Route::post('identity-documents/ocr', IdentityDocumentOcrController::class)->name('identity-documents.ocr');

@@ -73,5 +73,108 @@
             window.addEventListener('load', () => navigator.serviceWorker.register('{{ asset('service-worker.js') }}'));
         }
     </script>
+    @auth
+        <script>
+            window.patternPush = window.patternPush || {};
+            if (!window.patternPush.started) {
+                window.patternPush.started = true;
+                window.patternPush.vapidPublicKey = @js(config('services.webpush.public_key'));
+
+                const pushButtons = () => Array.from(document.querySelectorAll('[data-push-enable]'));
+                const pushTestButtons = () => Array.from(document.querySelectorAll('[data-push-test]'));
+                const pushStatusNodes = () => Array.from(document.querySelectorAll('[data-push-status]'));
+                const setPushStatus = (message, enabled = false) => {
+                    pushStatusNodes().forEach((node) => { node.textContent = message; });
+                    pushButtons().forEach((button) => {
+                        button.textContent = enabled ? 'Enabled' : 'Enable';
+                        button.disabled = enabled;
+                        button.classList.toggle('opacity-60', enabled);
+                    });
+                    pushTestButtons().forEach((button) => button.classList.toggle('hidden', !enabled));
+                };
+                const urlBase64ToUint8Array = (base64String) => {
+                    const padding = '='.repeat((4 - base64String.length % 4) % 4);
+                    const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+                    const rawData = window.atob(base64);
+                    const outputArray = new Uint8Array(rawData.length);
+                    for (let i = 0; i < rawData.length; ++i) outputArray[i] = rawData.charCodeAt(i);
+                    return outputArray;
+                };
+                const registration = async () => {
+                    if (!('serviceWorker' in navigator)) return null;
+                    return await navigator.serviceWorker.ready;
+                };
+                const saveSubscription = async (subscription) => {
+                    await fetch('{{ route('push-subscriptions.store') }}', {
+                        method: 'POST',
+                        headers: {
+                            'Accept': 'application/json',
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                        },
+                        body: JSON.stringify(subscription.toJSON()),
+                    });
+                };
+                const enablePush = async () => {
+                    if (!window.patternPush.vapidPublicKey) {
+                        setPushStatus('Push keys are not configured yet.');
+                        return;
+                    }
+                    if (!('Notification' in window) || !('PushManager' in window)) {
+                        setPushStatus('This browser does not support web push.');
+                        return;
+                    }
+
+                    const permission = await Notification.requestPermission();
+                    if (permission !== 'granted') {
+                        setPushStatus('Notifications were not allowed on this device.');
+                        return;
+                    }
+
+                    const sw = await registration();
+                    if (!sw) {
+                        setPushStatus('Service worker is not ready yet.');
+                        return;
+                    }
+
+                    const existing = await sw.pushManager.getSubscription();
+                    const subscription = existing || await sw.pushManager.subscribe({
+                        userVisibleOnly: true,
+                        applicationServerKey: urlBase64ToUint8Array(window.patternPush.vapidPublicKey),
+                    });
+
+                    await saveSubscription(subscription);
+                    setPushStatus('Enabled on this device.', true);
+                };
+                const testPush = async () => {
+                    await fetch('{{ route('notifications.test-push') }}', {
+                        method: 'POST',
+                        headers: {
+                            'Accept': 'application/json',
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                        },
+                    });
+                };
+
+                window.addEventListener('load', async () => {
+                    if (!window.patternPush.vapidPublicKey) return;
+                    try {
+                        const sw = await registration();
+                        const existing = sw ? await sw.pushManager.getSubscription() : null;
+                        if (existing && Notification.permission === 'granted') {
+                            await saveSubscription(existing);
+                            setPushStatus('Enabled on this device.', true);
+                        }
+                    } catch (error) {}
+                });
+
+                document.addEventListener('click', (event) => {
+                    if (event.target.closest('[data-push-enable]')) enablePush();
+                    if (event.target.closest('[data-push-test]')) testPush();
+                });
+            }
+        </script>
+    @endauth
 </body>
 </html>

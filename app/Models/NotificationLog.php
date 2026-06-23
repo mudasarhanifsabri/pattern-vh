@@ -27,4 +27,17 @@ class NotificationLog extends Model
     {
         return $this->hasMany(NotificationRead::class);
     }
+
+    protected static function booted(): void
+    {
+        static::created(function (NotificationLog $notification): void {
+            if ($notification->channel !== 'push') {
+                return;
+            }
+
+            app()->terminating(function () use ($notification): void {
+                app(\App\Support\WebPushSender::class)->send($notification->fresh() ?: $notification);
+            });
+        });
+    }
 }

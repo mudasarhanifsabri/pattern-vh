@@ -462,7 +462,7 @@
 
             if ('serviceWorker' in navigator && 'PushManager' in window && vapidPublicKey) {
                 const registration = await navigator.serviceWorker.ready;
-                const subscription = await registration.pushManager.subscribe({
+                const subscription = await registration.pushManager.getSubscription() || await registration.pushManager.subscribe({
                     userVisibleOnly: true,
                     applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
                 });

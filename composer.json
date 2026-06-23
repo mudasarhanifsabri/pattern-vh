@@ -11,7 +11,9 @@
         "laravel/framework": "^13.8",
         "laravel/tinker": "^3.0",
         "league/flysystem-aws-s3-v3": "^3.34",
+        "minishlink/web-push": "^10.1",
         "mpdf/mpdf": "^8.3",
+        "minishlink/web-push": "^10.1",
         "spatie/laravel-permission": "^8.0"
     },
     "require-dev": {

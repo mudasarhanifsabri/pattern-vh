@@ -105,10 +105,19 @@ class InvoicePaymentWorkflow
             $booking->notificationLogs()->firstOrCreate(
                 ['channel' => $channel, 'subject' => 'Receipt issued'],
                 [
-                    'recipient' => $channel === 'email' ? $booking->tenant->email : $booking->tenant->mobile_no,
+                    'recipient' => match ($channel) {
+                        'email' => $booking->tenant->email,
+                        'push' => $booking->tenant->user_id ? 'user:'.$booking->tenant->user_id : $booking->tenant->email,
+                        default => $booking->tenant->mobile_no,
+                    },
                     'message' => "Receipt {$receipt->receipt_no} issued. Check-in code: {$receipt->check_in_code}.",
                     'status' => $channel === 'email' ? 'sent' : 'pending',
-                    'payload' => ['receipt_id' => $receipt->id, 'check_in_code' => $receipt->check_in_code, 'integration_ready' => true],
+                    'payload' => [
+                        'receipt_id' => $receipt->id,
+                        'check_in_code' => $receipt->check_in_code,
+                        'url' => route('dashboard'),
+                        'integration_ready' => true,
+                    ],
                     'sent_at' => $channel === 'email' ? now() : null,
                 ],
             );
