@@ -15,6 +15,10 @@ class IdentityDocumentOcr
         'full name',
         'given name',
         'given names',
+        'suen names',
+        'gven names',
+        'given narnes',
+        'given narne',
         'first name',
         'forename',
         'forenames',
@@ -69,6 +73,10 @@ class IdentityDocumentOcr
     private const GIVEN_NAME_LABELS = [
         'given name',
         'given names',
+        'suen names',
+        'gven names',
+        'given narnes',
+        'given narne',
         'first name',
         'forename',
         'forenames',
@@ -278,7 +286,7 @@ class IdentityDocumentOcr
         }
 
         $combined = trim(($givenNames ?: '').' '.($surname ?: ''));
-        if ($combined) {
+        if ($givenNames && $surname && $combined) {
             return $this->validName($this->cleanName($combined));
         }
 
@@ -299,10 +307,22 @@ class IdentityDocumentOcr
                 $candidate = trim((string) ($lines[$index + $offset] ?? ''));
                 $candidateLower = Str::lower($candidate);
 
-                if (! $candidate || Str::contains($candidateLower, [
+                if (! $candidate) {
+                    break;
+                }
+
+                if (Str::contains($candidateLower, [
+                    'passport',
+                    'document',
+                    ...self::SURNAME_LABELS,
+                    ...self::GIVEN_NAME_LABELS,
+                ])) {
+                    continue;
+                }
+
+                if (Str::contains($candidateLower, [
                     'nationality',
                     'date of birth',
-                    'passport',
                     'country',
                     'sex',
                     'father',
@@ -329,7 +349,7 @@ class IdentityDocumentOcr
             }
         }
 
-        return null;
+        return $this->validName($this->cleanName((string) ($givenNames ?: $surname)));
     }
 
     private function extractNationality(string $rawText): ?string

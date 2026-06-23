@@ -18,6 +18,8 @@ class IdentityDocumentOcrParserTest extends TestCase
             CJ5023062
             Name
             SABRI
+            Suen Names
+            PASSPORT
             MUDASAR HANIF
             Nationality
             PAKISTANI
