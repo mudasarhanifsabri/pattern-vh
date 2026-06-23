@@ -24,42 +24,52 @@ class IdentityDocumentOcr
         $textract = $this->textract();
         $identityFields = [];
         $rawText = '';
+        $usedTextFallback = false;
+        $startedAt = microtime(true);
+        $mode = config('ocr.textract_mode', 'detect_text');
 
-        try {
-            $result = $textract->analyzeID([
-                'DocumentPages' => [
-                    ['Bytes' => $bytes],
-                ],
-            ]);
+        if ($mode === 'detect_text') {
+            $rawText = $this->detectDocumentText($textract, $bytes);
+            $usedTextFallback = (bool) $rawText;
+        } else {
+            try {
+                $result = $textract->analyzeID([
+                    'DocumentPages' => [
+                        ['Bytes' => $bytes],
+                    ],
+                ]);
 
-            foreach (($result['IdentityDocuments'] ?? []) as $document) {
-                foreach (($document['IdentityDocumentFields'] ?? []) as $field) {
-                    $type = strtoupper((string) data_get($field, 'Type.Text'));
-                    $value = trim((string) data_get($field, 'ValueDetection.Text'));
-                    if ($type && $value) {
-                        $identityFields[$type] = $value;
+                foreach (($result['IdentityDocuments'] ?? []) as $document) {
+                    foreach (($document['IdentityDocumentFields'] ?? []) as $field) {
+                        $type = strtoupper((string) data_get($field, 'Type.Text'));
+                        $value = trim((string) data_get($field, 'ValueDetection.Text'));
+                        if ($type && $value) {
+                            $identityFields[$type] = $value;
+                        }
                     }
                 }
+
+                $rawText = implode("\n", array_filter($identityFields));
+            } catch (\Throwable $exception) {
+                report($exception);
             }
-        } catch (\Throwable $exception) {
-            report($exception);
-        }
 
-        try {
-            $textResult = $textract->detectDocumentText([
-                'Document' => ['Bytes' => $bytes],
-            ]);
+            if (config('ocr.text_fallback') || empty($identityFields)) {
+                try {
+                    $detectedText = $this->detectDocumentText($textract, $bytes);
 
-            $rawText = collect($textResult['Blocks'] ?? [])
-                ->where('BlockType', 'LINE')
-                ->pluck('Text')
-                ->filter()
-                ->implode("\n");
-        } catch (\Throwable $exception) {
-            report($exception);
+                    if ($detectedText) {
+                        $rawText = trim($rawText."\n".$detectedText);
+                        $usedTextFallback = true;
+                    }
+                } catch (\Throwable $exception) {
+                    report($exception);
+                }
+            }
         }
 
         $fields = $this->normalize($identityFields, $rawText);
+        $durationMs = (int) round((microtime(true) - $startedAt) * 1000);
 
         return [
             'ok' => (bool) array_filter($fields),
@@ -67,6 +77,10 @@ class IdentityDocumentOcr
             'fields' => $fields,
             'raw_text' => $rawText,
             'provider_fields' => $identityFields,
+            'meta' => [
+                'duration_ms' => $durationMs,
+                'text_fallback_used' => $usedTextFallback,
+            ],
         ];
     }
 
@@ -79,11 +93,20 @@ class IdentityDocumentOcr
 
         $identityType = $this->detectIdentityType($rawText, $documentNumber);
         $fullName = $this->extractName($identityFields, $rawText);
+        $nationality = $this->normalizeNationality(
+            $identityFields['NATIONALITY']
+                ?? $identityFields['NATIONALITY_CODE']
+                ?? $identityFields['COUNTRY']
+                ?? $identityFields['COUNTRY_OF_ISSUE']
+                ?? $identityFields['ISSUING_COUNTRY']
+                ?? $this->extractNationality($rawText)
+        );
 
         return [
             'identity_type' => $identityType,
             'identity_no' => $documentNumber ? $this->cleanDocumentNumber($documentNumber, $identityType) : null,
             'full_name' => $fullName,
+            'nationality' => $nationality,
             'date_of_birth' => $this->normalizeDate($identityFields['DATE_OF_BIRTH'] ?? $this->extractDateNear($rawText, ['date of birth', 'birth', 'dob'])),
             'identity_expiry_date' => $this->normalizeDate($identityFields['EXPIRATION_DATE'] ?? $identityFields['EXPIRY_DATE'] ?? $this->extractDateNear($rawText, ['expiry', 'expiration', 'valid until'])),
         ];
@@ -104,6 +127,28 @@ class IdentityDocumentOcr
 
         if (preg_match('/(?:name|full name|surname)\s*[:\-]?\s*([A-Z][A-Z\s]{4,})/i', $rawText, $match)) {
             return $this->cleanName($match[1]);
+        }
+
+        return null;
+    }
+
+    private function extractNationality(string $rawText): ?string
+    {
+        $lines = preg_split('/\R+/', $rawText) ?: [];
+
+        foreach ($lines as $index => $line) {
+            if (! Str::contains(Str::lower($line), ['nationality', 'nationalite', 'الجنسية'])) {
+                continue;
+            }
+
+            $window = trim($line.' '.($lines[$index + 1] ?? ''));
+            if (preg_match('/(?:nationality|nationalite|الجنسية)\s*[:\-]?\s*([A-Z][A-Z\s]{2,}|[A-Z]{3})/iu', $window, $match)) {
+                return $match[1];
+            }
+
+            if (! empty($lines[$index + 1]) && preg_match('/^[A-Z][A-Z\s]{2,}$/i', trim($lines[$index + 1]))) {
+                return trim($lines[$index + 1]);
+            }
         }
 
         return null;
@@ -202,6 +247,69 @@ class IdentityDocumentOcr
             ->squish()
             ->title()
             ->toString();
+    }
+
+    private function normalizeNationality(?string $value): ?string
+    {
+        if (! $value) {
+            return null;
+        }
+
+        $value = Str::of($value)
+            ->replaceMatches('/[^A-Z\s]/i', ' ')
+            ->squish()
+            ->upper()
+            ->toString();
+
+        if (! $value) {
+            return null;
+        }
+
+        $map = [
+            'ARE' => 'Emirati',
+            'UAE' => 'Emirati',
+            'UNITED ARAB EMIRATES' => 'Emirati',
+            'EMIRATI' => 'Emirati',
+            'IND' => 'Indian',
+            'INDIA' => 'Indian',
+            'INDIAN' => 'Indian',
+            'PAK' => 'Pakistani',
+            'PAKISTAN' => 'Pakistani',
+            'PAKISTANI' => 'Pakistani',
+            'PHL' => 'Filipino',
+            'PHILIPPINES' => 'Filipino',
+            'FILIPINO' => 'Filipino',
+            'GBR' => 'British',
+            'UNITED KINGDOM' => 'British',
+            'BRITISH' => 'British',
+            'USA' => 'American',
+            'UNITED STATES' => 'American',
+            'AMERICAN' => 'American',
+            'EGY' => 'Egyptian',
+            'EGYPT' => 'Egyptian',
+            'EGYPTIAN' => 'Egyptian',
+            'JOR' => 'Jordanian',
+            'JORDAN' => 'Jordanian',
+            'JORDANIAN' => 'Jordanian',
+            'LBN' => 'Lebanese',
+            'LEBANON' => 'Lebanese',
+            'LEBANESE' => 'Lebanese',
+        ];
+
+        return $map[$value] ?? Str::of($value)->lower()->title()->toString();
+    }
+
+    private function detectDocumentText(TextractClient $textract, string $bytes): string
+    {
+        $textResult = $textract->detectDocumentText([
+            'Document' => ['Bytes' => $bytes],
+        ]);
+
+        return collect($textResult['Blocks'] ?? [])
+            ->where('BlockType', 'LINE')
+            ->pluck('Text')
+            ->filter()
+            ->implode("\n");
     }
 
     private function textract(): TextractClient
