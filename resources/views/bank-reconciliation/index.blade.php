@@ -17,50 +17,24 @@
         @endforeach
     </div>
 
-    @can('bank-reconciliation.manage')
-        <section class="grid gap-5 xl:grid-cols-[0.9fr_1.1fr]">
-            <form method="POST" action="{{ route('bank-reconciliation.accounts.store') }}" class="erp-card p-5">
-                @csrf
-                <h2 class="text-lg font-black text-[#071a3b]">Add bank account</h2>
-                <p class="mt-1 text-sm text-slate-500">Create Pattern bank accounts for statement imports and matching.</p>
-                <div class="mt-5 grid gap-3 md:grid-cols-2">
-                    <input name="name" placeholder="Account name e.g. Main collections" class="erp-focus h-11 rounded-xl border border-slate-200 px-3 text-sm" required>
-                    <input name="bank_name" placeholder="Bank name" class="erp-focus h-11 rounded-xl border border-slate-200 px-3 text-sm">
-                    <input name="account_no" placeholder="Account no" class="erp-focus h-11 rounded-xl border border-slate-200 px-3 text-sm">
-                    <input name="iban" placeholder="IBAN" class="erp-focus h-11 rounded-xl border border-slate-200 px-3 text-sm">
-                    <input name="currency" value="AED" class="erp-focus h-11 rounded-xl border border-slate-200 px-3 text-sm">
-                    <button class="rounded-xl bg-blue-600 px-4 text-sm font-black text-white">Save account</button>
-                </div>
-            </form>
-
-            <form method="POST" action="{{ route('bank-reconciliation.import') }}" enctype="multipart/form-data" class="erp-card p-5">
-                @csrf
-                <h2 class="text-lg font-black text-[#071a3b]">Upload bank statement CSV</h2>
-                <p class="mt-1 text-sm text-slate-500">Columns accepted: date, description/narration, reference, debit, credit, amount, balance.</p>
-                <div class="mt-5 grid gap-3 md:grid-cols-2">
-                    <select name="bank_account_id" class="erp-focus h-11 rounded-xl border border-slate-200 px-3 text-sm" required><option value="">Select bank account</option>@foreach($accounts as $account)<option value="{{ $account->id }}">{{ $account->name }} / {{ $account->bank_name ?: 'Bank' }}</option>@endforeach</select>
-                    <input name="statement" type="file" accept=".csv,.txt" class="erp-focus h-11 rounded-xl border border-dashed border-blue-200 bg-blue-50 px-3 py-2 text-sm" required>
-                    <input name="statement_from" type="date" class="erp-focus h-11 rounded-xl border border-slate-200 px-3 text-sm">
-                    <input name="statement_to" type="date" class="erp-focus h-11 rounded-xl border border-slate-200 px-3 text-sm">
-                    <textarea name="notes" rows="2" placeholder="Notes" class="erp-focus rounded-xl border border-slate-200 px-3 py-2 text-sm md:col-span-2"></textarea>
-                    <button class="rounded-xl bg-slate-900 px-4 py-3 text-sm font-black text-white md:col-span-2">Import and auto-match</button>
-                </div>
-            </form>
-        </section>
-    @endcan
-
     <section class="grid gap-5 xl:grid-cols-[1fr_340px]">
         <div class="erp-card overflow-hidden">
             <div class="border-b border-slate-100 p-5">
                 <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                     <div><h2 class="text-lg font-black text-[#071a3b]">Bank transactions</h2><p class="mt-1 text-sm text-slate-500">Match bank movements with payments, expenses, and owner transfers.</p></div>
-                    <form method="GET" class="grid gap-2 md:grid-cols-4">
-                        <input name="search" value="{{ request('search') }}" placeholder="Search reference..." class="erp-focus h-10 rounded-xl border border-slate-200 px-3 text-xs">
-                        <select name="status" class="erp-focus h-10 rounded-xl border border-slate-200 px-3 text-xs"><option value="">All status</option>@foreach(\App\Models\BankTransaction::STATUSES as $status)<option value="{{ $status }}" @selected(request('status')===$status)>{{ str($status)->headline() }}</option>@endforeach</select>
-                        <select name="type" class="erp-focus h-10 rounded-xl border border-slate-200 px-3 text-xs"><option value="">All type</option><option value="credit" @selected(request('type')==='credit')>Credit</option><option value="debit" @selected(request('type')==='debit')>Debit</option></select>
-                        <button class="rounded-xl bg-slate-900 px-3 text-xs font-black text-white">Filter</button>
-                    </form>
+                    <div class="flex flex-wrap gap-2">
+                        @can('bank-reconciliation.manage')
+                            <button type="button" x-data x-on:click="$dispatch('open-modal', 'import-bank-statement')" class="inline-flex h-11 items-center justify-center rounded-xl bg-blue-600 px-4 text-sm font-black text-white shadow-lg shadow-blue-600/20">Import statement</button>
+                            <button type="button" x-data x-on:click="$dispatch('open-modal', 'add-bank-account')" class="inline-flex h-11 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-black text-slate-700">Add account</button>
+                        @endcan
+                    </div>
                 </div>
+                <form method="GET" class="mt-5 grid gap-2 md:grid-cols-[1fr_170px_150px_110px]">
+                    <input name="search" value="{{ request('search') }}" placeholder="Search description or reference..." class="erp-focus h-11 rounded-xl border border-slate-200 px-3 text-sm">
+                    <select name="status" class="erp-focus h-11 rounded-xl border border-slate-200 px-3 text-sm"><option value="">All status</option>@foreach(\App\Models\BankTransaction::STATUSES as $status)<option value="{{ $status }}" @selected(request('status')===$status)>{{ str($status)->headline() }}</option>@endforeach</select>
+                    <select name="type" class="erp-focus h-11 rounded-xl border border-slate-200 px-3 text-sm"><option value="">All type</option><option value="credit" @selected(request('type')==='credit')>Credit</option><option value="debit" @selected(request('type')==='debit')>Debit</option></select>
+                    <button class="rounded-xl bg-slate-900 px-3 text-sm font-black text-white">Filter</button>
+                </form>
             </div>
 
             <div class="divide-y divide-slate-100">
@@ -99,10 +73,37 @@
 
                         @can('bank-reconciliation.manage')
                             @if($transaction->status !== 'matched')
-                                <details class="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                                    <summary class="cursor-pointer text-sm font-black text-[#071a3b]">Manual match</summary>
-                                    <form method="POST" action="{{ route('bank-reconciliation.manual-match', $transaction) }}" class="mt-3 grid gap-2 md:grid-cols-[180px_1fr_auto]">@csrf<select name="match_type" class="erp-focus h-10 rounded-xl border border-slate-200 px-3 text-xs"><option value="payment">Payment</option><option value="expense">Expense</option><option value="owner_payout">Owner payout</option></select><input name="match_id" placeholder="Record ID" class="erp-focus h-10 rounded-xl border border-slate-200 px-3 text-xs" required><button class="rounded-xl bg-slate-900 px-4 text-xs font-black text-white">Match</button></form>
-                                </details>
+                                <button type="button" x-data x-on:click="$dispatch('open-modal', 'manual-bank-match-{{ $transaction->id }}')" class="mt-4 inline-flex rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-black text-slate-700">Manual match</button>
+                                <x-modal name="manual-bank-match-{{ $transaction->id }}" maxWidth="lg">
+                                    <form method="POST" action="{{ route('bank-reconciliation.manual-match', $transaction) }}" class="p-6">
+                                        @csrf
+                                        <div class="flex items-start justify-between gap-4">
+                                            <div>
+                                                <p class="text-[11px] font-black uppercase tracking-[0.2em] text-blue-600">Manual match</p>
+                                                <h2 class="mt-1 text-xl font-black text-[#071a3b]">Match bank transaction</h2>
+                                                <p class="mt-1 text-sm text-slate-500">AED {{ number_format((float)$transaction->amount, 2) }} / {{ $transaction->reference_no ?: 'No reference' }}</p>
+                                            </div>
+                                            <button type="button" x-on:click="$dispatch('close-modal', 'manual-bank-match-{{ $transaction->id }}')" class="rounded-xl border border-slate-200 px-3 py-2 text-xs font-black text-slate-500">Close</button>
+                                        </div>
+                                        <div class="mt-5 grid gap-3">
+                                            <label class="text-xs font-black uppercase tracking-[0.12em] text-slate-500">Match with
+                                                <select name="match_type" class="erp-focus mt-2 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm">
+                                                    <option value="payment">Payment</option>
+                                                    <option value="expense">Expense</option>
+                                                    <option value="owner_payout">Owner payout</option>
+                                                </select>
+                                            </label>
+                                            <label class="text-xs font-black uppercase tracking-[0.12em] text-slate-500">Record ID
+                                                <input name="match_id" placeholder="Example: payment ID, expense ID, or payout transfer ID" class="erp-focus mt-2 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm" required>
+                                            </label>
+                                            <div class="rounded-2xl bg-amber-50 p-4 text-xs font-bold leading-5 text-amber-800">Use manual match only when the suggestion is missing but finance has verified the exact record.</div>
+                                        </div>
+                                        <div class="mt-6 flex justify-end gap-2">
+                                            <button type="button" x-on:click="$dispatch('close-modal', 'manual-bank-match-{{ $transaction->id }}')" class="rounded-xl border border-slate-200 px-5 py-2.5 text-sm font-black text-slate-600">Cancel</button>
+                                            <button class="rounded-xl bg-slate-900 px-5 py-2.5 text-sm font-black text-white">Confirm match</button>
+                                        </div>
+                                    </form>
+                                </x-modal>
                             @endif
                         @endcan
                     </article>
@@ -118,5 +119,63 @@
             <div class="erp-card p-5"><h2 class="text-lg font-black text-[#071a3b]">How matching works</h2><div class="mt-4 space-y-3 text-sm text-slate-600"><p class="rounded-2xl bg-emerald-50 p-4">Credits are matched with tenant payments by amount, date, invoice, reference, and tenant name.</p><p class="rounded-2xl bg-rose-50 p-4">Debits are matched with expenses and owner payout transfers.</p><p class="rounded-2xl bg-blue-50 p-4">Confirming a pending payment match approves the payment and can issue the receipt automatically.</p></div></div>
         </aside>
     </section>
+
+    @can('bank-reconciliation.manage')
+        <x-modal name="add-bank-account" maxWidth="2xl" focusable>
+            <form method="POST" action="{{ route('bank-reconciliation.accounts.store') }}" class="p-6">
+                @csrf
+                <div class="flex items-start justify-between gap-4">
+                    <div>
+                        <p class="text-[11px] font-black uppercase tracking-[0.2em] text-blue-600">Bank account</p>
+                        <h2 class="mt-1 text-xl font-black text-[#071a3b]">Add collection bank account</h2>
+                        <p class="mt-1 text-sm text-slate-500">Create Pattern bank accounts for statement imports and matching.</p>
+                    </div>
+                    <button type="button" x-on:click="$dispatch('close-modal', 'add-bank-account')" class="rounded-xl border border-slate-200 px-3 py-2 text-xs font-black text-slate-500">Close</button>
+                </div>
+                <div class="mt-6 grid gap-3 md:grid-cols-2">
+                    <input name="name" placeholder="Account name e.g. Main collections" class="erp-focus h-11 rounded-xl border border-slate-200 px-3 text-sm" required>
+                    <input name="bank_name" placeholder="Bank name" class="erp-focus h-11 rounded-xl border border-slate-200 px-3 text-sm">
+                    <input name="account_no" placeholder="Account no" class="erp-focus h-11 rounded-xl border border-slate-200 px-3 text-sm">
+                    <input name="iban" placeholder="IBAN" class="erp-focus h-11 rounded-xl border border-slate-200 px-3 text-sm">
+                    <input name="currency" value="AED" class="erp-focus h-11 rounded-xl border border-slate-200 px-3 text-sm">
+                </div>
+                <div class="mt-6 flex justify-end gap-2">
+                    <button type="button" x-on:click="$dispatch('close-modal', 'add-bank-account')" class="rounded-xl border border-slate-200 px-5 py-2.5 text-sm font-black text-slate-600">Cancel</button>
+                    <button class="rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-black text-white">Save account</button>
+                </div>
+            </form>
+        </x-modal>
+
+        <x-modal name="import-bank-statement" maxWidth="2xl" focusable>
+            <form method="POST" action="{{ route('bank-reconciliation.import') }}" enctype="multipart/form-data" class="p-6">
+                @csrf
+                <div class="flex items-start justify-between gap-4">
+                    <div>
+                        <p class="text-[11px] font-black uppercase tracking-[0.2em] text-blue-600">Statement import</p>
+                        <h2 class="mt-1 text-xl font-black text-[#071a3b]">Upload bank statement CSV</h2>
+                        <p class="mt-1 text-sm text-slate-500">Accepted columns: date, description/narration, reference, debit, credit, amount, balance.</p>
+                    </div>
+                    <button type="button" x-on:click="$dispatch('close-modal', 'import-bank-statement')" class="rounded-xl border border-slate-200 px-3 py-2 text-xs font-black text-slate-500">Close</button>
+                </div>
+                <div class="mt-6 grid gap-3 md:grid-cols-2">
+                    <select name="bank_account_id" class="erp-focus h-11 rounded-xl border border-slate-200 px-3 text-sm" required>
+                        <option value="">Select bank account</option>
+                        @foreach($accounts as $account)
+                            <option value="{{ $account->id }}">{{ $account->name }} / {{ $account->bank_name ?: 'Bank' }}</option>
+                        @endforeach
+                    </select>
+                    <input name="statement" type="file" accept=".csv,.txt" class="erp-focus h-11 rounded-xl border border-dashed border-blue-200 bg-blue-50 px-3 py-2 text-sm" required>
+                    <input name="statement_from" type="date" class="erp-focus h-11 rounded-xl border border-slate-200 px-3 text-sm">
+                    <input name="statement_to" type="date" class="erp-focus h-11 rounded-xl border border-slate-200 px-3 text-sm">
+                    <textarea name="notes" rows="3" placeholder="Notes" class="erp-focus rounded-xl border border-slate-200 px-3 py-2 text-sm md:col-span-2"></textarea>
+                </div>
+                <div class="mt-5 rounded-2xl bg-blue-50 p-4 text-xs font-bold leading-5 text-blue-800">After import, the system will suggest matches against payments, expenses, and owner payout transfers. No payment is approved until finance confirms the match.</div>
+                <div class="mt-6 flex justify-end gap-2">
+                    <button type="button" x-on:click="$dispatch('close-modal', 'import-bank-statement')" class="rounded-xl border border-slate-200 px-5 py-2.5 text-sm font-black text-slate-600">Cancel</button>
+                    <button class="rounded-xl bg-slate-900 px-5 py-2.5 text-sm font-black text-white">Import and auto-match</button>
+                </div>
+            </form>
+        </x-modal>
+    @endcan
 </div>
 </x-app-layout>
