@@ -8,6 +8,7 @@ use App\Models\CheckInInspectionItem;
 use App\Models\OperationsTeamMember;
 use App\Models\Tenant;
 use App\Support\ActivityLogger;
+use App\Support\PushEventLogger;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
@@ -54,7 +55,7 @@ class TaskManagementController extends Controller
         ]);
     }
 
-    public function update(Request $request, BookingTask $bookingTask)
+    public function update(Request $request, BookingTask $bookingTask, PushEventLogger $push)
     {
         $validated = $request->validate([
             'status' => ['required', Rule::in(BookingTask::STATUSES)],
@@ -68,6 +69,7 @@ class TaskManagementController extends Controller
         ]);
 
         $oldStatus = $bookingTask->status;
+        $oldAssignee = $bookingTask->assigned_to_id;
 
         $bookingTask->fill($validated);
         $bookingTask->checklist = collect($validated['checklist'] ?? [])
@@ -95,10 +97,32 @@ class TaskManagementController extends Controller
 
         ActivityLogger::log('booking_tasks.updated', "Updated task {$bookingTask->title}.", $bookingTask);
 
+        $bookingTask->loadMissing(['booking', 'assignee']);
+
+        if ($bookingTask->assigned_to_id && (int) $oldAssignee !== (int) $bookingTask->assigned_to_id) {
+            $push->toOperationsMember(
+                $bookingTask->assignee,
+                'New task assigned',
+                "{$bookingTask->title} is assigned to you.",
+                ['type' => 'task', 'task_id' => $bookingTask->id, 'url' => route('tasks.index')],
+                $bookingTask->booking
+            );
+        }
+
+        if ($oldStatus !== $bookingTask->status && $bookingTask->assigned_to_id) {
+            $push->toOperationsMember(
+                $bookingTask->assignee,
+                'Task status updated',
+                "{$bookingTask->title} is now ".str($bookingTask->status)->replace('_', ' ')->headline().'.',
+                ['type' => 'task_status', 'task_id' => $bookingTask->id, 'url' => route('tasks.index')],
+                $bookingTask->booking
+            );
+        }
+
         return back()->with('status', 'Task updated.');
     }
 
-    public function submitTenantCheckIn(Request $request, Booking $booking)
+    public function submitTenantCheckIn(Request $request, Booking $booking, PushEventLogger $push)
     {
         $tenant = $this->tenantFor($request);
         abort_unless($tenant && (int) $booking->tenant_id === (int) $tenant->id, 403);
@@ -136,6 +160,14 @@ class TaskManagementController extends Controller
             'event_type' => 'tenant_checkin_submitted',
             'description' => 'Tenant submitted check-in condition report.',
         ]);
+
+        $push->toUserIds(
+            \App\Models\User::permission('booking-tasks.manage')->pluck('id'),
+            'Tenant check-in report submitted',
+            "{$tenant->full_name} submitted the apartment condition report for {$booking->booking_no}.",
+            ['type' => 'tenant_checkin_report', 'booking_id' => $booking->id, 'url' => route('bookings.inspection', $booking)],
+            $booking
+        );
 
         return back()->with('status', 'Check-in condition report submitted.');
     }

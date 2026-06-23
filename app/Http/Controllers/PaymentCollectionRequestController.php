@@ -7,6 +7,7 @@ use App\Models\Payment;
 use App\Models\PaymentCollectionRequest;
 use App\Support\ActivityLogger;
 use App\Support\ErpStoragePath;
+use App\Support\PushEventLogger;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -27,7 +28,7 @@ class PaymentCollectionRequestController extends Controller
         ]);
     }
 
-    public function schedule(Request $request, PaymentCollectionRequest $paymentCollectionRequest)
+    public function schedule(Request $request, PaymentCollectionRequest $paymentCollectionRequest, PushEventLogger $push)
     {
         $validated = $request->validate([
             'assigned_to_id' => ['nullable', 'exists:operations_team_members,id'],
@@ -42,10 +43,26 @@ class PaymentCollectionRequestController extends Controller
 
         ActivityLogger::log('payment_collection_requests.scheduled', "Scheduled payment collection {$paymentCollectionRequest->request_no}.", $paymentCollectionRequest);
 
+        $paymentCollectionRequest->loadMissing(['tenant', 'assignedTo', 'booking']);
+        $push->toTenant(
+            $paymentCollectionRequest->tenant,
+            'Payment collection scheduled',
+            "Your {$paymentCollectionRequest->collection_method} collection request {$paymentCollectionRequest->request_no} has been scheduled.",
+            ['type' => 'collection_scheduled', 'collection_request_id' => $paymentCollectionRequest->id, 'url' => route('tenant.payment-requests.index')],
+            $paymentCollectionRequest->booking
+        );
+        $push->toOperationsMember(
+            $paymentCollectionRequest->assignedTo,
+            'Payment collection assigned',
+            "Collection {$paymentCollectionRequest->request_no} is assigned to you.",
+            ['type' => 'collection_assigned', 'collection_request_id' => $paymentCollectionRequest->id, 'url' => route('payment-collection-requests.index')],
+            $paymentCollectionRequest->booking
+        );
+
         return back()->with('status', 'Collection request scheduled.');
     }
 
-    public function collect(Request $request, PaymentCollectionRequest $paymentCollectionRequest)
+    public function collect(Request $request, PaymentCollectionRequest $paymentCollectionRequest, PushEventLogger $push)
     {
         abort_if($paymentCollectionRequest->payment_id, 422, 'Payment already recorded for this collection request.');
 
@@ -85,10 +102,18 @@ class PaymentCollectionRequestController extends Controller
 
         ActivityLogger::log('payment_collection_requests.collected', "Recorded collection {$paymentCollectionRequest->request_no} as pending payment {$payment->payment_no}.", $paymentCollectionRequest);
 
+        $push->toUserIds(
+            \App\Models\User::permission('payments.manage')->pluck('id'),
+            'Collection proof waiting',
+            "Collection {$paymentCollectionRequest->request_no} was recorded and needs finance approval.",
+            ['type' => 'collection_collected', 'collection_request_id' => $paymentCollectionRequest->id, 'payment_id' => $payment->id, 'url' => route('invoices.show', $paymentCollectionRequest->invoice)],
+            $paymentCollectionRequest->booking
+        );
+
         return redirect()->route('invoices.show', $paymentCollectionRequest->invoice)->with('status', 'Doorstep collection recorded as pending payment. Finance can approve it now.');
     }
 
-    public function cancel(Request $request, PaymentCollectionRequest $paymentCollectionRequest)
+    public function cancel(Request $request, PaymentCollectionRequest $paymentCollectionRequest, PushEventLogger $push)
     {
         $validated = $request->validate([
             'office_notes' => ['nullable', 'string', 'max:1000'],
@@ -101,6 +126,15 @@ class PaymentCollectionRequestController extends Controller
         ]);
 
         ActivityLogger::log('payment_collection_requests.cancelled', "Cancelled payment collection {$paymentCollectionRequest->request_no}.", $paymentCollectionRequest);
+
+        $paymentCollectionRequest->loadMissing(['tenant', 'booking']);
+        $push->toTenant(
+            $paymentCollectionRequest->tenant,
+            'Payment collection cancelled',
+            "Collection request {$paymentCollectionRequest->request_no} was cancelled.",
+            ['type' => 'collection_cancelled', 'collection_request_id' => $paymentCollectionRequest->id, 'url' => route('tenant.payment-requests.index')],
+            $paymentCollectionRequest->booking
+        );
 
         return back()->with('status', 'Collection request cancelled.');
     }

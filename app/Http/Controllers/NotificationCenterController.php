@@ -22,7 +22,7 @@ class NotificationCenterController extends Controller
         $user = $request->user();
         $notifications = $this->queryFor($request)
             ->withExists(['reads as is_read' => fn (Builder $query) => $query->where('user_id', $user->id)])
-            ->latest()
+            ->latest('id')
             ->limit(10)
             ->get();
 
@@ -83,7 +83,7 @@ class NotificationCenterController extends Controller
 
         $notifications = $controller->queryFor($request)
             ->withExists(['reads as is_read' => fn (Builder $query) => $query->where('user_id', $request->user()->id)])
-            ->latest()
+            ->latest('id')
             ->limit(8)
             ->get();
 

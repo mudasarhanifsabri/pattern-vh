@@ -39,8 +39,10 @@ class BookingModuleTest extends TestCase
         $this->assertTrue(Role::findByName('Super Admin')->hasPermissionTo('bookings.manage'));
         $this->assertDatabaseHas(Booking::class, ['booking_no' => 'BK-DEMO-0001', 'booking_status' => 'confirmed']);
         $this->assertDatabaseCount('booking_tasks', 2);
-        $this->assertDatabaseCount('notification_logs', 7);
+        $this->assertDatabaseCount('notification_logs', 9);
         $this->assertDatabaseHas('notification_logs', ['subject' => 'Building security check-in details', 'status' => 'sent']);
+        $this->assertDatabaseHas('notification_logs', ['channel' => 'push', 'subject' => 'Checkout cleaning assigned']);
+        $this->assertDatabaseHas('notification_logs', ['channel' => 'push', 'subject' => 'Checkout inspection assigned']);
     }
 
     public function test_admin_can_create_confirmed_booking_with_tasks_and_notifications(): void
@@ -88,7 +90,9 @@ class BookingModuleTest extends TestCase
         $this->assertEquals(200, (float) $booking->vat_amount);
         $this->assertEquals(5650, (float) $booking->total_amount);
         $this->assertCount(2, $booking->tasks);
-        $this->assertCount(4, $booking->notificationLogs);
+        $this->assertCount(6, $booking->notificationLogs);
+        $this->assertDatabaseHas('notification_logs', ['booking_id' => $booking->id, 'channel' => 'push', 'subject' => 'Checkout cleaning assigned']);
+        $this->assertDatabaseHas('notification_logs', ['booking_id' => $booking->id, 'channel' => 'push', 'subject' => 'Checkout inspection assigned']);
         Mail::assertQueued(BookingSecurityCheckInMail::class, fn (BookingSecurityCheckInMail $mail): bool => $mail->booking->is($booking)
             && count($mail->attachments()) >= 1);
     }

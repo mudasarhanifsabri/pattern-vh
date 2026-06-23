@@ -132,6 +132,47 @@
                 <div class="flex justify-between py-3 text-base"><span class="font-black text-[#0b1736]">Total</span><span class="font-black text-blue-600">AED {{ number_format((float) $booking->total_amount, 2) }}</span></div>
             </div>
         </section>
+
+        @if($booking->depositRefund)
+            @php
+                $refund = $booking->depositRefund;
+            @endphp
+            <section class="rounded-[1.8rem] bg-white p-5 shadow-[0_16px_40px_rgba(15,23,42,0.08)] ring-1 ring-slate-100">
+                <div class="flex items-start justify-between gap-3">
+                    <div>
+                        <h2 class="text-lg font-black text-[#0b1736]">Deposit report</h2>
+                        <p class="mt-1 text-sm font-semibold text-slate-500">Inspection and refund status for your stay.</p>
+                    </div>
+                    <span class="rounded-full bg-blue-50 px-3 py-1 text-xs font-black text-blue-700">{{ str($refund->status)->replace('_', ' ')->headline() }}</span>
+                </div>
+                <div class="mt-4 grid grid-cols-3 gap-2 text-center">
+                    <div class="rounded-2xl bg-slate-50 p-3">
+                        <p class="text-[10px] font-black uppercase tracking-[0.12em] text-slate-400">Deposit</p>
+                        <p class="mt-1 text-sm font-black text-[#0b1736]">AED {{ number_format((float) $refund->deposit_amount, 2) }}</p>
+                    </div>
+                    <div class="rounded-2xl bg-slate-50 p-3">
+                        <p class="text-[10px] font-black uppercase tracking-[0.12em] text-slate-400">Damage</p>
+                        <p class="mt-1 text-sm font-black text-[#0b1736]">AED {{ number_format((float) $refund->damage_amount, 2) }}</p>
+                    </div>
+                    <div class="rounded-2xl bg-emerald-50 p-3">
+                        <p class="text-[10px] font-black uppercase tracking-[0.12em] text-emerald-500">Refund</p>
+                        <p class="mt-1 text-sm font-black text-emerald-700">AED {{ number_format((float) $refund->refund_amount, 2) }}</p>
+                    </div>
+                </div>
+                @if($refund->damage_report)
+                    <div class="mt-4 rounded-2xl bg-slate-50 p-4">
+                        <p class="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Deposit report</p>
+                        <p class="mt-2 text-sm font-semibold leading-6 text-slate-600">{{ $refund->damage_report }}</p>
+                    </div>
+                @endif
+                @if($refund->status === 'tenant_review')
+                    <form method="POST" action="{{ route('booking-deposit-refunds.accept', $refund) }}" class="mt-4">
+                        @csrf
+                        <button class="h-12 w-full rounded-2xl bg-blue-600 px-4 py-3 text-sm font-black text-white shadow-xl shadow-blue-600/20">Accept report</button>
+                    </form>
+                @endif
+            </section>
+        @endif
     </div>
 @else
 <div class="space-y-5">

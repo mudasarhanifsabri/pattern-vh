@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Owner;
 use App\Models\OwnerPayoutTransfer;
 use App\Models\Payment;
+use App\Support\PushEventLogger;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 
@@ -29,7 +30,7 @@ class OwnerPayoutController extends Controller
         ]);
     }
 
-    public function storeTransfer(Request $request)
+    public function storeTransfer(Request $request, PushEventLogger $push)
     {
         $data = $request->validate([
             'owner_id' => ['required', 'exists:owners,id'],
@@ -49,7 +50,7 @@ class OwnerPayoutController extends Controller
 
         abort_unless($row && in_array($row['status'], ['ready', 'transferred'], true), 422, 'This payout is not ready to transfer yet.');
 
-        OwnerPayoutTransfer::updateOrCreate(
+        $transfer = OwnerPayoutTransfer::updateOrCreate(
             ['owner_id' => $data['owner_id'], 'payment_id' => $payment->id],
             [
                 'booking_id' => $row['booking']?->id,
@@ -62,6 +63,15 @@ class OwnerPayoutController extends Controller
                 'notes' => $data['notes'] ?? null,
                 'created_by' => $request->user()->id,
             ],
+        );
+
+        $owner = Owner::findOrFail($data['owner_id']);
+        $push->toOwner(
+            $owner,
+            'Owner payout transferred',
+            'Your payout of AED '.number_format((float) $transfer->net_payout, 2).' has been marked as transferred.',
+            ['type' => 'owner_payout_transferred', 'owner_payout_transfer_id' => $transfer->id, 'url' => route('owner-payouts.index')],
+            $transfer->booking
         );
 
         return back()->with('status', 'Owner payout transfer recorded.');

@@ -34,6 +34,8 @@ class NotificationCenterTest extends TestCase
             'message' => 'Your booking has a new update.',
             'status' => 'pending',
             'payload' => ['url' => route('dashboard')],
+            'created_at' => now()->addMinute(),
+            'updated_at' => now()->addMinute(),
         ]);
 
         NotificationLog::create([
@@ -42,6 +44,8 @@ class NotificationCenterTest extends TestCase
             'subject' => 'Other user update',
             'message' => 'This should not show for tenant.',
             'status' => 'pending',
+            'created_at' => now()->addMinutes(2),
+            'updated_at' => now()->addMinutes(2),
         ]);
 
         $this->actingAs($tenant)

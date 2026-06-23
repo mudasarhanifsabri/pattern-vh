@@ -84,21 +84,26 @@ Artisan::command('invoices:send-reminders', function () {
             $days = today()->diffInDays($invoice->due_date, false);
             $label = $days === 0 ? 'today' : "in {$days} days";
 
-            $invoice->booking->notificationLogs()->firstOrCreate(
-                ['channel' => 'email', 'subject' => "Invoice reminder {$invoice->invoice_no}"],
-                [
-                    'recipient' => $tenant->email,
-                    'message' => "Invoice {$invoice->invoice_no} for AED ".number_format((float) $invoice->balance_amount, 2)." is due {$label}.",
-                    'status' => 'queued',
-                    'payload' => [
-                        'invoice_id' => $invoice->id,
-                        'due_date' => $invoice->due_date?->toDateString(),
-                        'balance_amount' => $invoice->balance_amount,
-                        'integration_ready' => true,
+            foreach (['email', 'push'] as $channel) {
+                $invoice->booking->notificationLogs()->firstOrCreate(
+                    ['channel' => $channel, 'subject' => "Invoice reminder {$invoice->invoice_no}"],
+                    [
+                        'recipient' => $channel === 'email'
+                            ? $tenant->email
+                            : ($tenant->user_id ? 'user:'.$tenant->user_id : $tenant->email),
+                        'message' => "Invoice {$invoice->invoice_no} for AED ".number_format((float) $invoice->balance_amount, 2)." is due {$label}.",
+                        'status' => 'queued',
+                        'payload' => [
+                            'invoice_id' => $invoice->id,
+                            'due_date' => $invoice->due_date?->toDateString(),
+                            'balance_amount' => $invoice->balance_amount,
+                            'url' => route('dashboard'),
+                            'integration_ready' => true,
+                        ],
                     ],
-                ],
-            );
-            $count++;
+                );
+                $count++;
+            }
         });
 
     $this->info("Invoice reminder logs prepared: {$count}");

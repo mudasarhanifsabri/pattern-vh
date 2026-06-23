@@ -51,6 +51,13 @@ class BookingWorkflow
                 'event_type' => 'auto_created',
                 'description' => 'Checkout cleaning task auto-created when booking was confirmed.',
             ]);
+            app(PushEventLogger::class)->toOperationsMember(
+                $cleaner,
+                'Checkout cleaning assigned',
+                "Cleaning task is ready for {$booking->unit->building->name} Unit {$booking->unit->unit_no}.",
+                ['type' => 'checkout_cleaning', 'task_id' => $cleaningTask->id, 'url' => route('tasks.index')],
+                $booking
+            );
         }
 
         $inspectionTask = $booking->tasks()->firstOrCreate(
@@ -70,6 +77,13 @@ class BookingWorkflow
                 'event_type' => 'auto_created',
                 'description' => 'Checkout inspection task auto-created when booking was confirmed.',
             ]);
+            app(PushEventLogger::class)->toOperationsMember(
+                $technician,
+                'Checkout inspection assigned',
+                "Inspection task is ready for {$booking->unit->building->name} Unit {$booking->unit->unit_no}.",
+                ['type' => 'checkout_inspection', 'task_id' => $inspectionTask->id, 'url' => route('tasks.index')],
+                $booking
+            );
         }
     }
 

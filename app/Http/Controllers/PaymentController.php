@@ -8,6 +8,7 @@ use App\Models\Receipt;
 use App\Support\ActivityLogger;
 use App\Support\ErpStoragePath;
 use App\Support\InvoicePaymentWorkflow;
+use App\Support\PushEventLogger;
 use App\Support\SimpleFinancePdf;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
@@ -85,7 +86,7 @@ class PaymentController extends Controller
         return redirect()->route('invoices.show', $invoice)->with('status', 'Payment recorded and waiting for verification.');
     }
 
-    public function approve(Request $request, Payment $payment, InvoicePaymentWorkflow $workflow)
+    public function approve(Request $request, Payment $payment, InvoicePaymentWorkflow $workflow, PushEventLogger $push)
     {
         $validated = $request->validate([
             'verification_notes' => ['nullable', 'string', 'max:1000'],
@@ -109,10 +110,20 @@ class PaymentController extends Controller
 
         ActivityLogger::log('payments.approved', "Approved payment {$payment->payment_no}.", $payment);
 
+        $payment->loadMissing(['invoice.tenant', 'booking.tenant']);
+        $tenant = $payment->invoice?->tenant ?: $payment->booking?->tenant;
+        $push->toTenant(
+            $tenant,
+            'Payment approved',
+            "Your payment {$payment->payment_no} for AED ".number_format((float) $payment->amount, 2).' has been approved.',
+            ['type' => 'payment_approved', 'payment_id' => $payment->id, 'url' => route('dashboard')],
+            $payment->booking
+        );
+
         return redirect()->route('invoices.show', $payment->invoice)->with('status', $receipt ? 'Payment approved. Invoice paid and receipt issued.' : 'Payment approved successfully.');
     }
 
-    public function reject(Request $request, Payment $payment, InvoicePaymentWorkflow $workflow)
+    public function reject(Request $request, Payment $payment, InvoicePaymentWorkflow $workflow, PushEventLogger $push)
     {
         $validated = $request->validate([
             'verification_notes' => ['nullable', 'string', 'max:1000'],
@@ -135,6 +146,16 @@ class PaymentController extends Controller
         }
 
         ActivityLogger::log('payments.rejected', "Rejected payment {$payment->payment_no}.", $payment);
+
+        $payment->loadMissing(['invoice.tenant', 'booking.tenant']);
+        $tenant = $payment->invoice?->tenant ?: $payment->booking?->tenant;
+        $push->toTenant(
+            $tenant,
+            'Payment needs review',
+            "Your payment {$payment->payment_no} needs review. Please check your tenant app.",
+            ['type' => 'payment_rejected', 'payment_id' => $payment->id, 'url' => route('dashboard')],
+            $payment->booking
+        );
 
         return redirect()->route('invoices.show', $payment->invoice)->with('status', 'Payment rejected.');
     }

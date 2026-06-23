@@ -10,12 +10,13 @@ use App\Models\OperationsTeamMember;
 use App\Models\Tenant;
 use App\Support\ActivityLogger;
 use App\Support\BookingInvoiceScheduler;
+use App\Support\PushEventLogger;
 use App\Support\TaxCalculator;
 use Illuminate\Http\Request;
 
 class BookingLifecycleController extends Controller
 {
-    public function requestExtension(Request $request, Booking $booking)
+    public function requestExtension(Request $request, Booking $booking, PushEventLogger $push)
     {
         $tenant = $this->tenantFor($request);
         abort_unless($tenant && (int) $booking->tenant_id === (int) $tenant->id, 403);
@@ -43,10 +44,18 @@ class BookingLifecycleController extends Controller
 
         ActivityLogger::log('booking_extensions.requested', "Tenant requested extension for {$booking->booking_no}.", $extension);
 
+        $push->toUserIds(
+            \App\Models\User::permission('bookings.manage')->pluck('id'),
+            'Extension request received',
+            "{$tenant->full_name} requested checkout extension for {$booking->booking_no}.",
+            ['type' => 'extension_request', 'booking_id' => $booking->id, 'url' => route('bookings.show', $booking)],
+            $booking
+        );
+
         return back()->with('status', 'Extension request sent to reservations team.');
     }
 
-    public function approveExtension(Request $request, BookingExtensionRequest $extensionRequest)
+    public function approveExtension(Request $request, BookingExtensionRequest $extensionRequest, PushEventLogger $push)
     {
         $validated = $request->validate([
             'extra_rent_amount' => ['required', 'numeric', 'min:0.01'],
@@ -96,10 +105,18 @@ class BookingLifecycleController extends Controller
 
         ActivityLogger::log('booking_extensions.approved', "Approved extension for {$booking->booking_no}.", $extensionRequest);
 
+        $push->toTenant(
+            $booking->tenant,
+            'Extension approved',
+            "Your extension is approved. Invoice {$invoice->invoice_no} is ready for payment.",
+            ['type' => 'extension_approved', 'invoice_id' => $invoice->id, 'url' => route('dashboard')],
+            $booking
+        );
+
         return redirect()->route('invoices.show', $invoice)->with('status', 'Extension approved and invoice generated.');
     }
 
-    public function rejectExtension(Request $request, BookingExtensionRequest $extensionRequest)
+    public function rejectExtension(Request $request, BookingExtensionRequest $extensionRequest, PushEventLogger $push)
     {
         $validated = $request->validate(['approval_notes' => ['nullable', 'string', 'max:1000']]);
 
@@ -112,10 +129,19 @@ class BookingLifecycleController extends Controller
 
         ActivityLogger::log('booking_extensions.rejected', "Rejected extension request {$extensionRequest->id}.", $extensionRequest);
 
+        $extensionRequest->loadMissing('booking.tenant');
+        $push->toTenant(
+            $extensionRequest->booking?->tenant,
+            'Extension request update',
+            'Your extension request was reviewed. Please check your tenant app for details.',
+            ['type' => 'extension_rejected', 'url' => route('dashboard')],
+            $extensionRequest->booking
+        );
+
         return back()->with('status', 'Extension request rejected.');
     }
 
-    public function requestCheckout(Request $request, Booking $booking)
+    public function requestCheckout(Request $request, Booking $booking, PushEventLogger $push)
     {
         $tenant = $this->tenantFor($request);
         abort_unless($tenant && (int) $booking->tenant_id === (int) $tenant->id, 403);
@@ -142,10 +168,18 @@ class BookingLifecycleController extends Controller
             'description' => "{$tenant->full_name} confirmed checkout from tenant app.",
         ]);
 
+        $push->toUserIds(
+            \App\Models\User::permission('bookings.manage')->pluck('id'),
+            'Tenant confirmed checkout',
+            "{$tenant->full_name} confirmed checkout for {$booking->booking_no}.",
+            ['type' => 'checkout_requested', 'booking_id' => $booking->id, 'url' => route('bookings.show', $booking)],
+            $booking
+        );
+
         return back()->with('status', 'Checkout confirmation sent to operations.');
     }
 
-    public function completeCheckout(Booking $booking, BookingInvoiceScheduler $invoiceScheduler)
+    public function completeCheckout(Booking $booking, BookingInvoiceScheduler $invoiceScheduler, PushEventLogger $push)
     {
         $booking->update(['booking_status' => 'checked_out']);
         $cancelled = $invoiceScheduler->cancelFutureUnpaidInvoices($booking);
@@ -159,6 +193,15 @@ class BookingLifecycleController extends Controller
 
         ActivityLogger::log('bookings.checked_out', "Completed checkout for {$booking->booking_no}.", $booking);
 
+        $booking->loadMissing('tenant');
+        $push->toTenant(
+            $booking->tenant,
+            'Checkout completed',
+            'Your checkout is complete. Deposit inspection and refund review will begin now.',
+            ['type' => 'checkout_completed', 'url' => route('dashboard')],
+            $booking
+        );
+
         $message = 'Booking checked out. Cleaning/inspection tasks and deposit refund workflow are ready.';
 
         if ($cancelled > 0) {
@@ -168,7 +211,7 @@ class BookingLifecycleController extends Controller
         return back()->with('status', $message);
     }
 
-    public function completeInspection(Request $request, BookingDepositRefund $depositRefund)
+    public function completeInspection(Request $request, BookingDepositRefund $depositRefund, PushEventLogger $push)
     {
         $validated = $request->validate([
             'damage_amount' => ['required', 'numeric', 'min:0'],
@@ -196,20 +239,36 @@ class BookingLifecycleController extends Controller
             'sent_at' => now(),
         ]);
 
+        $push->toTenant(
+            $depositRefund->tenant,
+            'Deposit inspection report ready',
+            'Your deposit report is ready. Refund amount AED '.number_format($refund, 2).'.',
+            ['type' => 'deposit_report', 'deposit_refund_id' => $depositRefund->id, 'url' => route('dashboard')],
+            $depositRefund->booking
+        );
+
         return back()->with('status', 'Inspection report sent for tenant review.');
     }
 
-    public function acceptDepositReport(Request $request, BookingDepositRefund $depositRefund)
+    public function acceptDepositReport(Request $request, BookingDepositRefund $depositRefund, PushEventLogger $push)
     {
         $tenant = $this->tenantFor($request);
         abort_unless($tenant && (int) $depositRefund->tenant_id === (int) $tenant->id, 403);
 
         $depositRefund->update(['status' => 'accepted', 'tenant_accepted_at' => now()]);
 
+        $push->toUserIds(
+            \App\Models\User::permission('security-deposits.manage')->pluck('id'),
+            'Deposit report accepted',
+            "{$tenant->full_name} accepted the deposit report. Refund can be processed.",
+            ['type' => 'deposit_accepted', 'deposit_refund_id' => $depositRefund->id, 'url' => route('security-deposits.index')],
+            $depositRefund->booking
+        );
+
         return back()->with('status', 'Deposit report accepted. Refund processing can begin.');
     }
 
-    public function processRefund(BookingDepositRefund $depositRefund)
+    public function processRefund(BookingDepositRefund $depositRefund, PushEventLogger $push)
     {
         $depositRefund->update([
             'status' => 'refunded',
@@ -218,6 +277,15 @@ class BookingLifecycleController extends Controller
         ]);
 
         ActivityLogger::log('deposit_refunds.processed', "Processed deposit refund for {$depositRefund->booking->booking_no}.", $depositRefund);
+
+        $depositRefund->loadMissing(['tenant', 'booking']);
+        $push->toTenant(
+            $depositRefund->tenant,
+            'Deposit refund processed',
+            'Your security deposit refund has been marked as processed.',
+            ['type' => 'deposit_refunded', 'deposit_refund_id' => $depositRefund->id, 'url' => route('dashboard')],
+            $depositRefund->booking
+        );
 
         return back()->with('status', 'Deposit refund marked as processed.');
     }
@@ -240,6 +308,15 @@ class BookingLifecycleController extends Controller
             ['event_type' => 'checkout_completed'],
             ['description' => 'Checkout completed. Cleaning task is ready for operations.'],
         );
+        if ($cleaningTask->wasRecentlyCreated) {
+            app(PushEventLogger::class)->toOperationsMember(
+                $cleaner,
+                'Checkout cleaning ready',
+                "Cleaning is ready for Unit {$booking->unit->unit_no}.",
+                ['type' => 'checkout_cleaning', 'task_id' => $cleaningTask->id, 'url' => route('tasks.index')],
+                $booking
+            );
+        }
 
         $inspectionTask = $booking->tasks()->firstOrCreate(['task_type' => 'checkout_inspection'], [
             'unit_id' => $booking->unit_id,
@@ -254,6 +331,15 @@ class BookingLifecycleController extends Controller
             ['event_type' => 'checkout_completed'],
             ['description' => 'Checkout completed. Inspection task is ready for technician review.'],
         );
+        if ($inspectionTask->wasRecentlyCreated) {
+            app(PushEventLogger::class)->toOperationsMember(
+                $technician,
+                'Checkout inspection ready',
+                "Inspection is ready for Unit {$booking->unit->unit_no}.",
+                ['type' => 'checkout_inspection', 'task_id' => $inspectionTask->id, 'url' => route('tasks.index')],
+                $booking
+            );
+        }
     }
 
     private function tenantFor(Request $request): ?Tenant

@@ -6,6 +6,7 @@ use App\Models\Invoice;
 use App\Models\PaymentCollectionRequest;
 use App\Models\Tenant;
 use App\Support\ActivityLogger;
+use App\Support\PushEventLogger;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
@@ -33,7 +34,7 @@ class TenantPaymentRequestController extends Controller
         ]);
     }
 
-    public function store(Request $request)
+    public function store(Request $request, PushEventLogger $push)
     {
         $tenant = $this->tenantFor($request);
 
@@ -75,6 +76,14 @@ class TenantPaymentRequestController extends Controller
         ]);
 
         ActivityLogger::log('payment_collection_requests.created', "Tenant requested payment collection {$collectionRequest->request_no}.", $collectionRequest);
+
+        $push->toUserIds(
+            \App\Models\User::permission('payment-collection-requests.manage')->pluck('id'),
+            'Payment collection requested',
+            "{$tenant->full_name} requested {$collectionRequest->collection_method} collection for AED ".number_format($amount, 2).'.',
+            ['type' => 'collection_requested', 'collection_request_id' => $collectionRequest->id, 'url' => route('payment-collection-requests.index')],
+            $invoice->booking
+        );
 
         return redirect()->route('tenant.payment-requests.index')->with('status', 'Collection request sent to finance team.');
     }
