@@ -165,11 +165,12 @@ class IdentityDocumentOcr
             ?? $identityFields['ID_NUMBER']
             ?? ($identityType === 'passport' ? ($mrzFields['identity_no'] ?? null) : null)
             ?? $identityFields['PASSPORT_NUMBER']
+            ?? ($identityType === 'passport' ? $this->extractPassportNumber($rawText) : null)
             ?? $this->extractIdentityNumber($rawText)
             ?? ($mrzFields['identity_no'] ?? null);
 
         $fullName = $identityType === 'passport'
-            ? (($mrzFields['full_name'] ?? null) ?: $this->extractName($identityFields, $rawText))
+            ? (($mrzFields['full_name'] ?? null) ?: $this->extractPassportName($rawText) ?: $this->extractName($identityFields, $rawText))
             : ($this->extractName($identityFields, $rawText) ?? ($mrzFields['full_name'] ?? null));
         $nationality = $this->normalizeNationality(
             $identityFields['NATIONALITY']
@@ -202,12 +203,42 @@ class IdentityDocumentOcr
             ])));
 
         if ($name) {
-            return $this->cleanName($name);
+            return $this->validName($this->cleanName($name));
         }
 
         $name = $this->extractTextAfterLabel($rawText, ['full name', 'name', 'surname']);
         if ($name) {
-            return $this->cleanName($name);
+            return $this->validName($this->cleanName($name));
+        }
+
+        return null;
+    }
+
+    private function extractPassportName(string $rawText): ?string
+    {
+        $lines = collect(preg_split('/\R+/', $rawText) ?: [])
+            ->map(fn (string $line) => trim($line))
+            ->filter()
+            ->values();
+
+        $surname = null;
+        $givenNames = null;
+
+        foreach ($lines as $index => $line) {
+            $lower = Str::lower($line);
+
+            if (! $surname && Str::contains($lower, ['surname', 'last name'])) {
+                $surname = $this->extractValueFromLineWindow($lines, $index, ['surname', 'last name']);
+            }
+
+            if (! $givenNames && Str::contains($lower, ['given name', 'given names', 'first name'])) {
+                $givenNames = $this->extractValueFromLineWindow($lines, $index, ['given names', 'given name', 'first name']);
+            }
+        }
+
+        $combined = trim(($givenNames ?: '').' '.($surname ?: ''));
+        if ($combined) {
+            return $this->validName($this->cleanName($combined));
         }
 
         return null;
@@ -244,6 +275,28 @@ class IdentityDocumentOcr
 
         if (preg_match('/(?:passport|document|id|identity)\s*(?:no|number|#)\s*[:\-]?\s*([A-Z0-9]{6,15})/i', $rawText, $match)) {
             return $match[1];
+        }
+
+        return null;
+    }
+
+    private function extractPassportNumber(string $rawText): ?string
+    {
+        $lines = preg_split('/\R+/', $rawText) ?: [];
+
+        foreach ($lines as $index => $line) {
+            if (! Str::contains(Str::lower($line), ['passport no', 'passport number', 'passport n0'])) {
+                continue;
+            }
+
+            $window = implode(' ', array_slice($lines, $index, 4));
+            if (preg_match('/\b([A-Z]{1,3}\s?\d{5,9}|[A-Z]\d{6,9})\b/i', $window, $match)) {
+                return strtoupper(str_replace(' ', '', $match[1]));
+            }
+        }
+
+        if (preg_match('/\b([A-Z]{1,3}\s?\d{6,9})\b/i', $rawText, $match)) {
+            return strtoupper(str_replace(' ', '', $match[1]));
         }
 
         return null;
@@ -344,6 +397,49 @@ class IdentityDocumentOcr
             ->squish()
             ->title()
             ->toString();
+    }
+
+    private function validName(?string $value): ?string
+    {
+        if (! $value) {
+            return null;
+        }
+
+        $lower = Str::lower($value);
+        if (Str::length($value) > 80 || Str::contains($lower, [
+            'president',
+            'republic',
+            'concern',
+            'bearer',
+            'hindrance',
+            'protection',
+            'director',
+            'immigration',
+            'passport',
+            'government',
+        ])) {
+            return null;
+        }
+
+        return preg_match('/^[A-Z][A-Z\s.\'-]{2,}$/i', $value) ? $value : null;
+    }
+
+    private function extractValueFromLineWindow(\Illuminate\Support\Collection $lines, int $index, array $labels): ?string
+    {
+        $line = (string) $lines[$index];
+        $value = $this->extractTextAfterLabel($line, $labels, self::TEXT_FIELD_LABELS);
+        if ($this->validName($this->cleanName((string) $value))) {
+            return $value;
+        }
+
+        for ($offset = 1; $offset <= 2; $offset++) {
+            $candidate = trim((string) ($lines[$index + $offset] ?? ''));
+            if ($this->validName($this->cleanName($candidate))) {
+                return $candidate;
+            }
+        }
+
+        return null;
     }
 
     private function normalizeNationality(?string $value): ?string
