@@ -21,6 +21,9 @@
         $nights = $booking->check_in_date->diffInDays($booking->check_out_date);
         $wifiName = $booking->unit->wifi_name ?: 'Pattern_Guest';
         $wifiPassword = $booking->unit->wifi_password ?: 'Ask support';
+        $smartLockCodeDisplay = $booking->smart_lock_code ? trim(chunk_split($booking->smart_lock_code, 1, ' ')) : 'Pending';
+        $smartLockValidFrom = $booking->smart_lock_code_valid_from ?: \Illuminate\Support\Carbon::parse($booking->check_in_date->format('Y-m-d').' '.($booking->check_in_time ?: '15:00'));
+        $smartLockValidUntil = $booking->smart_lock_code_valid_until ?: \Illuminate\Support\Carbon::parse($booking->check_out_date->format('Y-m-d').' '.($booking->check_out_time ?: '11:00'));
     @endphp
 
     <div class="space-y-5">
@@ -87,11 +90,11 @@
                 <div>
                     <p class="text-sm font-black text-[#0b1736]">Main Door</p>
                     <p class="mt-4 text-xs font-semibold text-slate-500">Access Code</p>
-                    <div class="mt-2 flex items-center justify-between rounded-2xl bg-blue-50 px-4 py-3 text-3xl font-black tracking-[0.35em] text-blue-600">784512 <span class="text-blue-500"><svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M8 16H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v2" /><path d="M10 8h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-8a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2z" /></svg></span></div>
+                    <div class="mt-2 flex items-center justify-between rounded-2xl bg-blue-50 px-4 py-3 text-3xl font-black tracking-[0.35em] text-blue-600">{{ $smartLockCodeDisplay }} <span class="text-blue-500"><svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M8 16H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v2" /><path d="M10 8h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-8a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2z" /></svg></span></div>
                     <p class="mt-4 text-xs font-semibold text-slate-500">Valid From</p>
-                    <p class="text-sm font-black text-blue-600">{{ $booking->check_in_date->format('d M Y, h:i A') }}</p>
+                    <p class="text-sm font-black text-blue-600">{{ $smartLockValidFrom->format('d M Y, h:i A') }}</p>
                     <p class="mt-3 text-xs font-semibold text-slate-500">Valid Until</p>
-                    <p class="text-sm font-black text-blue-600">{{ $booking->check_out_date->format('d M Y, h:i A') }}</p>
+                    <p class="text-sm font-black text-blue-600">{{ $smartLockValidUntil->format('d M Y, h:i A') }}</p>
                 </div>
             </div>
             <button class="mt-5 h-12 w-full rounded-2xl bg-blue-600 px-4 py-3 text-sm font-black text-white shadow-xl shadow-blue-600/20">Open Smart Lock</button>
@@ -360,6 +363,67 @@
             </div>
 
             @unless($tenantPortal)
+                @php
+                    $lock = $booking->unit->ttLock;
+                    $accessMode = old('smart_lock_code_mode', $booking->smart_lock_code_mode ?: 'auto');
+                    $accessValidFrom = old('smart_lock_code_valid_from', $booking->smart_lock_code_valid_from?->format('Y-m-d\TH:i'));
+                    $accessValidUntil = old('smart_lock_code_valid_until', $booking->smart_lock_code_valid_until?->format('Y-m-d\TH:i'));
+                @endphp
+                <div class="erp-card p-5">
+                    <div class="flex items-start justify-between gap-3">
+                        <div>
+                            <p class="text-xs font-black uppercase tracking-[0.18em] text-blue-600">Smart access</p>
+                            <h2 class="mt-1 text-lg font-bold text-[#071a3b]">Lock code and details</h2>
+                        </div>
+                        <span class="rounded-full {{ $booking->smart_lock_code ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700' }} px-3 py-1 text-xs font-bold">{{ $booking->smart_lock_code ? 'Ready' : 'Pending' }}</span>
+                    </div>
+                    <dl class="mt-4 grid gap-3 text-sm">
+                        <div class="rounded-2xl bg-slate-50 p-3">
+                            <dt class="text-xs font-bold uppercase text-slate-400">Attached lock</dt>
+                            <dd class="mt-1 font-black text-[#071a3b]">{{ $lock?->lock_name ?: 'No lock attached to unit' }}</dd>
+                            @if($lock)
+                                <dd class="mt-1 text-xs font-semibold text-slate-500">TTLock ID {{ $lock->lock_id }} / {{ $lock->gateway_id ? 'Gateway '.$lock->gateway_id : 'Bluetooth only' }}</dd>
+                            @endif
+                        </div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div class="rounded-2xl bg-blue-50 p-3"><dt class="text-xs font-bold uppercase text-blue-400">Mode</dt><dd class="mt-1 font-black text-blue-700">{{ str($booking->smart_lock_code_mode ?: 'auto')->headline() }}</dd></div>
+                            <div class="rounded-2xl bg-blue-50 p-3"><dt class="text-xs font-bold uppercase text-blue-400">Code</dt><dd class="mt-1 font-black tracking-[0.18em] text-blue-700">{{ $booking->smart_lock_code ?: 'Pending' }}</dd></div>
+                        </div>
+                        <div class="rounded-2xl bg-slate-50 p-3">
+                            <dt class="text-xs font-bold uppercase text-slate-400">Valid period</dt>
+                            <dd class="mt-1 font-bold text-[#071a3b]">{{ $booking->smart_lock_code_valid_from?->format('M d, Y H:i') ?? 'After confirmation' }}</dd>
+                            <dd class="text-xs font-semibold text-slate-500">Until {{ $booking->smart_lock_code_valid_until?->format('M d, Y H:i') ?? 'checkout' }}</dd>
+                        </div>
+                    </dl>
+                    <form method="POST" action="{{ route('bookings.smart-lock-access.update', $booking) }}" class="mt-4 space-y-3 rounded-2xl border border-blue-100 bg-blue-50 p-3">
+                        @csrf
+                        <label class="block text-xs font-black text-[#071a3b]">Code mode
+                            <select name="smart_lock_code_mode" class="erp-focus mt-1 h-10 w-full rounded-xl border border-blue-100 bg-white px-3 text-sm">
+                                <option value="auto" @selected($accessMode === 'auto')>Auto generate after confirmation</option>
+                                <option value="manual" @selected($accessMode === 'manual')>Manual code</option>
+                            </select>
+                        </label>
+                        <label class="block text-xs font-black text-[#071a3b]">Manual code
+                            <input name="smart_lock_code" value="{{ old('smart_lock_code', $booking->smart_lock_code) }}" class="erp-focus mt-1 h-10 w-full rounded-xl border border-blue-100 bg-white px-3 text-sm" placeholder="Enter code if manual">
+                        </label>
+                        <div class="grid gap-2 sm:grid-cols-2">
+                            <label class="block text-xs font-black text-[#071a3b]">Valid from
+                                <input name="smart_lock_code_valid_from" type="datetime-local" value="{{ $accessValidFrom }}" class="erp-focus mt-1 h-10 w-full rounded-xl border border-blue-100 bg-white px-3 text-sm">
+                            </label>
+                            <label class="block text-xs font-black text-[#071a3b]">Valid until
+                                <input name="smart_lock_code_valid_until" type="datetime-local" value="{{ $accessValidUntil }}" class="erp-focus mt-1 h-10 w-full rounded-xl border border-blue-100 bg-white px-3 text-sm">
+                            </label>
+                        </div>
+                        <label class="block text-xs font-black text-[#071a3b]">Internal note
+                            <textarea name="smart_lock_code_note" rows="2" class="erp-focus mt-1 w-full rounded-xl border border-blue-100 bg-white px-3 py-2 text-sm" placeholder="Example: Auto code prepared, send after DTCM">{{ old('smart_lock_code_note', $booking->smart_lock_code_note) }}</textarea>
+                        </label>
+                        <label class="inline-flex items-center gap-2 text-xs font-black text-slate-600">
+                            <input type="checkbox" name="regenerate" value="1" class="rounded border-slate-300">
+                            Regenerate auto code now
+                        </label>
+                        <button class="w-full rounded-xl bg-blue-600 px-4 py-2.5 text-xs font-black text-white">Save access code</button>
+                    </form>
+                </div>
                 <div class="erp-card p-5"><h2 class="text-lg font-bold text-[#071a3b]">People</h2><dl class="mt-5 space-y-4"><div><dt class="text-xs font-bold uppercase text-slate-400">Tenant</dt><dd class="font-bold text-[#071a3b]">{{ $booking->tenant->full_name }}</dd><dd class="text-xs text-slate-500">{{ $booking->tenant->mobile_no }} / {{ $booking->tenant->email }}</dd></div><div><dt class="text-xs font-bold uppercase text-slate-400">Agent</dt><dd class="font-bold text-[#071a3b]">{{ $booking->agent?->full_name ?: 'Direct booking' }}</dd></div><div><dt class="text-xs font-bold uppercase text-slate-400">Source</dt><dd class="font-bold text-[#071a3b]">{{ $booking->source ?: 'Not set' }}</dd></div></dl></div>
                 <div class="erp-card p-5">
                     <h2 class="text-lg font-bold text-[#071a3b]">Notification log</h2>

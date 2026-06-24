@@ -11,6 +11,7 @@ use App\Support\BookingConfirmationPdf;
 use App\Support\BookingInvoiceScheduler;
 use App\Support\BookingWorkflow;
 use App\Support\TaxCalculator;
+use Illuminate\Support\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
@@ -54,6 +55,7 @@ class BookingController extends Controller
         $validated['updated_by'] = auth()->id();
 
         $booking = Booking::create($validated);
+        $this->syncSmartLockAccess($booking);
         $workflow->afterSaved($booking);
         $invoiceScheduler->syncInvoices($booking->fresh(['tenant', 'unit']));
 
@@ -68,7 +70,7 @@ class BookingController extends Controller
         abort_if($tenant && ! auth()->user()->can('bookings.manage') && (int) $booking->tenant_id !== (int) $tenant->id, 403);
 
         return view('bookings.show', [
-            'booking' => $booking->load(['unit.building', 'tenant', 'agent', 'tasks.assignee', 'tasks.events.user', 'notificationLogs', 'dtcmCheckin', 'extensionRequests.invoice', 'depositRefund', 'checkInInspectionItems']),
+            'booking' => $booking->load(['unit.building', 'unit.ttLock', 'tenant', 'agent', 'tasks.assignee', 'tasks.events.user', 'notificationLogs', 'dtcmCheckin', 'extensionRequests.invoice', 'depositRefund', 'checkInInspectionItems']),
         ]);
     }
 
@@ -90,6 +92,7 @@ class BookingController extends Controller
         $validated['updated_by'] = auth()->id();
 
         $booking->update($validated);
+        $this->syncSmartLockAccess($booking);
         $workflow->afterSaved($booking->fresh(['unit', 'tenant']));
         $invoiceScheduler->syncInvoices($booking->fresh(['tenant', 'unit']));
 
@@ -120,6 +123,35 @@ class BookingController extends Controller
             'Content-Type' => 'application/pdf',
             'Content-Disposition' => 'inline; filename="'.$booking->booking_no.'-confirmation.pdf"',
         ]);
+    }
+
+    public function updateSmartLockAccess(Request $request, Booking $booking)
+    {
+        $validated = $request->validate([
+            'smart_lock_code_mode' => ['required', Rule::in(['auto', 'manual'])],
+            'smart_lock_code' => ['nullable', 'string', 'max:32', 'required_if:smart_lock_code_mode,manual'],
+            'smart_lock_code_valid_from' => ['nullable', 'date'],
+            'smart_lock_code_valid_until' => ['nullable', 'date', 'after:smart_lock_code_valid_from'],
+            'smart_lock_code_note' => ['nullable', 'string', 'max:1000'],
+            'regenerate' => ['nullable', 'boolean'],
+        ]);
+
+        $booking->forceFill([
+            'smart_lock_code_mode' => $validated['smart_lock_code_mode'],
+            'smart_lock_code' => $validated['smart_lock_code_mode'] === 'manual'
+                ? preg_replace('/\s+/', '', (string) $validated['smart_lock_code'])
+                : ($request->boolean('regenerate') ? null : $booking->smart_lock_code),
+            'smart_lock_code_valid_from' => $validated['smart_lock_code_valid_from'] ?? null,
+            'smart_lock_code_valid_until' => $validated['smart_lock_code_valid_until'] ?? null,
+            'smart_lock_code_note' => $validated['smart_lock_code_note'] ?? null,
+            'updated_by' => auth()->id(),
+        ])->save();
+
+        $this->syncSmartLockAccess($booking);
+
+        ActivityLogger::log('bookings.smart_lock_access_updated', "Updated smart lock access for {$booking->booking_no}.", $booking);
+
+        return redirect()->route('bookings.show', $booking)->with('status', 'Smart lock access updated.');
     }
 
     private function formData(): array
@@ -194,6 +226,32 @@ class BookingController extends Controller
                 'tenant_id' => 'This tenant already has an active booking. Complete checkout or cancel the existing booking before creating another active booking.',
             ]);
         }
+    }
+
+    private function syncSmartLockAccess(Booking $booking, bool $force = false): void
+    {
+        if (! in_array($booking->booking_status, ['confirmed', 'checked_in', 'checkout_requested'], true)) {
+            return;
+        }
+
+        $mode = $booking->smart_lock_code_mode ?: 'auto';
+        $updates = [
+            'smart_lock_code_mode' => $mode,
+            'smart_lock_code_valid_from' => $booking->smart_lock_code_valid_from ?: $this->bookingDateTime($booking->check_in_date, $booking->check_in_time, '15:00'),
+            'smart_lock_code_valid_until' => $booking->smart_lock_code_valid_until ?: $this->bookingDateTime($booking->check_out_date, $booking->check_out_time, '11:00'),
+        ];
+
+        if ($mode === 'auto' && ($force || ! $booking->smart_lock_code)) {
+            $updates['smart_lock_code'] = (string) random_int(100000, 999999);
+            $updates['smart_lock_code_generated_at'] = now();
+        }
+
+        $booking->forceFill($updates)->save();
+    }
+
+    private function bookingDateTime($date, ?string $time, string $fallbackTime): Carbon
+    {
+        return Carbon::parse($date->format('Y-m-d').' '.($time ?: $fallbackTime));
     }
 
     private function nextBookingNumber(): string

@@ -180,6 +180,9 @@ Route::middleware('auth')->group(function () {
     Route::post('bookings/{booking}/send-confirmation-link', [BookingConfirmationSigningController::class, 'send'])
         ->middleware('permission:bookings.manage')
         ->name('bookings.send-confirmation-link');
+    Route::post('bookings/{booking}/smart-lock-access', [BookingController::class, 'updateSmartLockAccess'])
+        ->middleware('permission:bookings.manage')
+        ->name('bookings.smart-lock-access.update');
     Route::post('bookings/{booking}/request-extension', [BookingLifecycleController::class, 'requestExtension'])
         ->middleware('permission:portal.tenant')
         ->name('bookings.request-extension');

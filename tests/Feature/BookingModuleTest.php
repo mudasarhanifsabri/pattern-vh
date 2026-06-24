@@ -89,12 +89,49 @@ class BookingModuleTest extends TestCase
 
         $this->assertEquals(200, (float) $booking->vat_amount);
         $this->assertEquals(5650, (float) $booking->total_amount);
+        $this->assertSame('auto', $booking->smart_lock_code_mode);
+        $this->assertNotEmpty($booking->smart_lock_code);
+        $this->assertNotNull($booking->smart_lock_code_valid_from);
+        $this->assertNotNull($booking->smart_lock_code_valid_until);
         $this->assertCount(2, $booking->tasks);
         $this->assertCount(6, $booking->notificationLogs);
         $this->assertDatabaseHas('notification_logs', ['booking_id' => $booking->id, 'channel' => 'push', 'subject' => 'Checkout cleaning assigned']);
         $this->assertDatabaseHas('notification_logs', ['booking_id' => $booking->id, 'channel' => 'push', 'subject' => 'Checkout inspection assigned']);
         Mail::assertQueued(BookingSecurityCheckInMail::class, fn (BookingSecurityCheckInMail $mail): bool => $mail->booking->is($booking)
             && count($mail->attachments()) >= 1);
+    }
+
+    public function test_admin_can_manage_booking_smart_lock_access_code(): void
+    {
+        $this->seed();
+
+        $admin = User::where('email', 'admin@example.com')->firstOrFail();
+        $booking = Booking::where('booking_no', 'BK-DEMO-0001')->firstOrFail();
+
+        $this->actingAs($admin)
+            ->post(route('bookings.smart-lock-access.update', $booking), [
+                'smart_lock_code_mode' => 'manual',
+                'smart_lock_code' => '112233',
+                'smart_lock_code_valid_from' => '2026-07-01T15:00',
+                'smart_lock_code_valid_until' => '2026-07-05T11:00',
+                'smart_lock_code_note' => 'Manual TTLock code shared after payment.',
+            ])
+            ->assertRedirect(route('bookings.show', $booking))
+            ->assertSessionHas('status', 'Smart lock access updated.');
+
+        $booking->refresh();
+
+        $this->assertSame('manual', $booking->smart_lock_code_mode);
+        $this->assertSame('112233', $booking->smart_lock_code);
+        $this->assertSame('2026-07-01 15:00:00', $booking->smart_lock_code_valid_from->format('Y-m-d H:i:s'));
+        $this->assertSame('Manual TTLock code shared after payment.', $booking->smart_lock_code_note);
+
+        $this->actingAs($admin)
+            ->get(route('bookings.show', $booking))
+            ->assertOk()
+            ->assertSee('Lock code and details')
+            ->assertSee('112233')
+            ->assertSee('Manual');
     }
 
     public function test_booking_pages_and_confirmation_pdf_open(): void

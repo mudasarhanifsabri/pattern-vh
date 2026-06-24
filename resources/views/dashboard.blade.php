@@ -15,6 +15,9 @@
             $nights = $booking ? $booking->check_in_date->diffInDays($booking->check_out_date) : 0;
             $balanceDue = (float) $tenantBalanceDue;
             $openRefund = $tenantOpenRefund;
+            $smartLockCodeDisplay = $booking?->smart_lock_code ? trim(chunk_split($booking->smart_lock_code, 1, ' ')) : 'Pending';
+            $smartLockValidFrom = $booking?->smart_lock_code_valid_from ?: ($booking ? \Illuminate\Support\Carbon::parse($booking->check_in_date->format('Y-m-d').' '.($booking->check_in_time ?: '15:00')) : null);
+            $smartLockValidUntil = $booking?->smart_lock_code_valid_until ?: ($booking ? \Illuminate\Support\Carbon::parse($booking->check_out_date->format('Y-m-d').' '.($booking->check_out_time ?: '11:00')) : null);
         @endphp
 
         <div class="tenant-app-screen space-y-5">
@@ -57,11 +60,11 @@
                         <div class="min-w-0">
                             <div class="flex items-center justify-between"><h3 class="text-lg font-black text-[#071a3b]">Main Door</h3><span class="rounded-xl bg-emerald-50 px-3 py-1 text-sm font-black text-emerald-700">Active</span></div>
                             <p class="mt-4 text-sm font-semibold text-slate-500">Access Code</p>
-                            <div class="mt-2 flex items-center justify-between rounded-2xl bg-blue-50 px-4 py-3 text-3xl font-black tracking-[0.35em] text-blue-600">784512 <span class="text-base tracking-normal">⧉</span></div>
+                            <div class="mt-2 flex items-center justify-between rounded-2xl bg-blue-50 px-4 py-3 text-3xl font-black tracking-[0.35em] text-blue-600">{{ $smartLockCodeDisplay }} <span class="text-base tracking-normal">⧉</span></div>
                             <p class="mt-4 text-sm font-semibold text-slate-500">Valid From</p>
-                            <p class="font-black text-blue-600">{{ $booking->check_in_date->format('d M Y') }}, {{ $booking->check_in_time ? \Illuminate\Support\Carbon::parse($booking->check_in_time)->format('h:i A') : '03:00 PM' }}</p>
+                            <p class="font-black text-blue-600">{{ $smartLockValidFrom?->format('d M Y, h:i A') }}</p>
                             <p class="mt-3 text-sm font-semibold text-slate-500">Valid Until</p>
-                            <p class="font-black text-blue-600">{{ $booking->check_out_date->format('d M Y') }}, {{ $booking->check_out_time ? \Illuminate\Support\Carbon::parse($booking->check_out_time)->format('h:i A') : '11:00 AM' }}</p>
+                            <p class="font-black text-blue-600">{{ $smartLockValidUntil?->format('d M Y, h:i A') }}</p>
                         </div>
                     </div>
                     <p class="mt-5 border-t border-slate-100 pt-4 text-sm font-semibold text-slate-600">This code is only valid during your stay.</p>
