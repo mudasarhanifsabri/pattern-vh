@@ -102,6 +102,30 @@ class OwnerModuleTest extends TestCase
         Notification::assertSentTo($user, WelcomePasswordSetupNotification::class);
     }
 
+    public function test_duplicate_owner_create_opens_existing_owner_instead_of_creating_another_row(): void
+    {
+        $this->seed();
+        $admin = User::where('email', 'admin@example.com')->firstOrFail();
+
+        $payload = [
+            'full_name' => 'Fatima Mustafa Al Mheiri',
+            'mobile_no' => '052255998',
+            'email' => 'saeed.1998.almuhairi@gmail.com',
+            'identity_type' => 'emirates_id',
+            'identity_no' => 'AA0187008',
+        ];
+
+        $this->actingAs($admin)->post(route('owners.store'), $payload)->assertRedirect();
+        $first = Owner::where('email', 'saeed.1998.almuhairi@gmail.com')->firstOrFail();
+
+        $this->actingAs($admin)
+            ->post(route('owners.store'), array_merge($payload, ['mobile_no' => '+971 52 255 998']))
+            ->assertRedirect(route('owners.show', $first));
+
+        $this->assertSame(1, Owner::where('email', 'saeed.1998.almuhairi@gmail.com')->count());
+        $this->assertSame(1, Owner::where('identity_no', 'AA0187008')->count());
+    }
+
     public function test_owner_welcome_email_can_be_sent_later(): void
     {
         Notification::fake();

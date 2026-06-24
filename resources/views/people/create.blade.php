@@ -6,7 +6,7 @@
         </div>
     </x-slot>
 
-    <form method="POST" action="{{ route($config['route'].'.store') }}" enctype="multipart/form-data">
+    <form method="POST" action="{{ route($config['route'].'.store') }}" enctype="multipart/form-data" data-single-submit>
         @include('people._form', ['submitLabel' => 'Create '.$config['singularTitle']])
     </form>
 </x-app-layout>

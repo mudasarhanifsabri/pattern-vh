@@ -2,9 +2,17 @@
 
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
+use App\Models\Agent;
 use App\Models\Booking;
 use App\Models\Invoice;
+use App\Models\OperationsTeamMember;
+use App\Models\Owner;
+use App\Models\Tenant;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schedule;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Str;
 use Minishlink\WebPush\VAPID;
 
 Artisan::command('inspire', function () {
@@ -110,3 +118,116 @@ Artisan::command('invoices:send-reminders', function () {
 })->purpose('Prepare due invoice reminders for tenants');
 
 Schedule::command('invoices:send-reminders')->dailyAt('10:00');
+
+Artisan::command('people:dedupe {--apply : Soft-delete safe duplicate people records}', function () {
+    $modules = [
+        'owners' => [
+            'model' => Owner::class,
+            'label' => 'Owner',
+            'links' => [
+                ['owner_unit', 'owner_id'],
+                ['owner_notes', 'owner_id'],
+                ['expenses', 'owner_id'],
+                ['owner_unit_contracts', 'owner_id'],
+                ['owner_payout_transfers', 'owner_id'],
+                ['support_tickets', 'owner_id'],
+            ],
+        ],
+        'tenants' => [
+            'model' => Tenant::class,
+            'label' => 'Tenant',
+            'links' => [
+                ['bookings', 'tenant_id'],
+                ['invoices', 'tenant_id'],
+                ['payment_collection_requests', 'tenant_id'],
+                ['booking_deposit_refunds', 'tenant_id'],
+                ['support_tickets', 'tenant_id'],
+            ],
+        ],
+        'agents' => [
+            'model' => Agent::class,
+            'label' => 'Agent',
+            'links' => [
+                ['bookings', 'agent_id'],
+                ['support_tickets', 'agent_id'],
+            ],
+        ],
+        'operations-team' => [
+            'model' => OperationsTeamMember::class,
+            'label' => 'Operations team',
+            'links' => [
+                ['booking_tasks', 'assigned_to_id'],
+                ['payment_collection_requests', 'assigned_to_id'],
+                ['vehicle_handovers', 'team_member_id'],
+                ['support_tickets', 'operations_team_member_id'],
+            ],
+        ],
+    ];
+
+    $apply = (bool) $this->option('apply');
+    $removed = 0;
+    $skipped = 0;
+    $found = 0;
+
+    $duplicateKey = function (Model $record): ?string {
+        $email = filled($record->email) ? Str::of($record->email)->lower()->trim()->toString() : null;
+        $identity = filled($record->identity_no) ? Str::of($record->identity_no)->lower()->replace(['-', ' ', '.'], '')->trim()->toString() : null;
+        $mobile = filled($record->mobile_no) ? preg_replace('/\D+/', '', $record->mobile_no) : null;
+        $name = filled($record->full_name) ? Str::of($record->full_name)->squish()->lower()->toString() : null;
+
+        return $email
+            ? 'email:'.$email
+            : ($identity ? 'identity:'.$identity : (($mobile && $name) ? 'mobile-name:'.$mobile.'|'.$name : null));
+    };
+
+    $hasLinks = function (Model $record, array $links): bool {
+        if ($record->user_id) {
+            return true;
+        }
+
+        foreach ($links as [$table, $column]) {
+            if (Schema::hasTable($table) && Schema::hasColumn($table, $column) && DB::table($table)->where($column, $record->id)->exists()) {
+                return true;
+            }
+        }
+
+        if (Schema::hasTable('person_notes') && DB::table('person_notes')->where('notable_type', $record::class)->where('notable_id', $record->id)->exists()) {
+            return true;
+        }
+
+        return false;
+    };
+
+    foreach ($modules as $module => $config) {
+        $modelClass = $config['model'];
+        $records = $modelClass::query()->oldest('id')->get()->groupBy($duplicateKey)->filter(fn ($group, $key) => filled($key) && $group->count() > 1);
+
+        foreach ($records as $key => $group) {
+            $primary = $group->first();
+            $duplicates = $group->slice(1);
+            $found += $duplicates->count();
+            $this->line("{$config['label']} duplicate group {$key}: keep #{$primary->id} {$primary->full_name}, duplicates ".$duplicates->pluck('id')->implode(', '));
+
+            foreach ($duplicates as $duplicate) {
+                if ($hasLinks($duplicate, $config['links'])) {
+                    $skipped++;
+                    $this->warn("  skipped #{$duplicate->id} {$duplicate->full_name}: linked records exist");
+                    continue;
+                }
+
+                if ($apply) {
+                    $duplicate->delete();
+                    $removed++;
+                    $this->info("  removed #{$duplicate->id} {$duplicate->full_name}");
+                }
+            }
+        }
+    }
+
+    $mode = $apply ? 'applied' : 'preview';
+    $this->info("People duplicate cleanup {$mode}. Found {$found}, removed {$removed}, skipped {$skipped}.");
+
+    if (! $apply) {
+        $this->warn('Run php artisan people:dedupe --apply to soft-delete safe duplicates.');
+    }
+})->purpose('Preview or safely soft-delete duplicate people records with no linked business data');

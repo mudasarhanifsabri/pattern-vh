@@ -73,6 +73,24 @@
             window.addEventListener('load', () => navigator.serviceWorker.register('{{ asset('service-worker.js') }}'));
         }
     </script>
+    <script>
+        document.addEventListener('submit', (event) => {
+            const form = event.target.closest('form[data-single-submit]');
+            if (!form || form.dataset.submitted === '1') {
+                return;
+            }
+
+            form.dataset.submitted = '1';
+            const submitters = form.querySelectorAll('button[type="submit"], input[type="submit"]');
+            submitters.forEach((button) => {
+                button.disabled = true;
+                if (button.tagName === 'BUTTON') {
+                    button.dataset.originalText = button.textContent.trim();
+                    button.textContent = 'Saving...';
+                }
+            });
+        }, true);
+    </script>
     @auth
         <script>
             window.patternPush = window.patternPush || {};

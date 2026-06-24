@@ -6,7 +6,7 @@
         </div>
     </x-slot>
 
-    <form method="POST" action="{{ route('owners.store') }}" enctype="multipart/form-data">
+    <form method="POST" action="{{ route('owners.store') }}" enctype="multipart/form-data" data-single-submit>
         @include('owners._form', ['owner' => null, 'submitLabel' => 'Create owner'])
     </form>
 </x-app-layout>

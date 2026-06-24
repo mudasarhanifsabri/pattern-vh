@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Notifications\WelcomePasswordSetupNotification;
 use App\Support\ActivityLogger;
 use App\Support\ErpStoragePath;
+use App\Support\PeopleDuplicateGuard;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Hash;
@@ -54,7 +55,7 @@ trait ManagesPeopleRecords
         ]);
     }
 
-    public function store(Request $request)
+    public function store(Request $request, PeopleDuplicateGuard $duplicates)
     {
         $config = $this->moduleConfig();
         $modelClass = $this->modelClass();
@@ -65,25 +66,33 @@ trait ManagesPeopleRecords
         $validated['created_by'] = auth()->id();
         $validated['updated_by'] = auth()->id();
 
-        if ($request->hasFile('document')) {
-            $validated = array_merge($validated, $this->storeDocument($request, $config));
-        }
+        [$record, $created] = $duplicates->withCreateLock($modelClass, $validated, function () use ($request, $config, $modelClass, $validated, $duplicates): array {
+            if ($existing = $duplicates->findDuplicate($modelClass, $validated)) {
+                return [$existing, false];
+            }
 
-        $note = $validated['note'] ?? null;
-        $sendPortalInvite = $request->boolean('send_portal_invite');
-        unset($validated['document'], $validated['note'], $validated['send_portal_invite']);
+            if ($request->hasFile('document')) {
+                $validated = array_merge($validated, $this->storeDocument($request, $config));
+            }
 
-        $record = $modelClass::create($validated);
+            $note = $validated['note'] ?? null;
+            unset($validated['document'], $validated['note'], $validated['send_portal_invite']);
 
-        if ($sendPortalInvite) {
+            $record = $modelClass::create($validated);
+            $this->storeNoteIfPresent($record, $note);
+
+            ActivityLogger::log($config['route'].'.created', "Created {$config['singular']} {$record->full_name}.", $record);
+
+            return [$record, true];
+        });
+
+        if ($created && $request->boolean('send_portal_invite')) {
             $this->sendPortalInvite($record, $config);
         }
 
-        $this->storeNoteIfPresent($record, $note);
-
-        ActivityLogger::log($config['route'].'.created', "Created {$config['singular']} {$record->full_name}.", $record);
-
-        return redirect()->route($config['route'].'.show', $record)->with('status', "{$config['singularTitle']} created successfully.");
+        return redirect()
+            ->route($config['route'].'.show', $record)
+            ->with('status', $created ? "{$config['singularTitle']} created successfully." : "{$config['singularTitle']} already exists. Opened the existing record instead of creating a duplicate.");
     }
 
     public function show($record)
@@ -133,7 +142,7 @@ trait ManagesPeopleRecords
         ]);
     }
 
-    public function update(Request $request, $record)
+    public function update(Request $request, $record, PeopleDuplicateGuard $duplicates)
     {
         $record = $this->resolveRecord($record);
         $config = $this->moduleConfig();
@@ -142,6 +151,12 @@ trait ManagesPeopleRecords
         $validated['is_blacklisted'] = $request->boolean('is_blacklisted');
         $validated = $this->normalizeModuleBooleans($request, $validated);
         $validated['updated_by'] = auth()->id();
+
+        if ($existing = $duplicates->findDuplicate($this->modelClass(), $validated, $record->id)) {
+            throw ValidationException::withMessages([
+                'full_name' => "This {$config['singular']} looks like a duplicate of {$existing->full_name}. Open the existing record instead.",
+            ]);
+        }
 
         if (! $validated['is_blacklisted']) {
             $validated['blacklist_reason'] = null;

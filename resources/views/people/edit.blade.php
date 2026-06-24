@@ -6,7 +6,7 @@
         </div>
     </x-slot>
 
-    <form method="POST" action="{{ route($config['route'].'.update', $record) }}" enctype="multipart/form-data">
+    <form method="POST" action="{{ route($config['route'].'.update', $record) }}" enctype="multipart/form-data" data-single-submit>
         @method('PUT')
         @include('people._form', ['submitLabel' => 'Save '.$config['singularTitle']])
     </form>

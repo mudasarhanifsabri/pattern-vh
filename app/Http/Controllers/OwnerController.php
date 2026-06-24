@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Notifications\WelcomePasswordSetupNotification;
 use App\Support\ActivityLogger;
 use App\Support\ErpStoragePath;
+use App\Support\PeopleDuplicateGuard;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Hash;
@@ -45,7 +46,7 @@ class OwnerController extends Controller
         return view('owners.create');
     }
 
-    public function store(Request $request)
+    public function store(Request $request, PeopleDuplicateGuard $duplicates)
     {
         $validated = $this->validateOwner($request);
         $validated['mobile_has_whatsapp'] = $request->boolean('mobile_has_whatsapp');
@@ -53,30 +54,39 @@ class OwnerController extends Controller
         $validated['created_by'] = auth()->id();
         $validated['updated_by'] = auth()->id();
 
-        if ($request->hasFile('document')) {
-            $validated = array_merge($validated, $this->storeDocument($request));
-        }
+        [$owner, $created] = $duplicates->withCreateLock(Owner::class, $validated, function () use ($request, $validated, $duplicates): array {
+            if ($existing = $duplicates->findDuplicate(Owner::class, $validated)) {
+                return [$existing, false];
+            }
 
-        $note = $validated['note'] ?? null;
-        $sendPortalInvite = $request->boolean('send_portal_invite');
-        unset($validated['document'], $validated['note'], $validated['send_portal_invite']);
+            if ($request->hasFile('document')) {
+                $validated = array_merge($validated, $this->storeDocument($request));
+            }
 
-        $owner = Owner::create($validated);
+            $note = $validated['note'] ?? null;
+            unset($validated['document'], $validated['note'], $validated['send_portal_invite']);
 
-        if ($sendPortalInvite) {
+            $owner = Owner::create($validated);
+
+            if ($note) {
+                $owner->notes()->create([
+                    'user_id' => auth()->id(),
+                    'note' => $note,
+                ]);
+            }
+
+            ActivityLogger::log('owners.created', "Created owner {$owner->full_name}.", $owner);
+
+            return [$owner, true];
+        });
+
+        if ($created && $request->boolean('send_portal_invite')) {
             $this->sendPortalInvite($owner);
         }
 
-        if ($note) {
-            $owner->notes()->create([
-                'user_id' => auth()->id(),
-                'note' => $note,
-            ]);
-        }
-
-        ActivityLogger::log('owners.created', "Created owner {$owner->full_name}.", $owner);
-
-        return redirect()->route('owners.show', $owner)->with('status', 'Owner created successfully.');
+        return redirect()
+            ->route('owners.show', $owner)
+            ->with('status', $created ? 'Owner created successfully.' : 'Owner already exists. Opened the existing owner instead of creating a duplicate.');
     }
 
     public function show(Owner $owner)
@@ -121,12 +131,18 @@ class OwnerController extends Controller
         return view('owners.edit', compact('owner'));
     }
 
-    public function update(Request $request, Owner $owner)
+    public function update(Request $request, Owner $owner, PeopleDuplicateGuard $duplicates)
     {
         $validated = $this->validateOwner($request);
         $validated['mobile_has_whatsapp'] = $request->boolean('mobile_has_whatsapp');
         $validated['is_blacklisted'] = $request->boolean('is_blacklisted');
         $validated['updated_by'] = auth()->id();
+
+        if ($existing = $duplicates->findDuplicate(Owner::class, $validated, $owner->id)) {
+            throw ValidationException::withMessages([
+                'full_name' => "This owner looks like a duplicate of {$existing->full_name}. Open the existing owner instead.",
+            ]);
+        }
 
         if (! $validated['is_blacklisted']) {
             $validated['blacklist_reason'] = null;

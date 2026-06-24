@@ -6,7 +6,7 @@
         </div>
     </x-slot>
 
-    <form method="POST" action="{{ route('owners.update', $owner) }}" enctype="multipart/form-data">
+    <form method="POST" action="{{ route('owners.update', $owner) }}" enctype="multipart/form-data" data-single-submit>
         @method('PUT')
         @include('owners._form', ['submitLabel' => 'Save owner'])
     </form>

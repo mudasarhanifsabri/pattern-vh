@@ -85,6 +85,38 @@ class PeopleModulesTest extends TestCase
         ]);
     }
 
+    public function test_shared_people_modules_open_existing_duplicate_instead_of_creating_new_rows(): void
+    {
+        $this->seed();
+        $admin = User::where('email', 'admin@example.com')->firstOrFail();
+
+        $modules = [
+            ['route' => 'tenants', 'model' => Tenant::class, 'email' => 'duplicate.tenant@example.com', 'extra' => ['emergency_contact_name' => 'Emergency']],
+            ['route' => 'agents', 'model' => Agent::class, 'email' => 'duplicate.agent@example.com', 'extra' => ['commission_percent' => 5]],
+            ['route' => 'operations-team', 'model' => OperationsTeamMember::class, 'email' => 'duplicate.cleaner@example.com', 'extra' => ['team_role' => 'cleaner']],
+        ];
+
+        foreach ($modules as $module) {
+            $payload = array_merge([
+                'full_name' => 'Duplicate Person',
+                'mobile_no' => '+971501010999',
+                'email' => $module['email'],
+                'identity_type' => 'passport',
+                'identity_no' => 'P-DUP-100',
+            ], $module['extra']);
+
+            $this->actingAs($admin)->post(route($module['route'].'.store'), $payload)->assertRedirect();
+            $first = $module['model']::where('email', $module['email'])->firstOrFail();
+
+            $this->actingAs($admin)
+                ->post(route($module['route'].'.store'), array_merge($payload, ['mobile_no' => '050 101 0999']))
+                ->assertRedirect(route($module['route'].'.show', $first));
+
+            $this->assertSame(1, $module['model']::where('email', $module['email'])->count());
+            $this->assertSame(1, $module['model']::where('identity_no', 'P-DUP-100')->count());
+        }
+    }
+
     public function test_people_create_pages_open_and_demo_data_is_seeded(): void
     {
         $this->seed();
