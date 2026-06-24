@@ -129,7 +129,7 @@ class BookingModuleTest extends TestCase
         $this->actingAs($admin)
             ->get(route('bookings.show', $booking))
             ->assertOk()
-            ->assertSee('Lock code and details')
+            ->assertSee('Lock code and booking access details')
             ->assertSee('112233')
             ->assertSee('Manual');
     }
