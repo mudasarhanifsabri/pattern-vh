@@ -10,6 +10,7 @@ use App\Models\TtLockSetting;
 use App\Models\Unit;
 use App\Models\User;
 use App\Models\UtilityAccount;
+use App\Support\UnitDocumentOcr;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Mail;
@@ -82,6 +83,7 @@ class PortfolioModuleTest extends TestCase
             ->assertSee('Owner share allocation')
             ->assertSee('Utility accounts')
             ->assertSee('Smart lock')
+            ->assertSee('title_deed_issue_date')
             ->assertSee('No utility accounts added yet')
             ->assertDontSee('Legacy quick notes');
         $this->actingAs($admin)
@@ -170,6 +172,7 @@ class PortfolioModuleTest extends TestCase
                     ],
                 ],
                 'title_deed_no' => 'TD-100',
+                'title_deed_issue_date' => '2026-06-01',
                 'title_deed' => UploadedFile::fake()->create('title.pdf', 100, 'application/pdf'),
                 'dtcm_permit_no' => 'DTCM-200',
                 'dtcm_permit' => UploadedFile::fake()->create('dtcm.pdf', 100, 'application/pdf'),
@@ -182,12 +185,43 @@ class PortfolioModuleTest extends TestCase
 
         $this->assertTrue($unit->owners()->where('owners.id', $owner->id)->exists());
         $this->assertEquals(100, (float) $unit->owners()->first()->pivot->share_percent);
+        $this->assertSame('2026-06-01', $unit->title_deed_issue_date->format('Y-m-d'));
         Storage::disk($disk)->assertExists($unit->title_deed_path);
         Storage::disk($disk)->assertExists($unit->dtcm_permit_path);
         $this->assertCount(1, $unit->pictures);
         $this->assertSame($ttLock->id, $unit->tt_lock_id);
         $this->assertTrue(UtilityAccount::where('unit_id', $unit->id)->where('provider_name', 'DEWA')->where('paid_by_company', true)->exists());
         $this->assertTrue(UtilityAccount::where('unit_id', $unit->id)->where('account_no', 'DU-123')->exists());
+    }
+
+    public function test_admin_can_scan_unit_documents_with_ocr(): void
+    {
+        $this->seed();
+        $admin = User::where('email', 'admin@example.com')->firstOrFail();
+
+        $this->mock(UnitDocumentOcr::class, function ($mock): void {
+            $mock->shouldReceive('extract')
+                ->once()
+                ->withArgs(fn ($file, string $type): bool => $type === 'title_deed' && $file instanceof UploadedFile)
+                ->andReturn([
+                    'ok' => true,
+                    'message' => 'Document scanned. Please review extracted unit fields before saving.',
+                    'fields' => [
+                        'title_deed_no' => 'TD-2026-1402',
+                        'title_deed_issue_date' => '2026-06-01',
+                    ],
+                    'raw_text' => 'Title Deed No TD-2026-1402 Issue Date 01/06/2026',
+                ]);
+        });
+
+        $this->actingAs($admin)
+            ->postJson(route('unit-documents.ocr'), [
+                'document_type' => 'title_deed',
+                'document' => UploadedFile::fake()->create('title-deed.pdf', 100, 'application/pdf'),
+            ])
+            ->assertOk()
+            ->assertJsonPath('fields.title_deed_no', 'TD-2026-1402')
+            ->assertJsonPath('fields.title_deed_issue_date', '2026-06-01');
     }
 
     public function test_admin_can_manage_tt_lock_settings_and_inventory(): void

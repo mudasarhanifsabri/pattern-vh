@@ -81,6 +81,13 @@
             }
 
             form.dataset.submitted = '1';
+            form.querySelectorAll('[data-upload-progress]').forEach((progress) => {
+                const bar = progress.querySelector('[data-upload-progress-bar]');
+                progress.classList.remove('hidden');
+                if (bar) {
+                    bar.style.width = '100%';
+                }
+            });
             const submitters = form.querySelectorAll('button[type="submit"], input[type="submit"]');
             submitters.forEach((button) => {
                 button.disabled = true;

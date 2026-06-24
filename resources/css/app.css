@@ -144,5 +144,31 @@
         body.support-mobile-active {
             overflow: hidden;
         }
+
+        body.support-chat-fullscreen .tenant-topbar,
+        body.support-chat-fullscreen .tenant-bottom-nav {
+            display: none !important;
+        }
+
+        body.support-chat-fullscreen main {
+            max-width: none !important;
+            padding: 0 !important;
+        }
+
+        body.support-chat-fullscreen .support-mobile-shell {
+            top: 0;
+            height: 100dvh;
+            max-height: 100dvh;
+            background: #fff;
+        }
+
+        body.support-chat-fullscreen .support-mobile-pane {
+            height: 100dvh;
+            max-height: 100dvh;
+        }
+
+        body.support-chat-fullscreen .support-composer {
+            padding-bottom: max(0.9rem, calc(env(safe-area-inset-bottom) + var(--keyboard-offset, 0px)));
+        }
     }
 }

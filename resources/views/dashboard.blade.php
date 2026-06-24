@@ -24,18 +24,18 @@
 
             @if ($booking)
                 <section class="overflow-hidden rounded-[1.6rem] bg-white shadow-[0_18px_45px_rgba(15,23,42,0.08)]">
-                    <div class="relative h-48 bg-gradient-to-br from-slate-950 via-slate-800 to-blue-700 p-6 text-white">
+                    <div class="relative h-44 bg-gradient-to-br from-slate-950 via-slate-800 to-blue-700 p-6 text-white max-[380px]:h-40 max-[380px]:p-5">
                         <div class="absolute inset-0 opacity-35" style="background-image: radial-gradient(circle at 80% 10%, rgba(255,255,255,.55), transparent 22%), linear-gradient(135deg, rgba(255,255,255,.08) 0 25%, transparent 25% 50%, rgba(255,255,255,.06) 50% 75%, transparent 75%); background-size: auto, 42px 42px;"></div>
                         <div class="relative flex h-full flex-col justify-end">
-                            <h2 class="max-w-[260px] text-3xl font-black leading-tight tracking-[-0.04em]">{{ $booking->unit->building->name }}<br>Unit {{ $booking->unit->unit_no }}</h2>
+                            <h2 class="max-w-[270px] text-[2rem] font-black leading-tight tracking-[-0.04em] max-[380px]:text-[1.65rem]">{{ $booking->unit->building->name }}<br>Unit {{ $booking->unit->unit_no }}</h2>
                             <p class="mt-2 text-sm font-bold text-white/80">Dubai, UAE</p>
                             <span class="mt-4 inline-flex w-fit items-center gap-2 rounded-full bg-emerald-500/90 px-3 py-1.5 text-sm font-black"><span class="grid h-5 w-5 place-items-center rounded-full bg-white/20">✓</span>{{ str($booking->booking_status)->replace('_', ' ')->headline() }}</span>
                         </div>
                     </div>
-                    <div class="grid grid-cols-3 divide-x divide-slate-100 px-3 py-4 text-center">
-                        <div><p class="text-sm font-semibold text-slate-500">Check-in</p><p class="mt-1 text-base font-black text-blue-600">{{ $booking->check_in_date->format('d M Y') }}</p><p class="text-sm font-semibold text-slate-500">{{ $booking->check_in_time ? \Illuminate\Support\Carbon::parse($booking->check_in_time)->format('h:i A') : '03:00 PM' }}</p></div>
-                        <div><p class="text-sm font-semibold text-slate-500">Check-out</p><p class="mt-1 text-base font-black text-blue-600">{{ $booking->check_out_date->format('d M Y') }}</p><p class="text-sm font-semibold text-slate-500">{{ $booking->check_out_time ? \Illuminate\Support\Carbon::parse($booking->check_out_time)->format('h:i A') : '11:00 AM' }}</p></div>
-                        <div><p class="text-sm font-semibold text-slate-500">Booking ID</p><p class="mt-1 text-base font-black text-blue-600">{{ $booking->booking_no }}</p><p class="text-sm font-semibold text-slate-500">{{ $nights }} Nights</p></div>
+                    <div class="grid grid-cols-3 divide-x divide-slate-100 px-2 py-4 text-center">
+                        <div class="min-w-0 px-1"><p class="text-sm font-semibold text-slate-500 max-[380px]:text-xs">Check-in</p><p class="mt-1 text-base font-black text-blue-600 max-[380px]:text-sm">{{ $booking->check_in_date->format('d M Y') }}</p><p class="text-sm font-semibold text-slate-500 max-[380px]:text-xs">{{ $booking->check_in_time ? \Illuminate\Support\Carbon::parse($booking->check_in_time)->format('h:i A') : '03:00 PM' }}</p></div>
+                        <div class="min-w-0 px-1"><p class="text-sm font-semibold text-slate-500 max-[380px]:text-xs">Check-out</p><p class="mt-1 text-base font-black text-blue-600 max-[380px]:text-sm">{{ $booking->check_out_date->format('d M Y') }}</p><p class="text-sm font-semibold text-slate-500 max-[380px]:text-xs">{{ $booking->check_out_time ? \Illuminate\Support\Carbon::parse($booking->check_out_time)->format('h:i A') : '11:00 AM' }}</p></div>
+                        <div class="min-w-0 px-1"><p class="text-sm font-semibold text-slate-500 max-[380px]:text-xs">Booking ID</p><p class="mx-auto mt-1 max-w-[7.5rem] break-words text-sm font-black leading-tight text-blue-600 max-[380px]:text-xs">{{ $booking->booking_no }}</p><p class="text-sm font-semibold text-slate-500 max-[380px]:text-xs">{{ $nights }} Nights</p></div>
                     </div>
                 </section>
 
@@ -44,17 +44,17 @@
                         <h2 class="text-lg font-black text-[#071a3b]">Smart Lock Access</h2>
                         <a href="{{ route('support.index') }}" class="text-sm font-black text-blue-600">How it works?</a>
                     </div>
-                    <div class="mt-5 grid grid-cols-[130px_1fr] gap-5">
+                    <div class="mt-5 grid gap-5 min-[390px]:grid-cols-[118px_minmax(0,1fr)]">
                         <div class="text-center">
-                            <div class="mx-auto grid h-28 w-28 place-items-center rounded-full bg-blue-50 shadow-[inset_0_0_0_18px_rgba(37,99,235,0.04)]">
-                                <div class="grid h-16 w-16 place-items-center rounded-3xl bg-blue-600 text-white shadow-xl shadow-blue-600/30">
+                            <div class="mx-auto grid h-24 w-24 place-items-center rounded-full bg-blue-50 shadow-[inset_0_0_0_16px_rgba(37,99,235,0.04)]">
+                                <div class="grid h-14 w-14 place-items-center rounded-3xl bg-blue-600 text-white shadow-xl shadow-blue-600/30">
                                     <svg class="h-8 w-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
                                 </div>
                             </div>
-                            <p class="mt-3 text-lg font-black text-blue-600">Tap to Unlock</p>
+                            <p class="mt-3 text-base font-black text-blue-600">Tap to Unlock</p>
                             <p class="text-xs font-semibold text-slate-500">Ensure you are near the door</p>
                         </div>
-                        <div>
+                        <div class="min-w-0">
                             <div class="flex items-center justify-between"><h3 class="text-lg font-black text-[#071a3b]">Main Door</h3><span class="rounded-xl bg-emerald-50 px-3 py-1 text-sm font-black text-emerald-700">Active</span></div>
                             <p class="mt-4 text-sm font-semibold text-slate-500">Access Code</p>
                             <div class="mt-2 flex items-center justify-between rounded-2xl bg-blue-50 px-4 py-3 text-3xl font-black tracking-[0.35em] text-blue-600">784512 <span class="text-base tracking-normal">⧉</span></div>

@@ -43,6 +43,7 @@ use App\Http\Controllers\TaskManagementController;
 use App\Http\Controllers\TtLockCallbackController;
 use App\Http\Controllers\TtLockSettingsController;
 use App\Http\Controllers\UnitController;
+use App\Http\Controllers\UnitDocumentOcrController;
 use App\Http\Controllers\UtilityManagementController;
 use App\Http\Controllers\VehicleController;
 use Illuminate\Support\Facades\Route;
@@ -101,6 +102,7 @@ Route::middleware('auth')->group(function () {
     Route::post('notifications/{notificationLog}/read', [NotificationCenterController::class, 'read'])->name('notifications.read');
     Route::post('notifications/read-all', [NotificationCenterController::class, 'readAll'])->name('notifications.read-all');
     Route::post('identity-documents/ocr', IdentityDocumentOcrController::class)->name('identity-documents.ocr');
+    Route::post('unit-documents/ocr', UnitDocumentOcrController::class)->middleware('permission:units.manage')->name('unit-documents.ocr');
     Route::get('support-reports', [SupportCenterController::class, 'reports'])->middleware('permission:support.reports')->name('support.reports');
     Route::get('support-quick-replies', [SupportCenterController::class, 'quickReplies'])->middleware('permission:support.manage')->name('support.quick-replies.index');
     Route::post('support-reports/quick-replies', [SupportCenterController::class, 'storeQuickReply'])->middleware('permission:support.manage')->name('support.quick-replies.store');

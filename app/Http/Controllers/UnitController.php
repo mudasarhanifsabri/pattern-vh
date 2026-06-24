@@ -277,6 +277,7 @@ class UnitController extends Controller
             'hvac_details' => ['nullable', 'string', 'max:2000'],
             'other_utility_details' => ['nullable', 'string', 'max:2000'],
             'title_deed_no' => ['nullable', 'string', 'max:191'],
+            'title_deed_issue_date' => ['nullable', 'date'],
             'title_deed_expiry_date' => ['nullable', 'date'],
             'dtcm_permit_no' => ['nullable', 'string', 'max:191'],
             'dtcm_permit_expiry_date' => ['nullable', 'date'],

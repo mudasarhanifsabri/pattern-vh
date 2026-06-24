@@ -32,7 +32,8 @@
             'urgent' => 'text-rose-600',
         ];
         $tenantChat = auth()->user()?->can('portal.tenant') && ! auth()->user()?->can('bookings.manage');
-        $supportTopbar = $tenantChat ? '5.5rem' : '5rem';
+        $tenantSelectedChat = $tenantChat && $selected;
+        $supportTopbar = $tenantSelectedChat ? '0px' : ($tenantChat ? '5.5rem' : '5rem');
         $selectedOnline = $selected?->requester?->onlineStatus?->is_online
             && $selected->requester->onlineStatus->last_seen_at?->greaterThan(now()->subMinutes(3));
         $selectedName = $selected?->requester_name ?: 'Support customer';
@@ -111,7 +112,7 @@
 
             <main class="support-mobile-pane {{ $selected ? 'flex' : 'hidden lg:flex' }} min-h-0 min-w-0 flex-col overflow-hidden bg-white">
                 @if($selected)
-                    <header class="flex shrink-0 items-center justify-between gap-3 border-b border-slate-100 bg-white px-4 py-3">
+                    <header class="flex shrink-0 items-center justify-between gap-3 border-b border-slate-100 bg-white px-4 py-3 {{ $tenantChat ? 'pt-[calc(env(safe-area-inset-top)+0.75rem)]' : '' }}">
                         <div class="flex min-w-0 items-center gap-3">
                             <a href="{{ route('support.index') }}" class="grid h-10 w-10 shrink-0 place-items-center rounded-2xl border border-slate-100 text-xl font-black text-[#071a3b] lg:hidden">&lsaquo;</a>
                             <span class="relative grid h-12 w-12 shrink-0 place-items-center rounded-full bg-gradient-to-br from-blue-100 to-violet-100 text-sm font-black text-blue-700">
@@ -368,13 +369,27 @@
     <script>
         document.body.classList.add('support-page-active');
         if (window.matchMedia('(max-width: 1023px)').matches) document.body.classList.add('support-mobile-active');
+        @if($tenantSelectedChat)
+            document.body.classList.add('support-chat-fullscreen');
+        @endif
         window.addEventListener('beforeunload', () => {
             document.body.classList.remove('support-page-active');
             document.body.classList.remove('support-mobile-active');
+            document.body.classList.remove('support-chat-fullscreen');
         });
 
         const supportMessageBox = document.querySelector('[data-support-messages]');
         if (supportMessageBox) supportMessageBox.scrollTop = supportMessageBox.scrollHeight;
+
+        const updateKeyboardOffset = () => {
+            if (!window.visualViewport || !document.body.classList.contains('support-chat-fullscreen')) return;
+            const offset = Math.max(0, window.innerHeight - window.visualViewport.height - window.visualViewport.offsetTop);
+            document.documentElement.style.setProperty('--keyboard-offset', `${offset}px`);
+            if (supportMessageBox) supportMessageBox.scrollTop = supportMessageBox.scrollHeight;
+        };
+        window.visualViewport?.addEventListener('resize', updateKeyboardOffset);
+        window.visualViewport?.addEventListener('scroll', updateKeyboardOffset);
+        updateKeyboardOffset();
 
         document.querySelectorAll('[data-quick-reply]').forEach((button) => {
             button.addEventListener('click', () => {

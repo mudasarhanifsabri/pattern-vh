@@ -1,4 +1,4 @@
-<nav class="{{ request()->routeIs('support.*') ? 'hidden' : 'grid' }} fixed inset-x-0 bottom-0 z-40 mx-auto max-w-[430px] grid-cols-4 border-t border-slate-100 bg-white/95 px-3 pb-4 pt-2 shadow-[0_-12px_30px_rgba(15,23,42,0.08)] backdrop-blur">
+<nav class="tenant-bottom-nav {{ request()->routeIs('support.*') ? 'hidden' : 'grid' }} fixed inset-x-0 bottom-0 z-40 mx-auto max-w-[430px] grid-cols-4 border-t border-slate-100 bg-white/95 px-3 pb-4 pt-2 shadow-[0_-12px_30px_rgba(15,23,42,0.08)] backdrop-blur">
     @foreach ([
         ['route' => 'dashboard', 'label' => 'My Stay', 'icon' => 'M4 12 12 4l8 8M6 10v10h12V10'],
         ['route' => 'bookings.index', 'label' => 'Bookings', 'icon' => 'M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14H3V6a2 2 0 0 1 2-2z'],

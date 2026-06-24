@@ -317,6 +317,18 @@
                             <div class="rounded-2xl border border-slate-200 p-4">
                                 <div class="font-bold text-[#071a3b]">{{ $label }}</div>
                                 <div class="mt-1 text-xs text-slate-500">{{ $unit->getAttribute($type.'_original_name') ?: 'No file uploaded' }}</div>
+                                @if($type === 'title_deed')
+                                    <div class="mt-2 space-y-1 text-xs text-slate-500">
+                                        <p><span class="font-bold text-slate-700">No:</span> {{ $unit->title_deed_no ?: 'Not recorded' }}</p>
+                                        <p><span class="font-bold text-slate-700">Issue:</span> {{ $unit->title_deed_issue_date?->format('M d, Y') ?: 'Not recorded' }}</p>
+                                        <p><span class="font-bold text-slate-700">Expiry:</span> {{ $unit->title_deed_expiry_date?->format('M d, Y') ?: 'Not recorded' }}</p>
+                                    </div>
+                                @elseif($type === 'dtcm_permit')
+                                    <div class="mt-2 space-y-1 text-xs text-slate-500">
+                                        <p><span class="font-bold text-slate-700">No:</span> {{ $unit->dtcm_permit_no ?: 'Not recorded' }}</p>
+                                        <p><span class="font-bold text-slate-700">Expiry:</span> {{ $unit->dtcm_permit_expiry_date?->format('M d, Y') ?: 'Not recorded' }}</p>
+                                    </div>
+                                @endif
                                 @if ($unit->getAttribute($type.'_path'))
                                     <a href="{{ route('units.document', [$unit, $type]) }}" target="_blank" class="mt-3 inline-flex rounded-xl bg-blue-600 px-3 py-2 text-xs font-bold text-white">Open</a>
                                 @endif
