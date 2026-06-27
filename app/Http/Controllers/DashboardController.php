@@ -45,7 +45,7 @@ class DashboardController extends Controller
             'upcomingBookings' => $this->upcomingBookings($tenant),
             'bookingHistory' => $tenant ? $this->bookingHistory($tenant) : collect(),
             'attentionItems' => $this->attentionItems($tenant),
-            'recentPayments' => $this->recentPayments($tenant),
+            'recentPayments' => $owner ? $this->ownerRecentPayments($owner) : $this->recentPayments($tenant),
         ]);
     }
 
@@ -306,9 +306,23 @@ class DashboardController extends Controller
     {
         return [
             ['label' => 'Owner statement', 'route' => 'owner-statements.index', 'note' => 'Revenue, fees, expenses, net payout', 'tone' => 'blue'],
-            ['label' => 'Reports', 'route' => 'reports.index', 'note' => 'Export account reports', 'tone' => 'emerald'],
+            ['label' => 'Payouts', 'route' => 'owner-payouts.index', 'note' => 'Collections and transfer schedule', 'tone' => 'emerald'],
+            ['label' => 'Support', 'route' => 'support.index', 'note' => 'Message the Pattern team', 'tone' => 'amber'],
             ['label' => 'Profile', 'route' => 'profile.edit', 'note' => 'Update password and account', 'tone' => 'slate'],
         ];
+    }
+
+    private function ownerRecentPayments(Owner $owner)
+    {
+        $unitIds = $owner->units()->pluck('units.id');
+
+        return Payment::query()
+            ->with(['invoice.tenant', 'booking.unit.building'])
+            ->where('status', 'approved')
+            ->whereHas('booking', fn ($query) => $query->whereIn('unit_id', $unitIds))
+            ->latest('paid_at')
+            ->limit(5)
+            ->get();
     }
 
     private function workspaceActions(): array

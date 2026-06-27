@@ -103,6 +103,128 @@
                 </div>
             </section>
         </div>
+    @elseif ($owner)
+        @php
+            $ownerUnitsCount = $ownerUnits->count();
+            $occupiedOwnerUnits = $ownerUnits->where('availability_status', 'occupied')->count();
+            $availableOwnerUnits = $ownerUnits->where('availability_status', 'available')->count();
+            $ownerCollectionTotal = $recentPayments->sum(fn ($payment) => (float) $payment->amount);
+        @endphp
+
+        <div class="tenant-app-screen space-y-5">
+            @if (session('status'))
+                <div class="rounded-3xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-700">{{ session('status') }}</div>
+            @endif
+
+            <section class="overflow-hidden rounded-[1.6rem] bg-white shadow-[0_18px_45px_rgba(15,23,42,0.08)]">
+                <div class="relative bg-gradient-to-br from-slate-950 via-slate-800 to-blue-700 p-6 text-white">
+                    <div class="absolute inset-0 opacity-25" style="background-image: radial-gradient(circle at 78% 14%, rgba(255,255,255,.65), transparent 24%), linear-gradient(135deg, rgba(255,255,255,.08) 0 25%, transparent 25% 50%, rgba(255,255,255,.06) 50% 75%, transparent 75%); background-size: auto, 42px 42px;"></div>
+                    <div class="relative">
+                        <p class="text-xs font-black uppercase tracking-[0.18em] text-blue-100">Owner portal</p>
+                        <h2 class="mt-3 text-[2rem] font-black leading-tight tracking-[-0.04em]">{{ $owner->full_name }}</h2>
+                        <p class="mt-2 text-sm font-semibold leading-6 text-white/75">{{ $ownerUnitsCount }} {{ str('property')->plural($ownerUnitsCount) }} assigned with live statement and payout access.</p>
+                        <div class="mt-5 grid grid-cols-3 gap-2 text-center">
+                            <div class="rounded-2xl bg-white/12 p-3 backdrop-blur">
+                                <p class="text-[10px] font-bold uppercase text-white/55">Units</p>
+                                <p class="mt-1 text-xl font-black">{{ $ownerUnitsCount }}</p>
+                            </div>
+                            <div class="rounded-2xl bg-white/12 p-3 backdrop-blur">
+                                <p class="text-[10px] font-bold uppercase text-white/55">Rented</p>
+                                <p class="mt-1 text-xl font-black">{{ $occupiedOwnerUnits }}</p>
+                            </div>
+                            <div class="rounded-2xl bg-white/12 p-3 backdrop-blur">
+                                <p class="text-[10px] font-bold uppercase text-white/55">Vacant</p>
+                                <p class="mt-1 text-xl font-black">{{ $availableOwnerUnits }}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 divide-x divide-slate-100 p-4 text-center">
+                    <div>
+                        <p class="text-xs font-bold text-slate-400">Recent collected rent</p>
+                        <p class="mt-1 text-lg font-black text-[#071a3b]">AED {{ number_format($ownerCollectionTotal, 0) }}</p>
+                    </div>
+                    <div>
+                        <p class="text-xs font-bold text-slate-400">Owner expenses</p>
+                        <p class="mt-1 text-lg font-black text-[#071a3b]">{{ collect($stats)->firstWhere('label', 'Owner expenses')['value'] ?? 'AED 0' }}</p>
+                    </div>
+                </div>
+            </section>
+
+            <section class="grid grid-cols-2 gap-3">
+                @foreach ($quickActions as $action)
+                    <a href="{{ route($action['route']) }}" class="relative min-h-[150px] rounded-[1.35rem] bg-white p-4 shadow-[0_14px_30px_rgba(15,23,42,0.07)] active:scale-[0.98]">
+                        <span class="grid h-14 w-14 place-items-center rounded-2xl {{ $action['tone'] === 'emerald' ? 'bg-emerald-50 text-emerald-700' : ($action['tone'] === 'amber' ? 'bg-amber-50 text-amber-700' : ($action['tone'] === 'slate' ? 'bg-slate-100 text-slate-700' : 'bg-blue-50 text-blue-700')) }}">
+                            <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 19V5m0 14h16M8 16v-5m4 5V8m4 8v-8"/></svg>
+                        </span>
+                        <span class="mt-4 block text-[15px] font-black leading-tight text-[#071a3b]">{{ $action['label'] }}</span>
+                        <span class="mt-1 block pr-3 text-[13px] font-semibold leading-5 text-slate-500">{{ $action['note'] }}</span>
+                        <span class="absolute right-4 top-1/2 -translate-y-1/2 text-2xl text-slate-300">›</span>
+                    </a>
+                @endforeach
+            </section>
+
+            <section class="rounded-[1.6rem] bg-white p-5 shadow-[0_18px_45px_rgba(15,23,42,0.08)]">
+                <div class="flex items-center justify-between gap-3">
+                    <div>
+                        <h2 class="text-xl font-black text-[#071a3b]">My Properties</h2>
+                        <p class="mt-1 text-sm font-semibold text-slate-500">Portfolio status and unit details.</p>
+                    </div>
+                    <span class="rounded-2xl bg-blue-50 px-3 py-2 text-xs font-black text-blue-700">{{ $ownerUnitsCount }}</span>
+                </div>
+                <div class="mt-5 space-y-3">
+                    @forelse($ownerUnits as $unit)
+                        <a href="{{ route('units.show', $unit) }}" class="block rounded-3xl border border-slate-200 bg-white p-4 active:scale-[0.99]">
+                            <div class="flex items-start justify-between gap-3">
+                                <div class="min-w-0">
+                                    <p class="text-xs font-bold uppercase tracking-[0.14em] text-blue-600">{{ $unit->building?->name }}</p>
+                                    <h3 class="mt-1 text-lg font-black text-[#071a3b]">Unit {{ $unit->unit_no }}</h3>
+                                    <p class="mt-1 text-sm font-semibold text-slate-500">{{ $unit->unit_type ?: 'Property' }}</p>
+                                </div>
+                                <span class="shrink-0 rounded-full {{ $unit->availability_status === 'occupied' ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700' }} px-2.5 py-1 text-[11px] font-black">{{ str($unit->availability_status)->headline() }}</span>
+                            </div>
+                            <div class="mt-4 grid grid-cols-2 gap-3 text-sm">
+                                <div class="rounded-2xl bg-slate-50 p-3">
+                                    <p class="text-[10px] font-bold uppercase text-slate-400">Rent</p>
+                                    <p class="mt-1 font-black text-[#071a3b]">AED {{ number_format((float) $unit->rent_amount, 0) }}</p>
+                                </div>
+                                <div class="rounded-2xl bg-slate-50 p-3">
+                                    <p class="text-[10px] font-bold uppercase text-slate-400">Area</p>
+                                    <p class="mt-1 font-black text-[#071a3b]">{{ $unit->building?->area ?: 'Dubai' }}</p>
+                                </div>
+                            </div>
+                        </a>
+                    @empty
+                        <p class="rounded-2xl border border-dashed border-slate-200 px-4 py-8 text-center text-sm text-slate-500">No units assigned yet.</p>
+                    @endforelse
+                </div>
+            </section>
+
+            <section class="rounded-[1.6rem] bg-white p-5 shadow-[0_18px_45px_rgba(15,23,42,0.08)]">
+                <div class="flex items-center justify-between gap-3">
+                    <div>
+                        <h2 class="text-xl font-black text-[#071a3b]">Recent Collections</h2>
+                        <p class="mt-1 text-sm font-semibold text-slate-500">Approved rent collected against your properties.</p>
+                    </div>
+                    <a href="{{ route('owner-payouts.index') }}" class="rounded-2xl bg-blue-50 px-3 py-2 text-xs font-black text-blue-700">Open</a>
+                </div>
+                <div class="mt-5 space-y-3">
+                    @forelse($recentPayments as $payment)
+                        <div class="rounded-3xl border border-slate-200 p-4">
+                            <div class="flex items-start justify-between gap-3">
+                                <div>
+                                    <p class="text-sm font-black text-[#071a3b]">{{ $payment->booking?->unit?->building?->name }} / Unit {{ $payment->booking?->unit?->unit_no }}</p>
+                                    <p class="mt-1 text-xs font-semibold text-slate-500">{{ $payment->invoice?->tenant?->full_name }} · {{ $payment->paid_at?->format('M d, Y') }}</p>
+                                </div>
+                                <span class="text-sm font-black text-emerald-700">AED {{ number_format((float) $payment->amount, 2) }}</span>
+                            </div>
+                        </div>
+                    @empty
+                        <p class="rounded-2xl border border-dashed border-slate-200 px-4 py-8 text-center text-sm text-slate-500">No approved rent collections yet.</p>
+                    @endforelse
+                </div>
+            </section>
+        </div>
     @elseif ($operationsDashboard)
         @php
             $toneClasses = [
