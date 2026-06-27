@@ -206,6 +206,46 @@ class TtLockApi
         ];
     }
 
+    public function changeTimedPasscode(TtLock $lock, string $passcodeId, string $passcode, Carbon $startsAt, Carbon $endsAt, string $name): array
+    {
+        $setting = $lock->setting;
+
+        if (! $setting) {
+            throw new \RuntimeException('No TTLock API group is attached to this lock.');
+        }
+
+        $token = $this->validAccessToken($setting);
+        $response = Http::asForm()
+            ->timeout(30)
+            ->post($this->apiUrl('/keyboardPwd/change'), [
+                'clientId' => $setting->client_id,
+                'accessToken' => $token,
+                'lockId' => $lock->lock_id,
+                'keyboardPwdId' => $passcodeId,
+                'keyboardPwdName' => $name,
+                'newKeyboardPwd' => $passcode,
+                'startDate' => $this->dateMilliseconds($startsAt),
+                'endDate' => $this->dateMilliseconds($endsAt),
+                'changeType' => 2,
+                'date' => $this->milliseconds(),
+            ]);
+
+        $payload = $this->payloadOrFail($response->json(), 'Could not change TTLock passcode.');
+        $verified = $this->findPasscode($lock, $passcode);
+
+        $setting->forceFill([
+            'last_tested_at' => now(),
+            'last_error' => null,
+        ])->save();
+
+        return [
+            'keyboardPwdId' => $passcodeId,
+            'verified' => (bool) $verified,
+            'status' => $verified['status'] ?? null,
+            'payload' => $payload,
+        ];
+    }
+
     public function findPasscode(TtLock $lock, string $passcode): ?array
     {
         $setting = $lock->setting;

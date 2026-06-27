@@ -207,6 +207,65 @@ class BookingController extends Controller
         ]);
     }
 
+    public function updateTenantDoorCode(Request $request, Booking $booking, TtLockApi $api)
+    {
+        $validated = $request->validate([
+            'door_code' => ['required', 'digits_between:4,9'],
+        ]);
+
+        $tenant = $this->tenantForAuth();
+        abort_if(! $tenant || (int) $booking->tenant_id !== (int) $tenant->id, 403);
+
+        $booking->loadMissing(['unit.ttLock.setting']);
+        $validFrom = $this->bookingDateTime($booking->check_in_date, $booking->check_in_time, '15:00');
+        $validUntil = $this->bookingDateTime($booking->check_out_date, $booking->check_out_time, '11:00');
+
+        if (! in_array($booking->booking_status, ['confirmed', 'checked_in', 'checkout_requested'], true)) {
+            return back()->withErrors(['door_code' => 'Smart lock access is not active for this booking.']);
+        }
+
+        if (now()->gt($validUntil)) {
+            return back()->withErrors(['door_code' => 'Door code access ended '.$validUntil->format('d M Y, h:i A').'.']);
+        }
+
+        $lock = $booking->unit?->ttLock;
+        if (! $lock || ! $lock->setting) {
+            return back()->withErrors(['door_code' => 'No connected smart lock is attached to this unit yet.']);
+        }
+
+        $code = $validated['door_code'];
+        $name = "Tenant {$booking->booking_no}";
+
+        try {
+            $result = $booking->smart_lock_keyboard_pwd_id
+                ? $api->changeTimedPasscode($lock, (string) $booking->smart_lock_keyboard_pwd_id, $code, $validFrom, $validUntil, $name)
+                : $api->addTimedPasscode($lock, $code, $validFrom, $validUntil, $name);
+        } catch (\Throwable $exception) {
+            return back()->withErrors(['door_code' => $exception->getMessage()]);
+        }
+
+        $booking->forceFill([
+            'smart_lock_code_mode' => 'auto',
+            'smart_lock_code' => $code,
+            'smart_lock_code_valid_from' => $validFrom,
+            'smart_lock_code_valid_until' => $validUntil,
+            'smart_lock_code_generated_at' => now(),
+            'smart_lock_keyboard_pwd_id' => $result['keyboardPwdId'] ?? $booking->smart_lock_keyboard_pwd_id,
+            'smart_lock_code_changed_by_tenant_at' => now(),
+            'smart_lock_code_note' => trim(sprintf(
+                'Tenant private TTLock passcode %s%s for %s to %s.',
+                ($result['keyboardPwdId'] ?? null) ? '#'.$result['keyboardPwdId'] : 'created',
+                ($result['verified'] ?? false) ? ' verified' : ' sent',
+                $validFrom->format('M d, Y H:i'),
+                $validUntil->format('M d, Y H:i'),
+            )),
+        ])->save();
+
+        ActivityLogger::log('bookings.smart_lock_tenant_code_updated', "Tenant changed smart lock code for {$booking->booking_no}.", $booking);
+
+        return back()->with('status', 'Door code updated for your booking dates.');
+    }
+
     private function formData(): array
     {
         return [
@@ -349,6 +408,7 @@ class BookingController extends Controller
                     $validFrom->format('M d, Y H:i'),
                     $validUntil->format('M d, Y H:i'),
                 )),
+                'smart_lock_keyboard_pwd_id' => $result['keyboardPwdId'] ?? $booking->smart_lock_keyboard_pwd_id,
             ])->save();
         } catch (\Throwable $exception) {
             $booking->forceFill([

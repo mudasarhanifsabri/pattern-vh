@@ -100,6 +100,11 @@
                     </span>
                 </div>
             </div>
+            <form method="POST" action="{{ route('bookings.tenant-door-code.update', $booking) }}" class="mt-3 grid grid-cols-[1fr_auto] gap-2">
+                @csrf
+                <input name="door_code" inputmode="numeric" pattern="[0-9]{4,9}" maxlength="9" autocomplete="one-time-code" class="erp-focus h-12 min-w-0 rounded-2xl border border-slate-200 bg-white px-4 text-center text-lg font-black tracking-[0.2em] text-[#0b1736]" placeholder="New code">
+                <button class="h-12 rounded-2xl bg-slate-950 px-4 text-sm font-black text-white">Set</button>
+            </form>
             @include('bookings.partials.tenant-smart-lock-slider', [
                 'booking' => $booking,
                 'smartLockValidFrom' => $smartLockValidFrom,
