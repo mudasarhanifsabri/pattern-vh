@@ -193,11 +193,7 @@ class DashboardController extends Controller
 
     private function tenantOpenRefund(Tenant $tenant): ?BookingDepositRefund
     {
-        return $this->remember(
-            'dashboard:tenant-refund:'.$tenant->id,
-            now()->addSeconds(30),
-            fn () => BookingDepositRefund::where('tenant_id', $tenant->id)->latest()->first()
-        );
+        return BookingDepositRefund::where('tenant_id', $tenant->id)->latest()->first();
     }
 
     private function remember(string $key, $ttl, callable $callback): mixed
