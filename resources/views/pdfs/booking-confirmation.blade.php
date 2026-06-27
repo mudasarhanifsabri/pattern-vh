@@ -5,16 +5,17 @@
     <style>
         @page { margin: 0; }
         body { margin: 0; background: #ffffff; color: #101827; font-family: dejavusans, sans-serif; font-size: 9.3px; }
-        .page { padding: 18px 22px 16px; }
-        .header { background: #071a33; color: #ffffff; border-radius: 8px 8px 0 0; padding: 18px 22px 16px; }
+        .page { padding: 16px 20px 14px; }
+        .header { background: #071a33; color: #ffffff; border-radius: 8px 8px 0 0; padding: 18px 22px 15px; }
         .brand { width: 128px; vertical-align: middle; }
         .header-title { font-size: 23px; font-weight: 800; line-height: 1.1; letter-spacing: .2px; color: #ffffff; }
         .gold { color: #f4c75b; }
-        .contact { font-size: 9px; line-height: 1.8; text-align: right; color: #e7eefb; }
+        .contact { font-size: 8.5px; line-height: 1.55; text-align: right; color: #e7eefb; }
         .meta { background: #f7ca61; color: #061a38; padding: 8px 18px; font-size: 9px; font-weight: 800; }
-        .section { border: 1px solid #dfe5ef; border-radius: 6px; padding: 12px; background: #ffffff; }
-        .section-title { color: #0d376b; font-size: 10px; font-weight: 800; text-transform: uppercase; margin-bottom: 9px; }
-        .icon { color: #0d4b85; font-weight: 800; margin-right: 6px; }
+        .section { border: 1px solid #dfe5ef; border-radius: 7px; padding: 11px 12px; background: #ffffff; }
+        .section.soft { background: #fbfdff; }
+        .section-title { color: #0d376b; font-size: 10px; font-weight: 800; text-transform: uppercase; margin-bottom: 9px; border-bottom: 1px solid #e7edf5; padding-bottom: 5px; }
+        .icon { display: inline-block; background: #0d4b85; color: #ffffff; font-size: 7.5px; font-weight: 800; padding: 2px 5px; margin-right: 8px; border-radius: 3px; }
         table { width: 100%; border-collapse: collapse; }
         td { vertical-align: top; }
         .grid td { padding: 6px 8px 6px 0; }
@@ -34,7 +35,8 @@
         .signature-img { max-height: 54px; max-width: 190px; opacity: .92; }
         .emboss { display: inline-block; border: 2px solid #f4c75b; background: #071a33; color: #f4c75b; border-radius: 50%; width: 86px; height: 86px; text-align: center; font-weight: 800; font-size: 10px; line-height: 1.2; padding-top: 16px; }
         .signed-ribbon { background: #ecfdf3; color: #047857; border: 1px solid #a7f3d0; border-radius: 6px; padding: 8px 10px; font-weight: 800; }
-        .footer { background: #071a33; color: #ffffff; text-align: center; padding: 8px; font-size: 8.5px; border-radius: 0 0 8px 8px; }
+        .company-strip { background: #f8fafc; border: 1px solid #dfe5ef; border-radius: 7px; padding: 8px 10px; color: #334155; font-size: 8.2px; line-height: 1.45; }
+        .footer { background: #071a33; color: #ffffff; text-align: center; padding: 8px; font-size: 8.2px; border-radius: 0 0 8px 8px; }
         .thanks { color: #d99f1f; font-size: 18px; font-style: italic; }
     </style>
 </head>
@@ -52,8 +54,8 @@
         <table>
             <tr>
                 <td style="width: 24%;">@if($logo)<img src="{{ $logo }}" class="brand">@else <div style="font-size:18px;font-weight:800">PATTERN</div> @endif</td>
-                <td style="width: 46%;"><div class="header-title">BOOKING<br>CONFIRMATION</div><div class="gold" style="margin-top:7px;font-size:10px;">THANK YOU FOR BOOKING WITH US</div></td>
-                <td class="contact">+971 54 359 7870<br>info@pattern.ae<br>www.pattern.ae</td>
+                <td style="width: 43%;"><div class="header-title">BOOKING<br>CONFIRMATION</div><div class="gold" style="margin-top:7px;font-size:10px;">THANK YOU FOR BOOKING WITH US</div></td>
+                <td class="contact">+971 4 329 9693<br>customerservice@pattern.ae<br>pattern.ae<br>413, AB Center, Sheikh Zayed Road<br>Al Barsha 1, Dubai</td>
             </tr>
         </table>
     </div>
@@ -68,8 +70,8 @@
     <table style="margin-top: 12px;">
         <tr>
             <td style="width: 43%; padding-right: 9px;">
-                <div class="section">
-                    <div class="section-title"><span class="icon">●</span>Guest information</div>
+                <div class="section soft">
+                    <div class="section-title"><span class="icon">01</span>Guest information</div>
                     <table class="grid">
                         <tr><td class="label">Guest name</td><td class="value">: {{ $tenant?->full_name ?? 'Not assigned' }}</td></tr>
                         <tr><td class="label">Email</td><td class="value">: {{ $tenant?->email ?: 'Not added' }}</td></tr>
@@ -93,8 +95,8 @@
     <table style="margin-top: 10px;">
         <tr>
             <td style="width: 50%; padding-right: 8px;">
-                <div class="section">
-                    <div class="section-title"><span class="icon">●</span>Property information</div>
+                <div class="section soft">
+                    <div class="section-title"><span class="icon">02</span>Property information</div>
                     <table class="grid">
                         <tr><td class="label">Building</td><td class="value">: {{ $building?->name ?? 'Not set' }}</td></tr>
                         <tr><td class="label">Unit number</td><td class="value">: {{ $unit?->unit_no ?? 'Not set' }}</td></tr>
@@ -105,8 +107,8 @@
                 </div>
             </td>
             <td style="width: 50%; padding-left: 8px;">
-                <div class="section">
-                    <div class="section-title"><span class="icon">●</span>Stay details</div>
+                <div class="section soft">
+                    <div class="section-title"><span class="icon">03</span>Stay details</div>
                     <table class="grid">
                         <tr><td class="label">Check-in</td><td class="value">: {{ $checkIn }}</td></tr>
                         <tr><td class="label">Check-out</td><td class="value">: {{ $checkOut }}</td></tr>
@@ -122,8 +124,8 @@
     <table style="margin-top: 10px;">
         <tr>
             <td style="width: 68%; padding-right: 9px;">
-                <div class="section">
-                    <div class="section-title"><span class="icon">●</span>Payment summary</div>
+                <div class="section soft">
+                    <div class="section-title"><span class="icon">04</span>Payment summary</div>
                     <table class="charges">
                         <thead><tr><th>Description</th><th style="width:18%;">Qty</th><th style="width:24%;text-align:right;">Amount (AED)</th></tr></thead>
                         <tbody>
@@ -136,7 +138,7 @@
                 </div>
             </td>
             <td style="width: 32%;">
-                <div class="section">
+                <div class="section soft">
                     <div class="section-title">Payment status</div>
                     <div style="text-align:center;margin:8px 0 12px;"><span class="status-pill">{{ strtoupper($paymentSummary['status']) }}</span></div>
                     <table class="grid">
@@ -154,8 +156,8 @@
     <table style="margin-top: 10px;">
         <tr>
             <td style="width: 38%; padding-right: 8px;">
-                <div class="section">
-                    <div class="section-title"><span class="icon">●</span>Important notes</div>
+                <div class="section soft">
+                    <div class="section-title"><span class="icon">05</span>Important notes</div>
                     <ul class="note-list">
                         <li>Please present valid ID or passport at check-in.</li>
                         <li>Smoking, parties, and events are not permitted unless approved.</li>
@@ -165,22 +167,22 @@
                 </div>
             </td>
             <td style="width: 29%; padding: 0 8px;">
-                <div class="section">
-                    <div class="section-title"><span class="icon">●</span>Cancellation policy</div>
+                <div class="section soft">
+                    <div class="section-title"><span class="icon">06</span>Cancellation policy</div>
                     <p style="line-height:1.6;margin:0;">Extensions, early checkout, cancellation, and refunds are subject to written company approval and applicable booking terms.</p>
                 </div>
             </td>
             <td style="width: 33%; padding-left: 8px;">
-                <div class="section">
-                    <div class="section-title"><span class="icon">●</span>Need help?</div>
+                <div class="section soft">
+                    <div class="section-title"><span class="icon">07</span>Need help?</div>
                     <p style="line-height:1.7;margin:0;">Our guest support team is available to assist you.</p>
-                    <p style="line-height:1.8;margin:8px 0 0;color:#0d376b;font-weight:800;">+971 54 359 7870<br>support@pattern.ae<br>www.pattern.ae</p>
+                    <p style="line-height:1.7;margin:8px 0 0;color:#0d376b;font-weight:800;">+971 4 329 9693<br>customerservice@pattern.ae<br>pattern.ae</p>
                 </div>
             </td>
         </tr>
     </table>
 
-    <table style="margin-top: 14px;">
+    <table style="margin-top: 12px;">
         <tr>
             <td style="width: 35%;">
                 <div class="thanks">Thank You!</div>
@@ -211,7 +213,11 @@
         </tr>
     </table>
 
-    <div class="footer">Office 401, Churchill Tower, Business Bay, Dubai, United Arab Emirates</div>
+    <div class="company-strip" style="margin-top: 8px;">
+        <strong>Pattern Vacation Homes Rental</strong> - 413, AB Center, Sheikh Zayed Road, Al Barsha 1, Dubai<br>
+        Tel: +971 4 329 9693 | Email: customerservice@pattern.ae | Web: pattern.ae
+    </div>
+    <div class="footer">Pattern Vacation Homes Rental - Secure booking confirmation</div>
 </div>
 </body>
 </html>
