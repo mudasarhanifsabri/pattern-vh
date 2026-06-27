@@ -117,9 +117,9 @@
 
             <main class="support-mobile-pane {{ $selected ? 'flex' : 'hidden lg:flex' }} min-h-0 min-w-0 flex-col overflow-hidden bg-white">
                 @if($selected)
-                    <header class="flex shrink-0 items-center justify-between gap-3 border-b border-slate-100 bg-white px-4 py-3 {{ $tenantChat ? 'pt-[calc(env(safe-area-inset-top)+0.75rem)]' : '' }}">
+                    <header class="flex shrink-0 items-center justify-between gap-3 border-b border-slate-100 bg-white px-4 py-3 {{ $portalChat ? 'pt-[calc(env(safe-area-inset-top)+0.75rem)]' : '' }}">
                         <div class="flex min-w-0 items-center gap-3">
-                            <a href="{{ route('support.index') }}" class="grid h-10 w-10 shrink-0 place-items-center rounded-2xl border border-slate-100 text-xl font-black text-[#071a3b] lg:hidden">&lsaquo;</a>
+                            <a href="{{ route('support.index') }}" data-support-back class="grid h-10 w-10 shrink-0 place-items-center rounded-2xl border border-slate-100 text-xl font-black text-[#071a3b] lg:hidden">&lsaquo;</a>
                             <span class="relative grid h-12 w-12 shrink-0 place-items-center rounded-full bg-gradient-to-br from-blue-100 to-violet-100 text-sm font-black text-blue-700">
                                 {{ str($chatPartnerName)->substr(0, 2)->upper() }}
                                 <span class="absolute bottom-0 right-0 h-3.5 w-3.5 rounded-full border-2 border-white {{ $chatPartnerOnline ? 'bg-emerald-500' : 'bg-emerald-400' }}"></span>
@@ -386,6 +386,39 @@
 
         const supportMessageBox = document.querySelector('[data-support-messages]');
         if (supportMessageBox) supportMessageBox.scrollTop = supportMessageBox.scrollHeight;
+        const supportBackUrl = @js($selected ? route('support.index') : null);
+        const supportGoBack = () => {
+            if (!supportBackUrl) return;
+            document.body.classList.remove('support-chat-fullscreen');
+            document.body.classList.remove('support-keyboard-open');
+            window.location.assign(supportBackUrl);
+        };
+        document.querySelector('[data-support-back]')?.addEventListener('click', (event) => {
+            event.preventDefault();
+            supportGoBack();
+        });
+
+        @if($portalSelectedChat)
+            const supportShell = document.querySelector('[data-support-shell]');
+            let supportTouchStartX = 0;
+            let supportTouchStartY = 0;
+            let supportTouchStartedAt = 0;
+            supportShell?.addEventListener('touchstart', (event) => {
+                const touch = event.touches[0];
+                supportTouchStartX = touch.clientX;
+                supportTouchStartY = touch.clientY;
+                supportTouchStartedAt = Date.now();
+            }, { passive: true });
+            supportShell?.addEventListener('touchend', (event) => {
+                const touch = event.changedTouches[0];
+                const deltaX = touch.clientX - supportTouchStartX;
+                const deltaY = touch.clientY - supportTouchStartY;
+                const fastEnough = Date.now() - supportTouchStartedAt < 700;
+                if (fastEnough && deltaX > 80 && Math.abs(deltaY) < 70) {
+                    supportGoBack();
+                }
+            }, { passive: true });
+        @endif
 
         const updateKeyboardOffset = () => {
             if (!window.visualViewport || !document.body.classList.contains('support-chat-fullscreen')) return;
