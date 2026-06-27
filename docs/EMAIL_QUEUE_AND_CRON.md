@@ -21,6 +21,19 @@ The queue worker sends queued emails and notifications.
 
 The scheduler checks recurring jobs, such as booking reminders and invoice reminders.
 
+If either process is stopped:
+
+- Welcome emails and notifications stay pending in the queue.
+- Recurring booking and invoice reminders do not run.
+- Restarting the queue later will send pending queued jobs.
+
+After every deployment, run:
+
+```bash
+php artisan optimize:clear
+php artisan queue:restart
+```
+
 ## cPanel or Linux Cron Setup
 
 Add this cron entry to run Laravel's scheduler every minute:

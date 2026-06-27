@@ -45,7 +45,7 @@
             @else
                 @include('layouts.topbar')
             @endif
-            <main class="flex-1 {{ $tenantOnly ? 'mx-auto w-full max-w-[430px] px-4 pb-28 pt-2 mobile-app-safe max-[380px]:px-3' : 'p-3 pb-24 sm:p-6 lg:p-8 xl:p-9' }}">
+            <main class="flex-1 {{ $tenantOnly ? 'mobile-app-main mx-auto w-full max-w-[430px] px-4 pb-28 pt-2 mobile-app-safe max-[380px]:px-3' : 'p-3 pb-24 sm:p-6 lg:p-8 xl:p-9' }}">
                 @if(! $tenantOnly)
                 @isset($header)
                     <div class="mb-5 md:mb-7">

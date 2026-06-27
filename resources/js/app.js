@@ -11,6 +11,13 @@ let deferredInstallPrompt = null;
 const isStandalone = () => window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
 const isMobileViewport = () => window.matchMedia('(max-width: 767px)').matches;
 
+function syncStandaloneMode() {
+    document.documentElement.classList.toggle('pwa-standalone', isStandalone());
+}
+
+syncStandaloneMode();
+window.matchMedia('(display-mode: standalone)').addEventListener?.('change', syncStandaloneMode);
+
 window.addEventListener('beforeinstallprompt', (event) => {
     event.preventDefault();
     deferredInstallPrompt = event;
@@ -37,6 +44,8 @@ function showTenantInstallPrompt() {
     }
 
     prompt.classList.remove('hidden');
+    prompt.setAttribute('role', 'dialog');
+    prompt.setAttribute('aria-live', 'polite');
 
     dismiss.onclick = () => {
         localStorage.setItem('patternTenantInstallDismissed', '1');
@@ -55,5 +64,6 @@ function showTenantInstallPrompt() {
         await deferredInstallPrompt.userChoice;
         deferredInstallPrompt = null;
         prompt.classList.add('hidden');
+        syncStandaloneMode();
     };
 }
