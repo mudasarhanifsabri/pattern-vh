@@ -137,6 +137,45 @@
                 .replaceAll('>', '&gt;')
                 .replaceAll('"', '&quot;')
                 .replaceAll("'", '&#039;');
+            let previousUnreadCount = Number(document.querySelector('[data-notification-count]')?.textContent?.replace(/\D/g, '') || 0);
+            let notificationPollReady = false;
+            let notificationAudioContext = null;
+            let notificationSoundUnlocked = false;
+            const unlockNotificationSound = () => {
+                if (notificationSoundUnlocked) return;
+                try {
+                    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+                    if (!AudioContextClass) return;
+                    notificationAudioContext = notificationAudioContext || new AudioContextClass();
+                    if (notificationAudioContext.state === 'suspended') notificationAudioContext.resume();
+                    notificationSoundUnlocked = true;
+                } catch (error) {}
+            };
+            window.addEventListener('pointerdown', unlockNotificationSound, { once: true, passive: true });
+            window.addEventListener('keydown', unlockNotificationSound, { once: true });
+            const playNotificationBeep = () => {
+                try {
+                    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+                    if (!AudioContextClass) return;
+                    notificationAudioContext = notificationAudioContext || new AudioContextClass();
+                    if (notificationAudioContext.state === 'suspended') notificationAudioContext.resume();
+                    const now = notificationAudioContext.currentTime;
+                    const gain = notificationAudioContext.createGain();
+                    gain.gain.setValueAtTime(0.0001, now);
+                    gain.gain.exponentialRampToValueAtTime(0.075, now + 0.015);
+                    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.42);
+                    gain.connect(notificationAudioContext.destination);
+
+                    [660, 880].forEach((frequency, index) => {
+                        const osc = notificationAudioContext.createOscillator();
+                        osc.type = 'sine';
+                        osc.frequency.setValueAtTime(frequency, now + (index * 0.12));
+                        osc.connect(gain);
+                        osc.start(now + (index * 0.12));
+                        osc.stop(now + 0.18 + (index * 0.12));
+                    });
+                } catch (error) {}
+            };
             const updateNotificationBell = async () => {
                 const countEl = document.querySelector('[data-notification-count]');
                 const dotEl = document.querySelector('[data-notification-dot]');
@@ -149,6 +188,11 @@
                     if (!response.ok) return;
                     const data = await response.json();
                     const unread = Number(data.unread_count || 0);
+                    if (notificationPollReady && unread > previousUnreadCount) {
+                        playNotificationBeep();
+                    }
+                    previousUnreadCount = unread;
+                    notificationPollReady = true;
                     countEl.textContent = unread > 99 ? '99+' : unread;
                     countEl.classList.toggle('hidden', unread === 0);
                     countEl.classList.toggle('grid', unread > 0);
