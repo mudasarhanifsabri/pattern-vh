@@ -3,8 +3,10 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 
 class SystemSettingsController extends Controller
@@ -20,6 +22,7 @@ class SystemSettingsController extends Controller
         return view('settings.index', [
             'values' => $this->envValues(),
             'statuses' => $this->statuses(),
+            'cron' => $this->cronStatus(),
         ]);
     }
 
@@ -69,6 +72,56 @@ class SystemSettingsController extends Controller
             'Storage' => $this->check(fn () => Storage::disk(config('filesystems.default'))->exists('__pattern_connection_test__')),
             'Mail' => ['ok' => (bool) config('mail.mailers.smtp.host'), 'message' => config('mail.mailers.smtp.host') ?: 'SMTP host missing'],
         ];
+    }
+
+    private function cronStatus(): array
+    {
+        return [
+            'schedule' => $this->logHeartbeat(storage_path('logs/cron.log'), 'Laravel scheduler'),
+            'queue' => $this->logHeartbeat(storage_path('logs/queue-cron.log'), 'Queue worker'),
+            'jobs' => [
+                'pending' => Schema::hasTable('jobs') ? DB::table('jobs')->count() : null,
+                'failed' => Schema::hasTable('failed_jobs') ? DB::table('failed_jobs')->count() : null,
+            ],
+        ];
+    }
+
+    private function logHeartbeat(string $path, string $label): array
+    {
+        if (! file_exists($path)) {
+            return [
+                'ok' => false,
+                'label' => $label,
+                'path' => $path,
+                'last_run' => null,
+                'last_run_human' => 'No heartbeat log found',
+                'last_line' => null,
+                'message' => 'Add the cron command with log output to start tracking.',
+            ];
+        }
+
+        $lastRun = Carbon::createFromTimestamp(filemtime($path));
+        $minutesOld = $lastRun->diffInMinutes(now());
+
+        return [
+            'ok' => $minutesOld <= 5,
+            'label' => $label,
+            'path' => $path,
+            'last_run' => $lastRun,
+            'last_run_human' => $lastRun->diffForHumans(),
+            'last_line' => $this->lastNonEmptyLine($path),
+            'message' => $minutesOld <= 5 ? 'Running recently' : 'Not updated in the last 5 minutes',
+        ];
+    }
+
+    private function lastNonEmptyLine(string $path): ?string
+    {
+        $lines = @file($path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+        if (! $lines) {
+            return null;
+        }
+
+        return str($lines[array_key_last($lines)])->limit(180)->toString();
     }
 
     private function check(callable $callback): array
