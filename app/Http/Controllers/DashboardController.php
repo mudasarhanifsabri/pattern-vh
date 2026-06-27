@@ -51,11 +51,7 @@ class DashboardController extends Controller
 
     private function operationsDashboard(): array
     {
-        return $this->remember(
-            'dashboard:operations:'.now()->format('Y-m-d-H-i'),
-            now()->addSeconds(60),
-            fn (): array => $this->buildOperationsDashboard()
-        );
+        return $this->buildOperationsDashboard();
     }
 
     private function buildOperationsDashboard(): array
