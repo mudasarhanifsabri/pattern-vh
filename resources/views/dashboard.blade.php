@@ -20,7 +20,7 @@
             $smartLockValidUntil = $booking ? \Illuminate\Support\Carbon::parse($booking->check_out_date->format('Y-m-d').' '.($booking->check_out_time ?: '11:00')) : null;
         @endphp
 
-        <div class="tenant-app-screen space-y-5">
+        <div class="tenant-app-screen space-y-5 lg:hidden">
             @if (session('status'))
                 <div class="rounded-3xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-700">{{ session('status') }}</div>
             @endif
@@ -221,6 +221,55 @@
                         </div>
                     @empty
                         <p class="rounded-2xl border border-dashed border-slate-200 px-4 py-8 text-center text-sm text-slate-500">No approved rent collections yet.</p>
+                    @endforelse
+                </div>
+            </section>
+        </div>
+        <div class="hidden space-y-6 lg:block">
+            <section class="overflow-hidden rounded-[2rem] bg-gradient-to-br from-[#061a38] via-[#0d2b5c] to-[#2563eb] p-7 text-white shadow-2xl shadow-blue-950/20">
+                <div class="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
+                    <div>
+                        <p class="text-xs font-bold uppercase tracking-[0.22em] text-blue-200">Pattern owner portal</p>
+                        <h2 class="mt-3 text-3xl font-black tracking-[-0.04em]">Welcome, {{ $owner->full_name }}</h2>
+                        <p class="mt-2 max-w-2xl text-sm text-blue-100">Track units, occupancy status, owner expenses, account statements, and payouts.</p>
+                    </div>
+                    <a href="{{ route('owner-statements.index') }}" class="inline-flex h-14 items-center justify-center rounded-2xl bg-white px-5 text-sm font-black text-[#061a38]">View statement</a>
+                </div>
+            </section>
+
+            <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                @foreach ($stats as $card)
+                    <article class="erp-card p-5">
+                        <p class="text-xs font-medium text-slate-500">{{ $card['label'] }}</p>
+                        <p class="mt-2 truncate text-2xl font-black tracking-[-0.04em] text-[#071a3b]">{{ $card['value'] }}</p>
+                        <p class="mt-3 text-[11px] leading-5 text-slate-500">{{ $card['note'] }}</p>
+                    </article>
+                @endforeach
+            </div>
+
+            <section class="erp-card p-5">
+                <h2 class="text-lg font-black text-[#071a3b]">Owner actions</h2>
+                <div class="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                    @foreach ($quickActions as $action)
+                        <a href="{{ route($action['route']) }}" class="rounded-3xl bg-blue-600 p-4 text-white shadow-xl shadow-blue-600/20 transition hover:-translate-y-0.5">
+                            <span class="block text-base font-black">{{ $action['label'] }}</span>
+                            <span class="mt-2 block text-xs leading-5 opacity-80">{{ $action['note'] }}</span>
+                        </a>
+                    @endforeach
+                </div>
+            </section>
+
+            <section class="erp-card p-5">
+                <h2 class="text-lg font-black text-[#071a3b]">My units status</h2>
+                <div class="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                    @forelse($ownerUnits as $unit)
+                        <a href="{{ route('units.show', $unit) }}" class="rounded-3xl border border-slate-200 bg-white p-4 hover:bg-slate-50">
+                            <p class="text-xs font-bold text-slate-500">{{ $unit->building->name }}</p>
+                            <h3 class="mt-1 text-lg font-black text-[#071a3b]">Unit {{ $unit->unit_no }}</h3>
+                            <p class="mt-1 text-xs text-slate-500">{{ $unit->unit_type }} / {{ str($unit->availability_status)->headline() }}</p>
+                        </a>
+                    @empty
+                        <p class="rounded-2xl border border-dashed border-slate-200 px-4 py-8 text-center text-sm text-slate-500">No units assigned yet.</p>
                     @endforelse
                 </div>
             </section>

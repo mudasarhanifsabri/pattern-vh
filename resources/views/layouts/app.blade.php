@@ -25,7 +25,7 @@
             && ! auth()->user()?->can('accounting.view')
             && ! auth()->user()?->can('accounting.manage')
             && ! auth()->user()?->can('users.manage');
-        $mobilePortal = $tenantOnly || $ownerOnly;
+        $mobilePortal = $tenantOnly;
     @endphp
 
     <div
@@ -37,23 +37,30 @@
                 localStorage.setItem('patternSidebarCollapsed', this.sidebarCollapsed ? '1' : '0');
             }
         }"
-        class="min-h-screen {{ $mobilePortal ? 'bg-[#f7f9fe]' : 'lg:flex' }}"
+        class="min-h-screen {{ $mobilePortal || $ownerOnly ? 'bg-[#f7f9fe] lg:bg-transparent' : 'lg:flex' }} {{ $ownerOnly ? 'lg:flex' : '' }}"
     >
         @unless ($mobilePortal)
             <div x-show="sidebarOpen" x-transition.opacity class="fixed inset-0 z-30 bg-slate-950/60 lg:hidden" @click="sidebarOpen = false"></div>
-            @include('layouts.sidebar')
+            <div class="{{ $ownerOnly ? 'hidden lg:block' : '' }}">
+                @include('layouts.sidebar')
+            </div>
         @endunless
 
         <div class="flex min-h-screen min-w-0 flex-1 flex-col {{ $mobilePortal ? '' : 'transition-[padding] duration-300 ease-out' }}" @unless($mobilePortal) :class="sidebarCollapsed ? 'lg:pl-[92px]' : 'lg:pl-[292px]'" @endunless>
-            @if($mobilePortal)
-                @include('layouts.tenant.topbar')
-            @else
-                @include('layouts.topbar')
+            @if($mobilePortal || $ownerOnly)
+                <div class="{{ $ownerOnly ? 'lg:hidden' : '' }}">
+                    @include('layouts.tenant.topbar')
+                </div>
             @endif
-            <main class="flex-1 {{ $mobilePortal ? 'mobile-app-main mx-auto w-full max-w-[430px] px-4 pb-28 pt-2 mobile-app-safe max-[380px]:px-3' : 'p-3 pb-24 sm:p-6 lg:p-8 xl:p-9' }}">
+            @if(! $mobilePortal)
+                <div class="{{ $ownerOnly ? 'hidden lg:block' : '' }}">
+                    @include('layouts.topbar')
+                </div>
+            @endif
+            <main class="flex-1 {{ $mobilePortal ? 'mobile-app-main mx-auto w-full max-w-[430px] px-4 pb-28 pt-2 mobile-app-safe max-[380px]:px-3' : ($ownerOnly ? 'mobile-app-main mx-auto w-full max-w-[430px] px-4 pb-28 pt-2 mobile-app-safe max-[380px]:px-3 lg:mx-0 lg:max-w-none lg:p-8 lg:pb-24 xl:p-9' : 'p-3 pb-24 sm:p-6 lg:p-8 xl:p-9') }}">
                 @if(! $mobilePortal)
                 @isset($header)
-                    <div class="mb-5 md:mb-7">
+                    <div class="{{ $ownerOnly ? 'hidden lg:block' : '' }} mb-5 md:mb-7">
                         @php
                             $headerHtml = trim($header->toHtml());
                         @endphp
@@ -68,7 +75,9 @@
                 {{ $slot }}
             </main>
             @unless($mobilePortal)
+                <div class="{{ $ownerOnly ? 'hidden lg:block' : '' }}">
                 @include('layouts.footer')
+                </div>
             @endunless
         </div>
     </div>

@@ -66,7 +66,7 @@
         </section>
     @endif
 
-    <section class="grid gap-3 {{ $ownerOnly ? 'grid-cols-2' : 'md:grid-cols-4' }}">
+    <section class="grid gap-3 {{ $ownerOnly ? 'grid-cols-2 lg:grid-cols-4' : 'md:grid-cols-4' }}">
         @foreach($cards as $card)
             <article class="{{ $ownerOnly ? 'rounded-[1.35rem] bg-white p-4 shadow-[0_14px_30px_rgba(15,23,42,0.07)]' : 'erp-card p-5' }}">
                 <p class="text-xs font-bold uppercase tracking-[0.16em] text-slate-400">{{ $card['name'] }}</p>

@@ -78,7 +78,7 @@
                 <p class="mt-1 text-sm text-slate-500">Owners see rent payout landing dates. Deposits are excluded from owner payable amounts.</p>
             </div>
 
-            <div class="hidden overflow-x-auto {{ $ownerOnly ? '' : 'md:block' }}">
+            <div class="hidden overflow-x-auto {{ $ownerOnly ? 'lg:block' : 'md:block' }}">
                 <table class="min-w-full divide-y divide-slate-200 text-sm">
                     <thead class="bg-slate-50 text-left text-[11px] font-bold uppercase tracking-[0.16em] text-slate-500">
                         <tr>
@@ -127,7 +127,7 @@
                 </table>
             </div>
 
-            <div class="space-y-3 p-4 {{ $ownerOnly ? '' : 'md:hidden' }}">
+            <div class="space-y-3 p-4 {{ $ownerOnly ? 'lg:hidden' : 'md:hidden' }}">
                 @forelse($rows as $row)
                     <article class="rounded-3xl border border-slate-200 bg-white p-4">
                         <div class="flex items-start justify-between gap-3">

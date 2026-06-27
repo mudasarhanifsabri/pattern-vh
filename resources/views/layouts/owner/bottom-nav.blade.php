@@ -1,4 +1,4 @@
-<nav class="tenant-bottom-nav {{ request()->routeIs('support.*') ? 'hidden' : 'grid' }} fixed inset-x-0 bottom-0 z-40 mx-auto max-w-[430px] grid-cols-4 border-t border-slate-100 bg-white/95 px-3 pt-2 shadow-[0_-12px_30px_rgba(15,23,42,0.08)] backdrop-blur">
+<nav class="tenant-bottom-nav {{ request()->routeIs('support.*') ? 'hidden' : 'grid' }} fixed inset-x-0 bottom-0 z-40 mx-auto max-w-[430px] grid-cols-4 border-t border-slate-100 bg-white/95 px-3 pt-2 shadow-[0_-12px_30px_rgba(15,23,42,0.08)] backdrop-blur lg:hidden">
     @foreach ([
         ['route' => 'dashboard', 'label' => 'Owner', 'icon' => 'M4 19V5m0 14h16M8 16v-5m4 5V8m4 8v-8'],
         ['route' => 'owner-statements.index', 'label' => 'Statement', 'icon' => 'M6 3h12v18H6zM9 8h6M9 12h6M9 16h4'],
@@ -15,7 +15,7 @@
     @endforeach
 </nav>
 
-<div id="tenant-install-prompt" class="tenant-install-card {{ request()->routeIs('support.*') ? 'hidden' : '' }} fixed inset-x-3 bottom-24 z-50 hidden rounded-[1.5rem] border border-blue-100 bg-white p-4 shadow-2xl shadow-slate-950/20 sm:left-auto sm:w-[390px]">
+<div id="tenant-install-prompt" class="tenant-install-card {{ request()->routeIs('support.*') ? 'hidden' : '' }} fixed inset-x-3 bottom-24 z-50 hidden rounded-[1.5rem] border border-blue-100 bg-white p-4 shadow-2xl shadow-slate-950/20 sm:left-auto sm:w-[390px] lg:hidden">
     <div class="flex gap-3">
         <span class="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-blue-600 text-sm font-black text-white">P</span>
         <div class="min-w-0 flex-1">

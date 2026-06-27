@@ -38,7 +38,7 @@
         @endif
 
         @if ($ownerPortal)
-            <div class="tenant-app-screen space-y-5">
+            <div class="tenant-app-screen space-y-5 lg:hidden">
                 <section class="overflow-hidden rounded-[1.6rem] bg-white shadow-[0_18px_45px_rgba(15,23,42,0.08)]">
                     <div class="relative bg-gradient-to-br from-slate-950 via-slate-800 to-blue-700 p-6 text-white">
                         <div class="absolute inset-0 opacity-25" style="background-image: radial-gradient(circle at 78% 14%, rgba(255,255,255,.65), transparent 24%), linear-gradient(135deg, rgba(255,255,255,.08) 0 25%, transparent 25% 50%, rgba(255,255,255,.06) 50% 75%, transparent 75%); background-size: auto, 42px 42px;"></div>
@@ -125,8 +125,8 @@
                     </div>
                 </section>
             </div>
-        @else
-        <div class="erp-card overflow-hidden">
+        @endif
+        <div class="{{ $ownerPortal ? 'hidden lg:block' : '' }} erp-card overflow-hidden">
             <div class="grid gap-0 xl:grid-cols-[1.35fr_0.65fr]">
                 <div class="p-6">
                     <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
@@ -516,7 +516,6 @@
                 </div>
             </div>
         </div>
-        @endif
     </div>
 
     <script>
