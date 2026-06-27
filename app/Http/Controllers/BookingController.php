@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\Agent;
 use App\Models\Booking;
+use App\Models\Payment;
+use App\Models\PaymentCollectionRequest;
 use App\Models\Tenant;
 use App\Models\Unit;
 use App\Support\ActivityLogger;
@@ -16,6 +18,7 @@ use App\Support\TtLockApi;
 use Illuminate\Support\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
@@ -110,6 +113,88 @@ class BookingController extends Controller
         $booking->delete();
 
         return redirect()->route('bookings.index')->with('status', 'Booking deleted successfully.');
+    }
+
+    public function cancel(Request $request, Booking $booking)
+    {
+        $validated = $request->validate([
+            'cancellation_note' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        if ($booking->booking_status === 'cancelled') {
+            return back()->with('status', 'Booking is already cancelled.');
+        }
+
+        if ($booking->booking_status === 'checked_out') {
+            return back()->withErrors(['booking_status' => 'Checked out bookings cannot be cancelled.']);
+        }
+
+        $note = trim((string) ($validated['cancellation_note'] ?? ''));
+        $cancelNote = trim('Booking cancelled'.($note ? ': '.$note : '.'));
+
+        DB::transaction(function () use ($booking, $cancelNote): void {
+            $booking->forceFill([
+                'booking_status' => 'cancelled',
+                'smart_lock_code' => null,
+                'smart_lock_code_valid_until' => now(),
+                'smart_lock_code_note' => $cancelNote.' Smart lock access disabled.',
+                'updated_by' => auth()->id(),
+            ])->save();
+
+            $booking->invoices()->with(['payments', 'collectionRequests'])->get()->each(function ($invoice) use ($cancelNote): void {
+                $invoice->payments()
+                    ->whereIn('status', ['pending', 'approved'])
+                    ->get()
+                    ->each(fn (Payment $payment) => $this->rejectPaymentForCancellation($payment, $cancelNote));
+
+                $invoice->collectionRequests()
+                    ->whereNotIn('status', ['approved', 'rejected', 'cancelled'])
+                    ->update([
+                        'status' => 'cancelled',
+                        'office_notes' => $cancelNote,
+                        'updated_by' => auth()->id(),
+                    ]);
+
+                $invoice->forceFill([
+                    'status' => 'cancelled',
+                    'balance_amount' => 0,
+                    'notes' => $this->appendNote($invoice->notes, $cancelNote),
+                    'updated_by' => auth()->id(),
+                ])->save();
+            });
+
+            Payment::query()
+                ->where('booking_id', $booking->id)
+                ->whereIn('status', ['pending', 'approved'])
+                ->get()
+                ->each(fn (Payment $payment) => $this->rejectPaymentForCancellation($payment, $cancelNote));
+
+            PaymentCollectionRequest::query()
+                ->where('booking_id', $booking->id)
+                ->whereNotIn('status', ['approved', 'rejected', 'cancelled'])
+                ->update([
+                    'status' => 'cancelled',
+                    'office_notes' => $cancelNote,
+                    'updated_by' => auth()->id(),
+                ]);
+
+            $booking->tasks()
+                ->whereNotIn('status', ['completed', 'cancelled'])
+                ->update(['status' => 'cancelled']);
+
+            $booking->notificationLogs()->create([
+                'channel' => 'internal',
+                'recipient' => 'reservations',
+                'subject' => 'Booking cancelled',
+                'message' => $cancelNote,
+                'status' => 'sent',
+                'sent_at' => now(),
+            ]);
+        });
+
+        ActivityLogger::log('bookings.cancelled', "Cancelled booking {$booking->booking_no}.", $booking);
+
+        return redirect()->route('bookings.show', $booking)->with('status', 'Booking cancelled. Related invoices were cancelled and payments were rejected so active reports ignore this booking.');
     }
 
     public function confirmationPdf(Booking $booking, BookingConfirmationPdf $pdf)
@@ -453,6 +538,33 @@ class BookingController extends Controller
     private function nextBookingNumber(): string
     {
         return ReferenceNumber::next(Booking::class, 'booking_no', 'BK', 'Ymd', 4, true);
+    }
+
+    private function rejectPaymentForCancellation(Payment $payment, string $cancelNote): void
+    {
+        if ($payment->status === 'rejected') {
+            return;
+        }
+
+        $payment->forceFill([
+            'status' => 'rejected',
+            'approved_by' => auth()->id(),
+            'approved_at' => now(),
+            'verification_notes' => $this->appendNote($payment->verification_notes, $cancelNote),
+        ])->save();
+
+        if ($payment->collectionRequest && ! in_array($payment->collectionRequest->status, ['approved', 'rejected', 'cancelled'], true)) {
+            $payment->collectionRequest->update([
+                'status' => 'rejected',
+                'office_notes' => $cancelNote,
+                'updated_by' => auth()->id(),
+            ]);
+        }
+    }
+
+    private function appendNote(?string $existing, string $note): string
+    {
+        return trim(trim((string) $existing).PHP_EOL.$note);
     }
 
     private function tenantForAuth(): ?Tenant

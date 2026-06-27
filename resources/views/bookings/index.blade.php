@@ -96,7 +96,20 @@
                                 <td class="px-4 py-4 text-xs text-slate-600"><div class="font-bold text-slate-700">{{ $booking->unit->building->name }} / {{ $booking->unit->unit_no }}</div><div>{{ $booking->check_in_date->format('M d, Y') }} to {{ $booking->check_out_date->format('M d, Y') }}</div></td>
                                 <td class="px-4 py-4"><div class="font-bold text-[#071a3b]">AED {{ number_format((float) $booking->total_amount, 2) }}</div><div class="text-xs text-slate-500">Rent AED {{ number_format((float) $booking->rent_amount, 2) }}</div></td>
                                 <td class="px-4 py-4"><span class="rounded-full bg-blue-50 px-2.5 py-1 text-xs font-bold text-blue-700">{{ str($booking->booking_status)->headline() }}</span></td>
-                                <td class="px-4 py-4"><div class="flex justify-end gap-2"><a href="{{ route('bookings.show', $booking) }}" class="rounded-lg border border-slate-200 px-3 py-2 text-xs font-bold text-slate-600">View</a>@can('bookings.manage')<a href="{{ route('bookings.edit', $booking) }}" class="rounded-lg border border-slate-200 px-3 py-2 text-xs font-bold text-slate-600">Edit</a>@endcan</div></td>
+                                <td class="px-4 py-4">
+                                    <div class="flex justify-end gap-2">
+                                        <a href="{{ route('bookings.show', $booking) }}" class="rounded-lg border border-slate-200 px-3 py-2 text-xs font-bold text-slate-600">View</a>
+                                        @can('bookings.manage')
+                                            <a href="{{ route('bookings.edit', $booking) }}" class="rounded-lg border border-slate-200 px-3 py-2 text-xs font-bold text-slate-600">Edit</a>
+                                            @if (! in_array($booking->booking_status, ['cancelled', 'checked_out'], true))
+                                                <form method="POST" action="{{ route('bookings.cancel', $booking) }}" onsubmit="return confirm('Cancel this booking? Related invoices will be cancelled and payments rejected so active financial reports ignore it.');">
+                                                    @csrf
+                                                    <button type="submit" class="rounded-lg border border-rose-200 px-3 py-2 text-xs font-bold text-rose-600 hover:bg-rose-50">Cancel</button>
+                                                </form>
+                                            @endif
+                                        @endcan
+                                    </div>
+                                </td>
                             </tr>
                         @empty
                             <tr><td colspan="5" class="px-4 py-10 text-center text-sm text-slate-500">No bookings found.</td></tr>

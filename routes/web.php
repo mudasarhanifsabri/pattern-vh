@@ -189,6 +189,9 @@ Route::middleware('auth')->group(function () {
     Route::post('bookings/{booking}/tenant-door-code', [BookingController::class, 'updateTenantDoorCode'])
         ->middleware('permission:portal.tenant')
         ->name('bookings.tenant-door-code.update');
+    Route::post('bookings/{booking}/cancel', [BookingController::class, 'cancel'])
+        ->middleware('permission:bookings.manage')
+        ->name('bookings.cancel');
     Route::post('bookings/{booking}/request-extension', [BookingLifecycleController::class, 'requestExtension'])
         ->middleware('permission:portal.tenant')
         ->name('bookings.request-extension');
