@@ -3,46 +3,137 @@
 namespace App\Support;
 
 use App\Models\Booking;
+use Illuminate\Support\Facades\Storage;
+use Mpdf\Mpdf;
 
 class BookingConfirmationPdf
 {
     public function make(Booking $booking): string
     {
-        $booking->loadMissing(['unit.building', 'tenant', 'agent']);
+        ini_set('pcre.backtrack_limit', '10000000');
 
-        $pdf = new BrandedPdf('Booking Confirmation', "Booking {$booking->booking_no}");
+        $booking->loadMissing([
+            'unit.building',
+            'tenant',
+            'agent',
+            'invoices.payments',
+        ]);
 
-        $pdf->labelValue(52, 640, 'Booking no', $booking->booking_no)
-            ->labelValue(222, 640, 'Status', str($booking->booking_status)->headline())
-            ->labelValue(392, 640, 'Type', str($booking->booking_type)->replace('_', ' ')->headline())
-            ->labelValue(52, 580, 'Building', $booking->unit->building->name)
-            ->labelValue(222, 580, 'Unit', 'Unit '.$booking->unit->unit_no)
-            ->labelValue(392, 580, 'Guests', (string) $booking->guest_count)
-            ->labelValue(52, 520, 'Tenant', $booking->tenant->full_name)
-            ->labelValue(222, 520, 'Mobile', $booking->tenant->mobile_no)
-            ->labelValue(392, 520, 'Agent', $booking->agent?->full_name ?: 'Direct booking')
-            ->labelValue(52, 460, 'Check-in', $booking->check_in_date?->format('M d, Y').' '.($booking->check_in_time ?: ''))
-            ->labelValue(222, 460, 'Check-out', $booking->check_out_date?->format('M d, Y').' '.($booking->check_out_time ?: ''))
-            ->labelValue(392, 460, 'Source', $booking->source ?: 'Direct');
+        $tempDir = storage_path('app/mpdf');
+        if (! is_dir($tempDir)) {
+            mkdir($tempDir, 0775, true);
+        }
 
-        $pdf->labelValue(52, 410, 'Signature status', $booking->confirmation_signed_at ? 'Signed by '.$booking->confirmation_signed_by : 'Not signed')
-            ->labelValue(222, 410, 'Signed at', $booking->confirmation_signed_at?->format('M d, Y H:i') ?: 'Pending')
-            ->labelValue(392, 410, 'Delivery', collect($booking->confirmation_delivery_channels ?? [])->implode(', ') ?: 'Not sent');
+        $pdf = new Mpdf([
+            'mode' => 'utf-8',
+            'format' => 'A4',
+            'default_font' => 'dejavusans',
+            'tempDir' => $tempDir,
+            'margin_left' => 0,
+            'margin_right' => 0,
+            'margin_top' => 0,
+            'margin_bottom' => 0,
+        ]);
 
-        $pdf->text(52, 370, 'Booking charges', 14, 'bold')
-            ->table(52, 342, [
-                ['Rent', 'AED '.number_format((float) $booking->rent_amount, 2)],
-                ['VAT 5% on rent only', 'AED '.number_format((float) $booking->vat_amount, 2)],
-                ['Security deposit', 'AED '.number_format((float) $booking->deposit_amount, 2)],
-                ['DTCM fee', 'AED '.number_format((float) $booking->dtcm_fee, 2)],
-                ['Cleaning fee', 'AED '.number_format((float) $booking->cleaning_fee, 2)],
-                ['Agency fee', 'AED '.number_format((float) $booking->agency_fee, 2)],
-            ])
-            ->totalBox(376, 166, 'Total booking value', 'AED '.number_format((float) $booking->total_amount, 2))
-            ->rect(52, 118, 500, 36, 'EFF6FF', 'BFDBFE')
-            ->text(68, 139, 'Security note', 8, 'bold', '2563EB')
-            ->text(68, 126, 'Building security receives tenant and booking check-in details after booking confirmation.', 9, 'regular', '0F172A');
+        $pdf->SetTitle($booking->booking_no.' Booking Confirmation');
+        $pdf->WriteHTML(view('pdfs.booking-confirmation', [
+            'booking' => $booking,
+            'logo' => $this->fileImageData(public_path('brand/pattern-logo.jpeg')),
+            'propertyImage' => $this->unitImageData($booking),
+            'chargeRows' => $this->chargeRows($booking),
+            'paymentSummary' => $this->paymentSummary($booking),
+            'stayNights' => $this->stayNights($booking),
+        ])->render());
 
-        return $pdf->output();
+        return $pdf->Output('', 'S');
+    }
+
+    private function chargeRows(Booking $booking): array
+    {
+        return collect([
+            ['Accommodation charges', $this->stayNights($booking).' nights', (float) $booking->rent_amount],
+            ['VAT 5% on rent', '-', (float) $booking->vat_amount],
+            ['Security deposit', '1', (float) $booking->deposit_amount],
+            ['DTCM fee', '1', (float) $booking->dtcm_fee],
+            ['Cleaning fee', '1', (float) $booking->cleaning_fee],
+            ['Agency fee', '1', (float) $booking->agency_fee],
+        ])->filter(fn (array $row): bool => $row[2] > 0)->values()->all();
+    }
+
+    private function paymentSummary(Booking $booking): array
+    {
+        $invoices = $booking->invoices;
+        $approvedPaid = $invoices
+            ->flatMap(fn ($invoice) => $invoice->payments)
+            ->where('status', 'approved')
+            ->sum(fn ($payment) => (float) $payment->amount);
+
+        $invoiced = $invoices->sum(fn ($invoice) => (float) $invoice->total_amount);
+        $balance = $invoices->sum(fn ($invoice) => (float) $invoice->balance_amount);
+        $latestPayment = $invoices
+            ->flatMap(fn ($invoice) => $invoice->payments)
+            ->sortByDesc('paid_at')
+            ->first();
+
+        return [
+            'status' => $balance <= 0 && $approvedPaid > 0 ? 'Paid' : ($approvedPaid > 0 ? 'Partially paid' : 'Pending'),
+            'paid' => $approvedPaid,
+            'balance' => max(0, $balance ?: ((float) $booking->total_amount - $approvedPaid)),
+            'invoiced' => $invoiced ?: (float) $booking->total_amount,
+            'method' => $latestPayment ? str($latestPayment->method)->replace('_', ' ')->headline()->toString() : 'Not recorded',
+            'reference' => $latestPayment?->reference_no ?: $latestPayment?->payment_no ?: 'Not recorded',
+            'date' => $latestPayment?->paid_at?->format('M d, Y') ?: 'Not recorded',
+        ];
+    }
+
+    private function stayNights(Booking $booking): int
+    {
+        if (! $booking->check_in_date || ! $booking->check_out_date) {
+            return 0;
+        }
+
+        return max(1, $booking->check_in_date->diffInDays($booking->check_out_date));
+    }
+
+    private function unitImageData(Booking $booking): ?string
+    {
+        $picture = collect($booking->unit?->pictures ?? [])->first();
+        if (! $picture || empty($picture['path'])) {
+            return null;
+        }
+
+        $disk = Storage::disk($picture['disk'] ?? config('filesystems.default'));
+
+        try {
+            if (! $disk->exists($picture['path'])) {
+                return null;
+            }
+
+            $contents = $disk->get($picture['path']);
+        } catch (\Throwable) {
+            return null;
+        }
+
+        $mime = $picture['mime'] ?? $this->mimeFromName($picture['name'] ?? $picture['path']);
+
+        return 'data:'.$mime.';base64,'.base64_encode($contents);
+    }
+
+    private function fileImageData(string $path): ?string
+    {
+        if (! is_file($path)) {
+            return null;
+        }
+
+        return 'data:'.$this->mimeFromName($path).';base64,'.base64_encode(file_get_contents($path));
+    }
+
+    private function mimeFromName(string $name): string
+    {
+        return match (strtolower(pathinfo($name, PATHINFO_EXTENSION))) {
+            'png' => 'image/png',
+            'webp' => 'image/webp',
+            default => 'image/jpeg',
+        };
     }
 }
