@@ -258,6 +258,11 @@
             max-height: 100dvh;
         }
 
+        body.support-chat-fullscreen .support-message-scroll {
+            min-height: 0;
+            padding-bottom: 12rem !important;
+        }
+
         body.support-chat-fullscreen .support-composer {
             bottom: var(--keyboard-offset, 0px);
             padding-bottom: max(4rem, calc(env(safe-area-inset-bottom) + 3.5rem));

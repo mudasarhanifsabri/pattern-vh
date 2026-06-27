@@ -19,7 +19,7 @@
             <button class="h-12 rounded-2xl bg-slate-900 px-4 text-sm font-black text-white">Filter</button>
             @if($owner)
                 <div class="grid grid-cols-2 gap-2 {{ $ownerOnly ? '' : 'lg:contents' }}">
-                    <a href="{{ route('owner-statements.pdf', request()->query()) }}" target="_blank" class="inline-flex h-12 items-center justify-center rounded-2xl bg-slate-900 px-4 text-sm font-black text-white">PDF</a>
+                    <a href="{{ $ownerOnly ? route('owner-statements.pdf-preview', request()->query()) : route('owner-statements.pdf', request()->query()) }}" @unless($ownerOnly) target="_blank" @endunless class="inline-flex h-12 items-center justify-center rounded-2xl bg-slate-900 px-4 text-sm font-black text-white">PDF</a>
                     <a href="{{ route('owner-statements.index', array_merge(request()->query(), ['export' => 1])) }}" class="inline-flex h-12 items-center justify-center rounded-2xl bg-blue-600 px-4 text-sm font-black text-white">CSV</a>
                 </div>
             @endif

@@ -47,6 +47,23 @@ class OwnerStatementController extends Controller
         ]);
     }
 
+    public function preview(Request $request)
+    {
+        $owner = $this->ownerFor($request);
+        abort_unless($owner, 404);
+
+        $from = $request->date('from') ?: now()->startOfMonth();
+        $to = $request->date('to') ?: now()->endOfMonth();
+
+        return view('owner-statements.pdf-preview', [
+            'owner' => $owner,
+            'from' => $from,
+            'to' => $to,
+            'pdfUrl' => route('owner-statements.pdf', $request->query()),
+            'backUrl' => route('owner-statements.index', $request->query()),
+        ]);
+    }
+
     private function ownerFor(Request $request): ?Owner
     {
         if ($request->user()->can('owner-statements.manage') && $request->filled('owner_id')) {

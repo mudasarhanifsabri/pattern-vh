@@ -32,8 +32,13 @@
             'urgent' => 'text-rose-600',
         ];
         $tenantChat = auth()->user()?->can('portal.tenant') && ! auth()->user()?->can('bookings.manage');
-        $tenantSelectedChat = $tenantChat && $selected;
-        $supportTopbar = $tenantSelectedChat ? '0px' : ($tenantChat ? '5.5rem' : '5rem');
+        $ownerChat = auth()->user()?->can('portal.owner')
+            && ! auth()->user()?->can('accounting.view')
+            && ! auth()->user()?->can('accounting.manage')
+            && ! auth()->user()?->can('users.manage');
+        $portalChat = $tenantChat || $ownerChat;
+        $portalSelectedChat = $portalChat && $selected;
+        $supportTopbar = $portalSelectedChat ? '0px' : ($portalChat ? '5.5rem' : '5rem');
         $selectedOnline = $selected?->requester?->onlineStatus?->is_online
             && $selected->requester->onlineStatus->last_seen_at?->greaterThan(now()->subMinutes(3));
         $selectedName = $selected?->requester_name ?: 'Support customer';
@@ -369,7 +374,7 @@
     <script>
         document.body.classList.add('support-page-active');
         if (window.matchMedia('(max-width: 1023px)').matches) document.body.classList.add('support-mobile-active');
-        @if($tenantSelectedChat)
+        @if($portalSelectedChat)
             document.body.classList.add('support-chat-fullscreen');
         @endif
         window.addEventListener('beforeunload', () => {

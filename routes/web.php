@@ -295,6 +295,9 @@ Route::middleware('auth')->group(function () {
     Route::get('owner-statements', [OwnerStatementController::class, 'index'])
         ->middleware('permission:owner-statements.view|owner-statements.manage|portal.owner')
         ->name('owner-statements.index');
+    Route::get('owner-statements/pdf-preview', [OwnerStatementController::class, 'preview'])
+        ->middleware('permission:owner-statements.view|owner-statements.manage|portal.owner')
+        ->name('owner-statements.pdf-preview');
     Route::get('owner-statements/pdf', [OwnerStatementController::class, 'pdf'])
         ->middleware('permission:owner-statements.view|owner-statements.manage|portal.owner')
         ->name('owner-statements.pdf');
