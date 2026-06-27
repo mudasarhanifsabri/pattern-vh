@@ -1,5 +1,11 @@
 @php
-    $tenantTopbarTitle = request()->routeIs('bookings.show') ? 'Booking Details' : (request()->routeIs('bookings.*') ? 'Bookings' : (request()->routeIs('support.*') ? 'Messages' : (request()->routeIs('profile.*') ? 'Profile' : 'My Stay')));
+    $ownerOnly = auth()->user()?->can('portal.owner')
+        && ! auth()->user()?->can('accounting.view')
+        && ! auth()->user()?->can('accounting.manage')
+        && ! auth()->user()?->can('users.manage');
+    $tenantTopbarTitle = $ownerOnly
+        ? (request()->routeIs('owner-statements.*') ? 'Statement' : (request()->routeIs('owner-payouts.*') ? 'Payouts' : (request()->routeIs('units.*') ? 'Property' : (request()->routeIs('reports.*') ? 'Income' : (request()->routeIs('support.*') ? 'Messages' : (request()->routeIs('profile.*') ? 'Profile' : 'Owner'))))))
+        : (request()->routeIs('bookings.show') ? 'Booking Details' : (request()->routeIs('bookings.*') ? 'Bookings' : (request()->routeIs('support.*') ? 'Messages' : (request()->routeIs('profile.*') ? 'Profile' : 'My Stay'))));
     $tenantTopbarBackRoute = request()->routeIs('bookings.show') ? route('bookings.index') : null;
 @endphp
 

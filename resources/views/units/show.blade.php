@@ -12,6 +12,7 @@
         $pictures = collect($unit->pictures ?? []);
         $activeBookings = $unit->bookings->whereIn('booking_status', ['confirmed', 'checked_in', 'checkout_requested']);
         $pastBookings = $unit->bookings->whereNotIn('booking_status', ['confirmed', 'checked_in', 'checkout_requested']);
+        $ownerPortal = auth()->user()?->can('portal.owner') && ! auth()->user()?->can('units.manage');
         $statusClass = match ($unit->availability_status) {
             'available' => 'bg-emerald-50 text-emerald-700',
             'occupied' => 'bg-blue-50 text-blue-700',
@@ -25,7 +26,7 @@
             <div class="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700">{{ session('status') }}</div>
         @endif
 
-        @if ($errors->any())
+        @if (isset($errors) && $errors->any())
             <div class="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
                 <p class="font-bold">Please fix this before sending.</p>
                 <ul class="mt-2 list-inside list-disc">
@@ -36,6 +37,95 @@
             </div>
         @endif
 
+        @if ($ownerPortal)
+            <div class="tenant-app-screen space-y-5">
+                <section class="overflow-hidden rounded-[1.6rem] bg-white shadow-[0_18px_45px_rgba(15,23,42,0.08)]">
+                    <div class="relative bg-gradient-to-br from-slate-950 via-slate-800 to-blue-700 p-6 text-white">
+                        <div class="absolute inset-0 opacity-25" style="background-image: radial-gradient(circle at 78% 14%, rgba(255,255,255,.65), transparent 24%), linear-gradient(135deg, rgba(255,255,255,.08) 0 25%, transparent 25% 50%, rgba(255,255,255,.06) 50% 75%, transparent 75%); background-size: auto, 42px 42px;"></div>
+                        <div class="relative">
+                            <p class="text-xs font-black uppercase tracking-[0.16em] text-blue-100">{{ $unit->building->name }}</p>
+                            <h2 class="mt-2 text-[2rem] font-black leading-tight">Unit {{ $unit->unit_no }}</h2>
+                            <p class="mt-1 text-sm font-semibold text-white/75">{{ $unit->unit_type ?: 'Property' }} / {{ $unit->view ?: 'Dubai view' }}</p>
+                            <span class="mt-4 inline-flex rounded-full bg-white/15 px-3 py-1.5 text-xs font-black backdrop-blur">{{ str($unit->availability_status)->headline() }}</span>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-3 divide-x divide-slate-100 p-4 text-center">
+                        <div><p class="text-[10px] font-bold uppercase text-slate-400">Rent</p><p class="mt-1 text-sm font-black text-[#071a3b]">AED {{ number_format((float) $unit->rent_amount, 0) }}</p></div>
+                        <div><p class="text-[10px] font-bold uppercase text-slate-400">Fee</p><p class="mt-1 text-sm font-black text-[#071a3b]">{{ $unit->management_fee_percent ?: 0 }}%</p></div>
+                        <div><p class="text-[10px] font-bold uppercase text-slate-400">Size</p><p class="mt-1 text-sm font-black text-[#071a3b]">{{ $unit->size_sqft ? number_format((float) $unit->size_sqft) : '-' }}</p></div>
+                    </div>
+                </section>
+
+                <section class="grid grid-cols-2 gap-3">
+                    @foreach([
+                        ['label' => 'Statement', 'route' => route('owner-statements.index'), 'note' => 'Income and expenses'],
+                        ['label' => 'Payouts', 'route' => route('owner-payouts.index'), 'note' => 'Transfer schedule'],
+                        ['label' => 'Support', 'route' => route('support.index'), 'note' => 'Ask Pattern team'],
+                        ['label' => 'Profile', 'route' => route('profile.edit'), 'note' => 'Account settings'],
+                    ] as $tile)
+                        <a href="{{ $tile['route'] }}" class="relative min-h-[132px] rounded-[1.35rem] bg-white p-4 shadow-[0_14px_30px_rgba(15,23,42,0.07)] active:scale-[0.98]">
+                            <span class="grid h-12 w-12 place-items-center rounded-2xl bg-blue-50 text-blue-700">
+                                <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 19V5m0 14h16M8 16v-5m4 5V8m4 8v-8"/></svg>
+                            </span>
+                            <span class="mt-3 block text-sm font-black text-[#071a3b]">{{ $tile['label'] }}</span>
+                            <span class="mt-1 block text-xs font-semibold leading-5 text-slate-500">{{ $tile['note'] }}</span>
+                        </a>
+                    @endforeach
+                </section>
+
+                <section class="rounded-[1.6rem] bg-white p-5 shadow-[0_18px_45px_rgba(15,23,42,0.08)]">
+                    <h2 class="text-xl font-black text-[#071a3b]">Property Details</h2>
+                    <div class="mt-4 grid grid-cols-2 gap-3 text-sm">
+                        <div class="rounded-2xl bg-slate-50 p-3"><p class="text-[10px] font-bold uppercase text-slate-400">Layout</p><p class="mt-1 font-black text-[#071a3b]">{{ $unit->bedrooms ?? '-' }} bed / {{ $unit->bathrooms ?? '-' }} bath</p></div>
+                        <div class="rounded-2xl bg-slate-50 p-3"><p class="text-[10px] font-bold uppercase text-slate-400">Parking</p><p class="mt-1 font-black text-[#071a3b]">{{ $unit->parking_no ?: 'Not set' }}</p></div>
+                        <div class="rounded-2xl bg-slate-50 p-3"><p class="text-[10px] font-bold uppercase text-slate-400">Building</p><p class="mt-1 font-black text-[#071a3b]">{{ $unit->building->area ?: 'Dubai' }}</p></div>
+                        <div class="rounded-2xl bg-slate-50 p-3"><p class="text-[10px] font-bold uppercase text-slate-400">Status</p><p class="mt-1 font-black text-[#071a3b]">{{ str($unit->availability_status)->headline() }}</p></div>
+                    </div>
+                </section>
+
+                <section class="rounded-[1.6rem] bg-white p-5 shadow-[0_18px_45px_rgba(15,23,42,0.08)]">
+                    <div class="flex items-center justify-between gap-3">
+                        <div>
+                            <h2 class="text-xl font-black text-[#071a3b]">Bookings</h2>
+                            <p class="mt-1 text-sm font-semibold text-slate-500">Current and recent stays.</p>
+                        </div>
+                        <span class="rounded-2xl bg-blue-50 px-3 py-2 text-xs font-black text-blue-700">{{ $unit->bookings->count() }}</span>
+                    </div>
+                    <div class="mt-5 space-y-3">
+                        @forelse($unit->bookings->take(5) as $booking)
+                            <div class="rounded-3xl border border-slate-200 p-4">
+                                <div class="flex items-start justify-between gap-3">
+                                    <div>
+                                        <p class="text-xs font-bold uppercase tracking-[0.14em] text-blue-600">{{ $booking->booking_no }}</p>
+                                        <h3 class="mt-1 text-sm font-black text-[#071a3b]">{{ $booking->tenant?->full_name }}</h3>
+                                        <p class="mt-1 text-xs font-semibold text-slate-500">{{ $booking->check_in_date->format('M d') }} to {{ $booking->check_out_date->format('M d, Y') }}</p>
+                                    </div>
+                                    <span class="rounded-full bg-blue-50 px-2.5 py-1 text-[11px] font-black text-blue-700">{{ str($booking->booking_status)->replace('_', ' ')->headline() }}</span>
+                                </div>
+                            </div>
+                        @empty
+                            <p class="rounded-2xl border border-dashed border-slate-200 px-4 py-8 text-center text-sm text-slate-500">No bookings yet.</p>
+                        @endforelse
+                    </div>
+                </section>
+
+                <section class="rounded-[1.6rem] bg-white p-5 shadow-[0_18px_45px_rgba(15,23,42,0.08)]">
+                    <h2 class="text-xl font-black text-[#071a3b]">Documents</h2>
+                    <div class="mt-4 grid gap-3">
+                        @foreach (['title_deed' => 'Title deed', 'dtcm_permit' => 'DTCM permit', 'ttlock_attachment' => 'TT Lock'] as $type => $label)
+                            @php
+                                $hasDocument = filled($unit->getAttribute($type.'_path'));
+                            @endphp
+                            @if($hasDocument)
+                                <a href="{{ route('units.document', [$unit, $type]) }}" target="_blank" class="flex items-center justify-between rounded-2xl border border-slate-200 px-4 py-3 text-sm font-black text-[#071a3b]"><span>{{ $label }}</span><span class="text-blue-600">Open</span></a>
+                            @else
+                                <div class="flex items-center justify-between rounded-2xl bg-slate-50 px-4 py-3 text-sm font-bold text-slate-400"><span>{{ $label }}</span><span>Not uploaded</span></div>
+                            @endif
+                        @endforeach
+                    </div>
+                </section>
+            </div>
+        @else
         <div class="erp-card overflow-hidden">
             <div class="grid gap-0 xl:grid-cols-[1.35fr_0.65fr]">
                 <div class="p-6">
@@ -226,7 +316,7 @@
                                             <span class="rounded-full bg-blue-50 px-2.5 py-1 text-xs font-bold text-blue-700">{{ str($booking->booking_status)->headline() }}</span>
                                         </div>
                                         <p class="mt-3 text-sm font-bold text-[#071a3b]">{{ $booking->check_in_date?->format('M d, Y') }} - {{ $booking->check_out_date?->format('M d, Y') }}</p>
-                                        <p class="mt-1 text-xs text-slate-500">Total AED {{ number_format((float) $booking->total_amount, 2) }}</p>
+                                        <p class="mt-1 text-xs text-slate-500">Rent AED {{ number_format((float) $booking->rent_amount, 2) }}</p>
                                     </a>
                                 @empty
                                     <p class="rounded-2xl border border-dashed border-blue-200 bg-white/70 px-4 py-8 text-center text-sm text-slate-500">No current booking for this unit.</p>
@@ -426,6 +516,7 @@
                 </div>
             </div>
         </div>
+        @endif
     </div>
 
     <script>

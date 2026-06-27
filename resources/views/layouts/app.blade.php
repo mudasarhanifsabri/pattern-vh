@@ -21,6 +21,11 @@
 <body class="font-sans antialiased">
     @php
         $tenantOnly = auth()->user()?->can('portal.tenant') && ! auth()->user()?->can('bookings.manage');
+        $ownerOnly = auth()->user()?->can('portal.owner')
+            && ! auth()->user()?->can('accounting.view')
+            && ! auth()->user()?->can('accounting.manage')
+            && ! auth()->user()?->can('users.manage');
+        $mobilePortal = $tenantOnly || $ownerOnly;
     @endphp
 
     <div
@@ -32,21 +37,21 @@
                 localStorage.setItem('patternSidebarCollapsed', this.sidebarCollapsed ? '1' : '0');
             }
         }"
-        class="min-h-screen {{ $tenantOnly ? 'bg-[#f7f9fe]' : 'lg:flex' }}"
+        class="min-h-screen {{ $mobilePortal ? 'bg-[#f7f9fe]' : 'lg:flex' }}"
     >
-        @unless ($tenantOnly)
+        @unless ($mobilePortal)
             <div x-show="sidebarOpen" x-transition.opacity class="fixed inset-0 z-30 bg-slate-950/60 lg:hidden" @click="sidebarOpen = false"></div>
             @include('layouts.sidebar')
         @endunless
 
-        <div class="flex min-h-screen min-w-0 flex-1 flex-col {{ $tenantOnly ? '' : 'transition-[padding] duration-300 ease-out' }}" @unless($tenantOnly) :class="sidebarCollapsed ? 'lg:pl-[92px]' : 'lg:pl-[292px]'" @endunless>
-            @if($tenantOnly)
+        <div class="flex min-h-screen min-w-0 flex-1 flex-col {{ $mobilePortal ? '' : 'transition-[padding] duration-300 ease-out' }}" @unless($mobilePortal) :class="sidebarCollapsed ? 'lg:pl-[92px]' : 'lg:pl-[292px]'" @endunless>
+            @if($mobilePortal)
                 @include('layouts.tenant.topbar')
             @else
                 @include('layouts.topbar')
             @endif
-            <main class="flex-1 {{ $tenantOnly ? 'mobile-app-main mx-auto w-full max-w-[430px] px-4 pb-28 pt-2 mobile-app-safe max-[380px]:px-3' : 'p-3 pb-24 sm:p-6 lg:p-8 xl:p-9' }}">
-                @if(! $tenantOnly)
+            <main class="flex-1 {{ $mobilePortal ? 'mobile-app-main mx-auto w-full max-w-[430px] px-4 pb-28 pt-2 mobile-app-safe max-[380px]:px-3' : 'p-3 pb-24 sm:p-6 lg:p-8 xl:p-9' }}">
+                @if(! $mobilePortal)
                 @isset($header)
                     <div class="mb-5 md:mb-7">
                         @php
@@ -62,13 +67,15 @@
                 @endif
                 {{ $slot }}
             </main>
-            @unless($tenantOnly)
+            @unless($mobilePortal)
                 @include('layouts.footer')
             @endunless
         </div>
     </div>
     @if($tenantOnly)
         @include('layouts.tenant.bottom-nav')
+    @elseif($ownerOnly)
+        @include('layouts.owner.bottom-nav')
     @endif
     <script>
         if ('serviceWorker' in navigator) {

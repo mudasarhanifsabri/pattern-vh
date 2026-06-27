@@ -1,14 +1,36 @@
 <x-app-layout>
+    @php
+        $ownerOnly = auth()->user()?->can('portal.owner')
+            && ! auth()->user()?->can('accounting.view')
+            && ! auth()->user()?->can('accounting.manage')
+            && ! auth()->user()?->can('users.manage');
+    @endphp
+
     <x-slot name="header">
         <div>
             <p class="text-[11px] font-bold uppercase tracking-[0.22em] text-blue-600">Accounting</p>
             <h1 class="text-3xl font-black tracking-[-0.04em] text-[#071a3b]">Owner Account Manager</h1>
-            <p class="mt-2 text-sm text-slate-500">Owner Payouts: approved rent collections become payable to owners 30 days after approval, then finance records the owner transfer.</p>
+            <p class="mt-2 text-sm text-slate-500">Owner payouts are calculated from approved rent collections only. Security deposits stay with the company until tenant refund workflow is completed.</p>
         </div>
     </x-slot>
 
-    <div class="space-y-6">
-        <section class="erp-card p-5">
+    <div class="{{ $ownerOnly ? 'tenant-app-screen' : '' }} space-y-5">
+        @if($ownerOnly)
+            <section class="overflow-hidden rounded-[1.6rem] bg-white shadow-[0_18px_45px_rgba(15,23,42,0.08)]">
+                <div class="bg-gradient-to-br from-slate-950 via-slate-800 to-blue-700 p-5 text-white">
+                    <p class="text-xs font-black uppercase tracking-[0.16em] text-blue-100">Payouts</p>
+                    <h2 class="mt-2 text-2xl font-black leading-tight">AED {{ number_format((float) $stats['ready'], 0) }}</h2>
+                    <p class="mt-1 text-sm font-semibold text-white/70">Ready to transfer from approved rent collections.</p>
+                </div>
+                <div class="grid grid-cols-3 divide-x divide-slate-100 p-4 text-center">
+                    <div><p class="text-[10px] font-bold uppercase text-slate-400">Upcoming</p><p class="mt-1 text-sm font-black text-[#071a3b]">{{ number_format((float) $stats['upcoming'], 0) }}</p></div>
+                    <div><p class="text-[10px] font-bold uppercase text-slate-400">Transferred</p><p class="mt-1 text-sm font-black text-[#071a3b]">{{ number_format((float) $stats['transferred'], 0) }}</p></div>
+                    <div><p class="text-[10px] font-bold uppercase text-slate-400">Items</p><p class="mt-1 text-sm font-black text-[#071a3b]">{{ $stats['count'] }}</p></div>
+                </div>
+            </section>
+        @endif
+
+        <section class="{{ $ownerOnly ? 'hidden' : 'erp-card p-5' }}">
             <form method="GET" class="grid gap-3 lg:grid-cols-[1fr_auto] lg:items-end">
                 @can('owner-payouts.manage')
                     <div>
@@ -31,11 +53,11 @@
             <div class="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-700">{{ session('status') }}</div>
         @endif
 
-        @if ($errors->any())
+        @if (isset($errors) && $errors->any())
             <div class="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-bold text-rose-700">{{ $errors->first() }}</div>
         @endif
 
-        <section class="grid gap-4 md:grid-cols-5">
+        <section class="grid gap-3 {{ $ownerOnly ? 'grid-cols-2' : 'md:grid-cols-5' }}">
             @foreach([
                 ['label' => 'Upcoming payouts', 'value' => 'AED '.number_format((float) $stats['upcoming'], 2), 'tone' => 'blue'],
                 ['label' => 'Ready to transfer', 'value' => 'AED '.number_format((float) $stats['ready'], 2), 'tone' => 'emerald'],
@@ -43,20 +65,20 @@
                 ['label' => 'Forecast total', 'value' => 'AED '.number_format((float) $stats['total'], 2), 'tone' => 'slate'],
                 ['label' => 'Payout items', 'value' => $stats['count'], 'tone' => 'amber'],
             ] as $card)
-                <article class="erp-card p-5">
+                <article class="{{ $ownerOnly ? 'rounded-[1.35rem] bg-white p-4 shadow-[0_14px_30px_rgba(15,23,42,0.07)]' : 'erp-card p-5' }}">
                     <p class="text-xs font-bold uppercase tracking-[0.16em] text-slate-400">{{ $card['label'] }}</p>
-                    <p class="mt-3 text-2xl font-black tracking-[-0.04em] text-[#071a3b]">{{ $card['value'] }}</p>
+                    <p class="mt-3 text-xl font-black tracking-[-0.04em] text-[#071a3b]">{{ $card['value'] }}</p>
                 </article>
             @endforeach
         </section>
 
-        <section class="erp-card overflow-hidden">
+        <section class="{{ $ownerOnly ? 'overflow-hidden rounded-[1.6rem] bg-white shadow-[0_18px_45px_rgba(15,23,42,0.08)]' : 'erp-card overflow-hidden' }}">
             <div class="border-b border-slate-100 p-5">
                 <h2 class="text-lg font-bold text-[#071a3b]">Payout and transfer schedule</h2>
-                <p class="mt-1 text-sm text-slate-500">Owners see upcoming landing dates. Finance records the bank transfer once payout is done.</p>
+                <p class="mt-1 text-sm text-slate-500">Owners see rent payout landing dates. Deposits are excluded from owner payable amounts.</p>
             </div>
 
-            <div class="hidden overflow-x-auto md:block">
+            <div class="hidden overflow-x-auto {{ $ownerOnly ? '' : 'md:block' }}">
                 <table class="min-w-full divide-y divide-slate-200 text-sm">
                     <thead class="bg-slate-50 text-left text-[11px] font-bold uppercase tracking-[0.16em] text-slate-500">
                         <tr>
@@ -105,7 +127,7 @@
                 </table>
             </div>
 
-            <div class="space-y-3 p-4 md:hidden">
+            <div class="space-y-3 p-4 {{ $ownerOnly ? '' : 'md:hidden' }}">
                 @forelse($rows as $row)
                     <article class="rounded-3xl border border-slate-200 bg-white p-4">
                         <div class="flex items-start justify-between gap-3">
