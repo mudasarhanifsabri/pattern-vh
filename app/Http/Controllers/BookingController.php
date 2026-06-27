@@ -192,10 +192,24 @@ class BookingController extends Controller
             return response()->json(['message' => $exception->getMessage()], 422);
         }
 
+        $actorName = $tenant->full_name ?: (auth()->user()?->name ?: 'Tenant');
+        $verb = $validated['action'] === 'unlock' ? 'unlocked' : 'locked';
+
         ActivityLogger::log(
             'bookings.smart_lock_'.$validated['action'],
-            str($validated['action'])->headline()." command sent for {$booking->booking_no}.",
+            "Tenant {$actorName} {$verb} smart lock for {$booking->booking_no}.",
             $booking,
+            [
+                'actor_role' => 'tenant',
+                'tenant_id' => $tenant->id,
+                'tenant_name' => $actorName,
+                'user_id' => auth()->id(),
+                'user_name' => auth()->user()?->name,
+                'booking_no' => $booking->booking_no,
+                'lock_id' => $lock->lock_id,
+                'lock_name' => $lock->lock_name,
+                'ttlock_action' => $validated['action'],
+            ],
         );
 
         return response()->json([
