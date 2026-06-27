@@ -376,6 +376,7 @@
             document.body.classList.remove('support-page-active');
             document.body.classList.remove('support-mobile-active');
             document.body.classList.remove('support-chat-fullscreen');
+            document.body.classList.remove('support-keyboard-open');
         });
 
         const supportMessageBox = document.querySelector('[data-support-messages]');
@@ -385,7 +386,8 @@
             if (!window.visualViewport || !document.body.classList.contains('support-chat-fullscreen')) return;
             const offset = Math.max(0, window.innerHeight - window.visualViewport.height - window.visualViewport.offsetTop);
             document.documentElement.style.setProperty('--keyboard-offset', `${offset}px`);
-            if (supportMessageBox) supportMessageBox.scrollTop = supportMessageBox.scrollHeight;
+            document.body.classList.toggle('support-keyboard-open', offset > 80);
+            if (supportMessageBox) requestAnimationFrame(() => { supportMessageBox.scrollTop = supportMessageBox.scrollHeight; });
         };
         window.visualViewport?.addEventListener('resize', updateKeyboardOffset);
         window.visualViewport?.addEventListener('scroll', updateKeyboardOffset);
@@ -418,6 +420,8 @@
                 typingTimer = setTimeout(sendTyping, 2500);
             });
             input.addEventListener('focus', sendTyping);
+            input.addEventListener('focus', () => setTimeout(updateKeyboardOffset, 250));
+            input.addEventListener('blur', () => setTimeout(updateKeyboardOffset, 250));
         });
 
         const vapidPublicKey = @js(config('services.webpush.public_key'));
