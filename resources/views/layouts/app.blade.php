@@ -62,9 +62,9 @@
                 @endif
                 {{ $slot }}
             </main>
-            <div class="{{ $tenantOnly ? 'hidden md:block' : '' }}">
+            @unless($tenantOnly)
                 @include('layouts.footer')
-            </div>
+            @endunless
         </div>
     </div>
     @if($tenantOnly)

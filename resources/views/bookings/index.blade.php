@@ -10,12 +10,6 @@
             @if (session('status'))
                 <div class="rounded-3xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-700">{{ session('status') }}</div>
             @endif
-            <div class="flex items-center justify-between">
-                <h1 class="text-3xl font-black tracking-[-0.04em] text-[#071a3b]">Bookings</h1>
-                <a href="{{ route('support.index') }}" class="grid h-11 w-11 place-items-center rounded-2xl bg-white text-[#071a3b] shadow-sm">
-                    <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></svg>
-                </a>
-            </div>
             <div class="flex gap-3 overflow-x-auto pb-1">
                 @foreach(['' => 'Upcoming', 'checked_in' => 'Current', 'checked_out' => 'Past', 'cancelled' => 'Cancelled'] as $status => $label)
                     <a href="{{ route('bookings.index', $status ? ['status' => $status] : []) }}" class="shrink-0 rounded-2xl px-4 py-2 text-sm font-black {{ request('status') === $status || (!request('status') && $status === '') ? 'bg-blue-100 text-blue-600' : 'text-slate-500' }}">{{ $label }}</a>

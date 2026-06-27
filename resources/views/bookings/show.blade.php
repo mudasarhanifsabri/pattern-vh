@@ -42,16 +42,6 @@
             <div class="rounded-[1.35rem] border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700">{{ $errors->first() }}</div>
         @endif
 
-        <div class="flex items-center justify-between">
-            <a href="{{ route('bookings.index') }}" class="grid h-11 w-11 place-items-center rounded-2xl bg-white text-slate-700 shadow-sm ring-1 ring-slate-200">
-                <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M15 19l-7-7 7-7" /></svg>
-            </a>
-            <h1 class="text-base font-black text-[#0b1736]">Booking Details</h1>
-            <a href="{{ route('bookings.confirmation-pdf', $booking) }}" target="_blank" class="grid h-11 w-11 place-items-center rounded-2xl bg-white text-slate-700 shadow-sm ring-1 ring-slate-200">
-                <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M6 9V2h12v7" /><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" /><path d="M6 14h12v8H6z" /></svg>
-            </a>
-        </div>
-
         <section class="overflow-hidden rounded-[1.8rem] bg-white p-4 shadow-[0_16px_40px_rgba(15,23,42,0.08)] ring-1 ring-slate-100">
             <div class="grid grid-cols-[120px_1fr] gap-4">
                 <div class="h-28 overflow-hidden rounded-[1.35rem] bg-[linear-gradient(135deg,rgba(15,23,42,.18),rgba(37,99,235,.18)),url('https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=600&q=80')] bg-cover bg-center"></div>
@@ -61,6 +51,10 @@
                     <p class="mt-1 text-sm font-semibold text-slate-500">Dubai, UAE</p>
                 </div>
             </div>
+            <a href="{{ route('bookings.confirmation-pdf', $booking) }}" target="_blank" class="mt-4 flex h-11 items-center justify-center gap-2 rounded-2xl bg-blue-50 text-sm font-black text-blue-600">
+                <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M6 9V2h12v7" /><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" /><path d="M6 14h12v8H6z" /></svg>
+                Booking PDF
+            </a>
         </section>
 
         <section class="rounded-[1.8rem] bg-white p-4 shadow-[0_16px_40px_rgba(15,23,42,0.08)] ring-1 ring-slate-100">

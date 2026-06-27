@@ -9,13 +9,6 @@
                 <div class="rounded-[1.35rem] border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700">Profile updated successfully.</div>
             @endif
 
-            <div class="flex items-center justify-between">
-                <h1 class="text-3xl font-black tracking-[-0.04em] text-[#0b1736]">Profile</h1>
-                <button type="button" class="grid h-11 w-11 place-items-center rounded-2xl bg-white text-slate-700 shadow-sm ring-1 ring-slate-200">
-                    <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M10.325 4.317a1.75 1.75 0 0 1 3.35 0l.2.698a1.75 1.75 0 0 0 2.4 1.08l.64-.31a1.75 1.75 0 0 1 2.37 2.37l-.31.64a1.75 1.75 0 0 0 1.08 2.4l.698.2a1.75 1.75 0 0 1 0 3.35l-.698.2a1.75 1.75 0 0 0-1.08 2.4l.31.64a1.75 1.75 0 0 1-2.37 2.37l-.64-.31a1.75 1.75 0 0 0-2.4 1.08l-.2.698a1.75 1.75 0 0 1-3.35 0l-.2-.698a1.75 1.75 0 0 0-2.4-1.08l-.64.31a1.75 1.75 0 0 1-2.37-2.37l.31-.64a1.75 1.75 0 0 0-1.08-2.4l-.698-.2a1.75 1.75 0 0 1 0-3.35l.698-.2a1.75 1.75 0 0 0 1.08-2.4l-.31-.64a1.75 1.75 0 0 1 2.37-2.37l.64.31a1.75 1.75 0 0 0 2.4-1.08l.2-.698z" /><path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z" /></svg>
-                </button>
-            </div>
-
             <section class="rounded-[1.8rem] bg-white p-5 shadow-[0_16px_40px_rgba(15,23,42,0.08)] ring-1 ring-slate-100">
                 <div class="flex items-center gap-4">
                     <span class="grid h-20 w-20 shrink-0 place-items-center rounded-full bg-gradient-to-br from-blue-100 to-slate-100 text-xl font-black text-blue-700">{{ strtoupper(substr($user->name, 0, 2)) }}</span>

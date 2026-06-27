@@ -1,10 +1,19 @@
+@php
+    $tenantTopbarTitle = request()->routeIs('bookings.show') ? 'Booking Details' : (request()->routeIs('bookings.*') ? 'Bookings' : (request()->routeIs('support.*') ? 'Messages' : (request()->routeIs('profile.*') ? 'Profile' : 'My Stay')));
+    $tenantTopbarBackRoute = request()->routeIs('bookings.show') ? route('bookings.index') : null;
+@endphp
+
 <header class="tenant-topbar sticky top-0 z-20 mx-auto flex h-[76px] w-full max-w-[430px] items-center gap-3 border-b-0 bg-[#f7f9fe]/95 px-4 pt-3 backdrop-blur max-[380px]:px-3">
-    <a href="{{ route('dashboard') }}" class="pressable touch-target grid h-11 w-11 shrink-0 place-items-center overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-slate-200" aria-label="Pattern home">
-        <img src="{{ asset('icons/pattern-48.png') }}" alt="" class="h-8 w-8 object-contain">
+    <a href="{{ $tenantTopbarBackRoute ?: route('dashboard') }}" class="pressable touch-target grid h-11 w-11 shrink-0 place-items-center overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-slate-200" aria-label="{{ $tenantTopbarBackRoute ? 'Back to bookings' : 'Pattern home' }}">
+        @if($tenantTopbarBackRoute)
+            <svg class="h-5 w-5 text-[#071a3b]" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M15 19l-7-7 7-7" /></svg>
+        @else
+            <img src="{{ asset('icons/pattern-48.png') }}" alt="" class="h-8 w-8 object-contain">
+        @endif
     </a>
-    <a href="{{ route('dashboard') }}" class="absolute left-1/2 -translate-x-1/2 text-lg font-black text-[#071a3b] max-[380px]:text-base">
-        {{ request()->routeIs('bookings.*') ? 'Bookings' : (request()->routeIs('support.*') ? 'Messages' : (request()->routeIs('profile.*') ? 'Profile' : 'My Stay')) }}
-    </a>
+    <div class="absolute left-1/2 -translate-x-1/2 text-lg font-black text-[#071a3b] max-[380px]:text-base">
+        {{ $tenantTopbarTitle }}
+    </div>
 
     <div class="ml-auto flex items-center gap-2">
         <x-dropdown align="right" width="w-[22rem] sm:w-[26rem]" contentClasses="bg-white">
