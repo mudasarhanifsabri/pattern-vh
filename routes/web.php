@@ -56,6 +56,7 @@ Route::get('/', function () {
 
 Route::view('/offline', 'offline')->name('offline');
 Route::match(['GET', 'POST'], 'ttlock/callback', TtLockCallbackController::class)->name('ttlock.callback');
+Route::get('mobile-app/android/download', [SystemSettingsController::class, 'downloadMobileApp'])->name('mobile-app.android.download');
 
 Route::get('support/help', [PublicSupportController::class, 'create'])->name('support.public.create');
 Route::post('support/help', [PublicSupportController::class, 'store'])->name('support.public.store');
@@ -323,6 +324,12 @@ Route::middleware('auth')->group(function () {
     Route::post('settings/test', [SystemSettingsController::class, 'test'])
         ->middleware('permission:users.manage|roles.manage')
         ->name('settings.test');
+    Route::post('settings/mobile-app', [SystemSettingsController::class, 'uploadMobileApp'])
+        ->middleware('permission:users.manage|roles.manage')
+        ->name('settings.mobile-app.upload');
+    Route::delete('settings/mobile-app', [SystemSettingsController::class, 'deleteMobileApp'])
+        ->middleware('permission:users.manage|roles.manage')
+        ->name('settings.mobile-app.delete');
     Route::get('software-updates', [SoftwareUpdateController::class, 'index'])
         ->middleware('permission:software-updates.manage|users.manage')
         ->name('software-updates.index');

@@ -8,9 +8,13 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
 
 class SystemSettingsController extends Controller
 {
+    private const MOBILE_APP_APK_PATH = 'mobile-app/pattern-mobile.apk';
+    private const MOBILE_APP_META_PATH = 'mobile-app/latest.json';
+
     private array $keys = [
         'APP_URL', 'QUEUE_CONNECTION', 'FILESYSTEM_DISK',
         'MAIL_MAILER', 'MAIL_HOST', 'MAIL_PORT', 'MAIL_USERNAME', 'MAIL_PASSWORD', 'MAIL_FROM_ADDRESS', 'MAIL_FROM_NAME',
@@ -23,6 +27,7 @@ class SystemSettingsController extends Controller
             'values' => $this->envValues(),
             'statuses' => $this->statuses(),
             'cron' => $this->cronStatus(),
+            'mobileApp' => $this->mobileAppRelease(),
         ]);
     }
 
@@ -55,6 +60,55 @@ class SystemSettingsController extends Controller
         }
     }
 
+    public function uploadMobileApp(Request $request)
+    {
+        $validated = $request->validate([
+            'apk' => ['required', 'file', 'max:204800'],
+            'version' => ['nullable', 'string', 'max:50'],
+            'release_notes' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        $file = $request->file('apk');
+        if (strtolower($file->getClientOriginalExtension()) !== 'apk') {
+            throw ValidationException::withMessages(['apk' => 'Upload an Android APK file.']);
+        }
+
+        $disk = Storage::disk('local');
+        $disk->makeDirectory('mobile-app');
+        $disk->put(self::MOBILE_APP_APK_PATH, file_get_contents($file->getRealPath()));
+        $disk->put(self::MOBILE_APP_META_PATH, json_encode([
+            'version' => $validated['version'] ?: now()->format('Y.m.d.Hi'),
+            'release_notes' => $validated['release_notes'] ?? null,
+            'original_name' => $file->getClientOriginalName(),
+            'size' => $disk->size(self::MOBILE_APP_APK_PATH),
+            'uploaded_at' => now()->toISOString(),
+            'uploaded_by' => $request->user()?->email,
+        ], JSON_PRETTY_PRINT));
+
+        return back()->with('status', 'Android APK uploaded. Users can download the latest mobile app now.');
+    }
+
+    public function deleteMobileApp()
+    {
+        Storage::disk('local')->delete([self::MOBILE_APP_APK_PATH, self::MOBILE_APP_META_PATH]);
+
+        return back()->with('status', 'Android APK removed.');
+    }
+
+    public function downloadMobileApp()
+    {
+        $disk = Storage::disk('local');
+        abort_unless($disk->exists(self::MOBILE_APP_APK_PATH), 404);
+
+        $release = $this->mobileAppRelease();
+        $version = str($release['version'] ?: 'latest')->slug('-');
+        $filename = 'pattern-mobile-'.$version.'.apk';
+
+        return response()->download($disk->path(self::MOBILE_APP_APK_PATH), $filename, [
+            'Content-Type' => 'application/vnd.android.package-archive',
+        ]);
+    }
+
     private function envValues(): array
     {
         $env = $this->parseEnv();
@@ -84,6 +138,49 @@ class SystemSettingsController extends Controller
                 'failed' => Schema::hasTable('failed_jobs') ? DB::table('failed_jobs')->count() : null,
             ],
         ];
+    }
+
+    private function mobileAppRelease(): array
+    {
+        $disk = Storage::disk('local');
+        $metadata = [];
+
+        if ($disk->exists(self::MOBILE_APP_META_PATH)) {
+            $metadata = json_decode($disk->get(self::MOBILE_APP_META_PATH), true) ?: [];
+        }
+
+        $exists = $disk->exists(self::MOBILE_APP_APK_PATH);
+        $size = $exists ? $disk->size(self::MOBILE_APP_APK_PATH) : null;
+        $uploadedAt = $metadata['uploaded_at'] ?? null;
+
+        return [
+            'exists' => $exists,
+            'version' => $metadata['version'] ?? null,
+            'release_notes' => $metadata['release_notes'] ?? null,
+            'original_name' => $metadata['original_name'] ?? null,
+            'size' => $size,
+            'size_human' => $size ? $this->formatBytes($size) : null,
+            'uploaded_at' => $uploadedAt ? Carbon::parse($uploadedAt) : null,
+            'uploaded_by' => $metadata['uploaded_by'] ?? null,
+            'download_url' => route('mobile-app.android.download'),
+        ];
+    }
+
+    private function formatBytes(int $bytes): string
+    {
+        if ($bytes >= 1073741824) {
+            return number_format($bytes / 1073741824, 2).' GB';
+        }
+
+        if ($bytes >= 1048576) {
+            return number_format($bytes / 1048576, 2).' MB';
+        }
+
+        if ($bytes >= 1024) {
+            return number_format($bytes / 1024, 2).' KB';
+        }
+
+        return $bytes.' B';
     }
 
     private function logHeartbeat(string $path, string $label): array

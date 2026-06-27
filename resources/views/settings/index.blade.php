@@ -109,6 +109,88 @@
             </div>
         </section>
 
+        <section class="erp-card overflow-hidden">
+            <div class="border-b border-slate-100 p-5">
+                <p class="text-[11px] font-black uppercase tracking-[0.18em] text-blue-600">Mobile app</p>
+                <h2 class="mt-1 text-lg font-black text-[#071a3b]">Android APK release</h2>
+                <p class="mt-1 text-sm text-slate-500">Upload the latest Flutter Android APK and share the download link with Android users.</p>
+            </div>
+
+            <div class="grid gap-5 p-5 lg:grid-cols-[0.85fr_1.15fr]">
+                <article class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                    <div class="flex items-start justify-between gap-3">
+                        <div>
+                            <h3 class="text-sm font-black text-[#071a3b]">Current app file</h3>
+                            <p class="mt-1 text-xs font-bold {{ $mobileApp['exists'] ? 'text-emerald-600' : 'text-rose-600' }}">{{ $mobileApp['exists'] ? 'Available for download' : 'No APK uploaded yet' }}</p>
+                        </div>
+                        <span class="h-3 w-3 rounded-full {{ $mobileApp['exists'] ? 'bg-emerald-400' : 'bg-rose-400' }}"></span>
+                    </div>
+
+                    <dl class="mt-4 space-y-3 text-sm">
+                        <div class="flex justify-between gap-3">
+                            <dt class="font-bold text-slate-500">Version</dt>
+                            <dd class="text-right font-black text-[#071a3b]">{{ $mobileApp['version'] ?: 'Not set' }}</dd>
+                        </div>
+                        <div class="flex justify-between gap-3">
+                            <dt class="font-bold text-slate-500">Size</dt>
+                            <dd class="text-right font-black text-[#071a3b]">{{ $mobileApp['size_human'] ?: '-' }}</dd>
+                        </div>
+                        <div class="flex justify-between gap-3">
+                            <dt class="font-bold text-slate-500">Uploaded</dt>
+                            <dd class="text-right font-bold text-slate-600">{{ $mobileApp['uploaded_at'] ? $mobileApp['uploaded_at']->format('M d, Y H:i') : '-' }}</dd>
+                        </div>
+                        @if($mobileApp['release_notes'])
+                            <div>
+                                <dt class="font-bold text-slate-500">Notes</dt>
+                                <dd class="mt-1 rounded-xl bg-white px-3 py-2 text-xs leading-5 text-slate-600">{{ $mobileApp['release_notes'] }}</dd>
+                            </div>
+                        @endif
+                    </dl>
+
+                    <div class="mt-4 grid gap-2 sm:grid-cols-2">
+                        <a href="{{ route('mobile-app.android.download') }}" class="inline-flex h-11 items-center justify-center rounded-xl bg-blue-600 px-4 text-sm font-black text-white {{ $mobileApp['exists'] ? '' : 'pointer-events-none opacity-50' }}">Download APK</a>
+                        @if($mobileApp['exists'])
+                            <form method="POST" action="{{ route('settings.mobile-app.delete') }}" onsubmit="return confirm('Remove the current Android APK download?')">
+                                @csrf
+                                @method('DELETE')
+                                <button class="h-11 w-full rounded-xl border border-rose-200 px-4 text-sm font-black text-rose-600">Remove</button>
+                            </form>
+                        @endif
+                    </div>
+
+                    <div class="mt-4 rounded-xl bg-white px-3 py-2">
+                        <p class="text-[11px] font-black uppercase tracking-[0.14em] text-slate-400">Share link</p>
+                        <p class="mt-1 break-all font-mono text-xs text-slate-600">{{ $mobileApp['download_url'] }}</p>
+                    </div>
+                </article>
+
+                <form method="POST" action="{{ route('settings.mobile-app.upload') }}" enctype="multipart/form-data" class="rounded-2xl border border-slate-200 p-4" data-single-submit>
+                    @csrf
+                    <h3 class="text-sm font-black text-[#071a3b]">Upload new APK</h3>
+                    <div class="mt-4 grid gap-4 md:grid-cols-2">
+                        <label>
+                            <span class="text-xs font-black uppercase tracking-[0.14em] text-slate-400">Version</span>
+                            <input name="version" placeholder="1.0.0" class="erp-focus mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm">
+                        </label>
+                        <label class="md:col-span-2">
+                            <span class="text-xs font-black uppercase tracking-[0.14em] text-slate-400">APK file</span>
+                            <input name="apk" type="file" accept=".apk,application/vnd.android.package-archive" class="erp-focus mt-1 block w-full rounded-xl border border-dashed border-blue-200 bg-blue-50/50 px-3 py-3 text-sm" required>
+                        </label>
+                        <label class="md:col-span-2">
+                            <span class="text-xs font-black uppercase tracking-[0.14em] text-slate-400">Release notes</span>
+                            <textarea name="release_notes" rows="4" class="erp-focus mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm" placeholder="What changed in this build?"></textarea>
+                        </label>
+                    </div>
+                    <div class="mt-4 hidden overflow-hidden rounded-full bg-slate-100" data-upload-progress>
+                        <div class="h-2 w-0 rounded-full bg-blue-600 transition-all duration-500" data-upload-progress-bar></div>
+                    </div>
+                    <div class="mt-4 flex justify-end">
+                        <button class="rounded-xl bg-slate-900 px-5 py-3 text-sm font-black text-white">Upload APK</button>
+                    </div>
+                </form>
+            </div>
+        </section>
+
         <form method="POST" action="{{ route('settings.update') }}" class="erp-card overflow-hidden">
             @csrf
             @method('PATCH')
