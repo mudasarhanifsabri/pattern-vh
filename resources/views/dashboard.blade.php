@@ -43,36 +43,24 @@
                 </section>
 
                 <section class="rounded-[1.6rem] bg-white p-5 shadow-[0_18px_45px_rgba(15,23,42,0.08)]">
-                    <div class="flex items-center justify-between border-b border-slate-100 pb-4">
-                        <h2 class="text-lg font-black text-[#071a3b]">Smart Lock Access</h2>
-                        <a href="{{ route('support.index') }}" class="text-sm font-black text-blue-600">How it works?</a>
-                    </div>
-                    <div class="mt-5 grid gap-5 min-[390px]:grid-cols-[118px_minmax(0,1fr)]">
-                        <div class="text-center">
-                            <div class="mx-auto grid h-24 w-24 place-items-center rounded-full bg-blue-50 shadow-[inset_0_0_0_16px_rgba(37,99,235,0.04)]">
-                                <div class="grid h-14 w-14 place-items-center rounded-3xl bg-blue-600 text-white shadow-xl shadow-blue-600/30">
-                                    <svg class="h-8 w-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
-                                </div>
-                            </div>
-                            <p class="mt-3 text-base font-black text-blue-600">Swipe Access</p>
-                            <p class="text-xs font-semibold text-slate-500">Ensure you are near the door</p>
-                        </div>
+                    <div class="flex items-start justify-between gap-3">
                         <div class="min-w-0">
-                            <div class="flex items-center justify-between"><h3 class="text-lg font-black text-[#071a3b]">Main Door</h3><span class="rounded-xl bg-emerald-50 px-3 py-1 text-sm font-black text-emerald-700">Active</span></div>
-                            <p class="mt-4 text-sm font-semibold text-slate-500">Access Code</p>
-                            <div class="mt-2 flex items-center justify-between rounded-2xl bg-blue-50 px-4 py-3 text-3xl font-black tracking-[0.35em] text-blue-600">{{ $smartLockCodeDisplay }} <span class="text-base tracking-normal">⧉</span></div>
-                            <p class="mt-4 text-sm font-semibold text-slate-500">Valid From</p>
-                            <p class="font-black text-blue-600">{{ $smartLockValidFrom?->format('d M Y, h:i A') }}</p>
-                            <p class="mt-3 text-sm font-semibold text-slate-500">Valid Until</p>
-                            <p class="font-black text-blue-600">{{ $smartLockValidUntil?->format('d M Y, h:i A') }}</p>
+                            <h2 class="text-lg font-black text-[#071a3b]">Smart Lock</h2>
+                            <p class="mt-1 text-xs font-semibold leading-5 text-slate-500">Access works only during your booking window.</p>
                         </div>
+                        <span class="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-blue-50 text-blue-600">
+                            <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+                        </span>
+                    </div>
+                    <div class="mt-4 grid grid-cols-2 gap-3 text-xs font-semibold text-slate-500">
+                        <div class="rounded-2xl bg-slate-50 p-3">From<br><span class="mt-1 block font-black text-[#071a3b]">{{ $smartLockValidFrom?->format('d M, h:i A') }}</span></div>
+                        <div class="rounded-2xl bg-slate-50 p-3">Until<br><span class="mt-1 block font-black text-[#071a3b]">{{ $smartLockValidUntil?->format('d M, h:i A') }}</span></div>
                     </div>
                     @include('bookings.partials.tenant-smart-lock-slider', [
                         'booking' => $booking,
                         'smartLockValidFrom' => $smartLockValidFrom,
                         'smartLockValidUntil' => $smartLockValidUntil,
                     ])
-                    <p class="mt-5 border-t border-slate-100 pt-4 text-sm font-semibold text-slate-600">This code is only valid during your stay.</p>
                 </section>
             @else
                 <section class="rounded-[1.6rem] bg-white px-5 py-7 text-center shadow-[0_18px_45px_rgba(15,23,42,0.08)]">

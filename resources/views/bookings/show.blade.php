@@ -78,26 +78,18 @@
         </section>
 
         <section class="rounded-[1.8rem] bg-white p-5 shadow-[0_16px_40px_rgba(15,23,42,0.08)] ring-1 ring-slate-100">
-            <div class="flex items-center justify-between border-b border-slate-100 pb-4">
-                <h2 class="text-lg font-black text-[#0b1736]">Smart Lock Access</h2>
-                <span class="rounded-full bg-emerald-50 px-3 py-1 text-xs font-black text-emerald-700">Active</span>
+            <div class="flex items-start justify-between gap-3">
+                <div class="min-w-0">
+                    <h2 class="text-lg font-black text-[#0b1736]">Smart Lock</h2>
+                    <p class="mt-1 text-xs font-semibold leading-5 text-slate-500">Access works only during your booking window.</p>
+                </div>
+                <span class="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-blue-50 text-blue-600">
+                    <svg class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4" /></svg>
+                </span>
             </div>
-            <div class="mt-5 grid grid-cols-[110px_1fr] gap-4">
-                <div class="text-center">
-                    <div class="grid h-24 w-24 place-items-center rounded-full bg-blue-50 ring-[16px] ring-blue-50/60">
-                        <svg class="h-12 w-12 text-blue-600" fill="currentColor" viewBox="0 0 24 24"><path d="M17 8h-1V6a4 4 0 0 0-8 0v2H7a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-9a2 2 0 0 0-2-2Zm-7-2a2 2 0 1 1 4 0v2h-4V6Z" /></svg>
-                    </div>
-                    <p class="mt-3 text-sm font-black text-blue-600">Swipe Access</p>
-                </div>
-                <div>
-                    <p class="text-sm font-black text-[#0b1736]">Main Door</p>
-                    <p class="mt-4 text-xs font-semibold text-slate-500">Access Code</p>
-                    <div class="mt-2 flex items-center justify-between rounded-2xl bg-blue-50 px-4 py-3 text-3xl font-black tracking-[0.35em] text-blue-600">{{ $smartLockCodeDisplay }} <span class="text-blue-500"><svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M8 16H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v2" /><path d="M10 8h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-8a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2z" /></svg></span></div>
-                    <p class="mt-4 text-xs font-semibold text-slate-500">Valid From</p>
-                    <p class="text-sm font-black text-blue-600">{{ $smartLockValidFrom->format('d M Y, h:i A') }}</p>
-                    <p class="mt-3 text-xs font-semibold text-slate-500">Valid Until</p>
-                    <p class="text-sm font-black text-blue-600">{{ $smartLockValidUntil->format('d M Y, h:i A') }}</p>
-                </div>
+            <div class="mt-4 grid grid-cols-2 gap-3 text-xs font-semibold text-slate-500">
+                <div class="rounded-2xl bg-slate-50 p-3">From<br><span class="mt-1 block font-black text-[#0b1736]">{{ $smartLockValidFrom->format('d M, h:i A') }}</span></div>
+                <div class="rounded-2xl bg-slate-50 p-3">Until<br><span class="mt-1 block font-black text-[#0b1736]">{{ $smartLockValidUntil->format('d M, h:i A') }}</span></div>
             </div>
             @include('bookings.partials.tenant-smart-lock-slider', [
                 'booking' => $booking,

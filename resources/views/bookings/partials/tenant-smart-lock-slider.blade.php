@@ -20,17 +20,17 @@
 @endphp
 
 <div class="mt-5" data-smart-lock-slider data-smart-lock-url="{{ $booking ? route('bookings.smart-lock-control', $booking) : '' }}" data-smart-lock-action="unlock" data-smart-lock-enabled="{{ $smartLockCanControl ? '1' : '0' }}">
-    <div class="relative h-14 overflow-hidden rounded-full {{ $smartLockCanControl ? 'bg-slate-900 shadow-xl shadow-slate-950/15' : 'bg-slate-200' }} p-1">
-        <div data-smart-lock-progress class="absolute inset-y-1 left-1 w-12 rounded-full bg-blue-600 transition-[width] duration-150"></div>
-        <div data-smart-lock-label class="pointer-events-none absolute inset-0 grid place-items-center pl-10 pr-4 text-sm font-black {{ $smartLockCanControl ? 'text-white' : 'text-slate-500' }}">
+    <div data-smart-lock-track class="relative h-16 touch-none overflow-hidden rounded-full {{ $smartLockCanControl ? 'cursor-grab bg-slate-950 shadow-xl shadow-slate-950/15 active:cursor-grabbing' : 'bg-slate-200' }} p-1.5">
+        <div data-smart-lock-progress class="absolute inset-y-1.5 left-1.5 w-[52px] rounded-full bg-blue-600 transition-all duration-150"></div>
+        <div data-smart-lock-label class="pointer-events-none absolute inset-0 grid place-items-center pl-14 pr-5 text-sm font-black {{ $smartLockCanControl ? 'text-white' : 'text-slate-500' }}">
             {{ $smartLockCanControl ? 'Swipe to unlock' : $smartLockDisabledMessage }}
         </div>
-        <button type="button" data-smart-lock-thumb class="pressable touch-target absolute left-1 top-1 grid h-12 w-12 place-items-center rounded-full bg-white text-blue-600 shadow-lg transition-transform duration-150 disabled:opacity-60" @disabled(! $smartLockCanControl) aria-label="Swipe smart lock control">
+        <div data-smart-lock-thumb role="button" tabindex="{{ $smartLockCanControl ? '0' : '-1' }}" aria-disabled="{{ $smartLockCanControl ? 'false' : 'true' }}" class="touch-target absolute left-1.5 top-1.5 grid h-[52px] w-[52px] select-none place-items-center rounded-full bg-white text-blue-600 shadow-lg transition-transform duration-150 {{ $smartLockCanControl ? '' : 'opacity-60' }}" aria-label="Swipe smart lock control">
             <svg data-smart-lock-icon class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path d="M7 11V7a5 5 0 0 1 9.8-1.4" /><rect x="5" y="11" width="14" height="10" rx="2" /></svg>
-        </button>
+        </div>
     </div>
-    <p data-smart-lock-message class="mt-2 text-center text-xs font-semibold {{ $smartLockCanControl ? 'text-slate-500' : 'text-amber-600' }}">
-        {{ $smartLockCanControl ? 'Swipe fully right while you are near the door.' : $smartLockDisabledMessage }}
+    <p data-smart-lock-message class="mt-3 text-center text-xs font-semibold {{ $smartLockCanControl ? 'text-slate-500' : 'text-amber-600' }}">
+        {{ $smartLockCanControl ? 'Swipe fully right near the door. It will switch to lock after opening.' : $smartLockDisabledMessage }}
     </p>
 </div>
 
@@ -52,7 +52,7 @@
                 const label = slider.querySelector('[data-smart-lock-label]');
                 const message = slider.querySelector('[data-smart-lock-message]');
                 const icon = slider.querySelector('[data-smart-lock-icon]');
-                const track = thumb?.parentElement;
+                const track = slider.querySelector('[data-smart-lock-track]');
                 if (!thumb || !progress || !label || !message || !track || slider.dataset.smartLockEnabled !== '1') return;
 
                 let dragging = false;
@@ -60,7 +60,7 @@
                 let startX = 0;
                 let startLeft = 0;
 
-                const maxLeft = () => Math.max(0, track.clientWidth - thumb.offsetWidth - 8);
+                const maxLeft = () => Math.max(0, track.clientWidth - thumb.offsetWidth - 12);
                 const setLeft = (left) => {
                     const safeLeft = Math.max(0, Math.min(left, maxLeft()));
                     thumb.style.transform = `translateX(${safeLeft}px)`;
@@ -76,11 +76,13 @@
                     const action = slider.dataset.smartLockAction || 'unlock';
                     label.textContent = action === 'unlock' ? 'Swipe to unlock' : 'Swipe to lock';
                     icon.innerHTML = iconPaths[action] || iconPaths.unlock;
+                    progress.classList.toggle('bg-emerald-600', action === 'lock');
+                    progress.classList.toggle('bg-blue-600', action !== 'lock');
                 };
                 const submit = async () => {
                     if (submitting) return;
                     submitting = true;
-                    thumb.disabled = true;
+                    thumb.setAttribute('aria-disabled', 'true');
                     const action = slider.dataset.smartLockAction || 'unlock';
                     label.textContent = action === 'unlock' ? 'Unlocking...' : 'Locking...';
                     message.textContent = 'Sending secure command to the smart lock.';
@@ -104,7 +106,7 @@
                         message.textContent = error.message || 'Smart lock command failed.';
                     } finally {
                         submitting = false;
-                        thumb.disabled = false;
+                        thumb.setAttribute('aria-disabled', 'false');
                         setActionLabel();
                         reset();
                     }
@@ -112,30 +114,39 @@
 
                 setActionLabel();
 
-                thumb.addEventListener('pointerdown', (event) => {
+                const startDrag = (event) => {
                     if (submitting) return;
+                    event.preventDefault();
                     dragging = true;
                     startX = event.clientX;
                     startLeft = Number(thumb.style.transform.match(/translateX\((\d+(?:\.\d+)?)px\)/)?.[1] || 0);
-                    thumb.setPointerCapture(event.pointerId);
+                    track.setPointerCapture(event.pointerId);
                     thumb.classList.remove('duration-150');
-                });
+                };
 
-                thumb.addEventListener('pointermove', (event) => {
+                const moveDrag = (event) => {
                     if (!dragging) return;
                     setLeft(startLeft + event.clientX - startX);
-                });
+                };
 
-                thumb.addEventListener('pointerup', () => {
+                const endDrag = () => {
                     if (!dragging) return;
                     dragging = false;
                     const currentLeft = Number(thumb.style.transform.match(/translateX\((\d+(?:\.\d+)?)px\)/)?.[1] || 0);
                     currentLeft >= maxLeft() * 0.82 ? submit() : reset();
-                });
+                };
 
-                thumb.addEventListener('pointercancel', () => {
+                track.addEventListener('pointerdown', startDrag);
+                track.addEventListener('pointermove', moveDrag);
+                track.addEventListener('pointerup', endDrag);
+                track.addEventListener('pointercancel', () => {
                     dragging = false;
                     reset();
+                });
+                thumb.addEventListener('keydown', (event) => {
+                    if (event.key !== 'Enter' && event.key !== ' ') return;
+                    event.preventDefault();
+                    submit();
                 });
             };
 
