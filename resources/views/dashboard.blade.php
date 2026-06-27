@@ -56,20 +56,10 @@
                         <div class="rounded-2xl bg-slate-50 p-3">From<br><span class="mt-1 block font-black text-[#071a3b]">{{ $smartLockValidFrom?->format('d M, h:i A') }}</span></div>
                         <div class="rounded-2xl bg-slate-50 p-3">Until<br><span class="mt-1 block font-black text-[#071a3b]">{{ $smartLockValidUntil?->format('d M, h:i A') }}</span></div>
                     </div>
-                    <div class="mt-3 rounded-2xl bg-blue-50 px-4 py-3">
-                        <p class="text-xs font-black uppercase tracking-[0.14em] text-blue-500">Door code</p>
-                        <div class="mt-1 flex items-center justify-between gap-3">
-                            <p class="min-w-0 break-all text-2xl font-black tracking-[0.28em] text-blue-700 max-[380px]:text-xl">{{ $smartLockCodeDisplay }}</p>
-                            <span class="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-white text-blue-600">
-                                <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 16H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v2" /><path d="M10 8h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-8a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2z" /></svg>
-                            </span>
-                        </div>
-                    </div>
-                    <form method="POST" action="{{ route('bookings.tenant-door-code.update', $booking) }}" class="mt-3 grid grid-cols-[1fr_auto] gap-2">
-                        @csrf
-                        <input name="door_code" inputmode="numeric" pattern="[0-9]{4,9}" maxlength="9" autocomplete="one-time-code" class="erp-focus h-12 min-w-0 rounded-2xl border border-slate-200 bg-white px-4 text-center text-lg font-black tracking-[0.2em] text-[#071a3b]" placeholder="New code">
-                        <button class="h-12 rounded-2xl bg-slate-950 px-4 text-sm font-black text-white">Set</button>
-                    </form>
+                    @include('bookings.partials.tenant-door-code-panel', [
+                        'booking' => $booking,
+                        'smartLockCodeDisplay' => $smartLockCodeDisplay,
+                    ])
                     @include('bookings.partials.tenant-smart-lock-slider', [
                         'booking' => $booking,
                         'smartLockValidFrom' => $smartLockValidFrom,
