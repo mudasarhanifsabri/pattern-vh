@@ -56,6 +56,15 @@
                         <div class="rounded-2xl bg-slate-50 p-3">From<br><span class="mt-1 block font-black text-[#071a3b]">{{ $smartLockValidFrom?->format('d M, h:i A') }}</span></div>
                         <div class="rounded-2xl bg-slate-50 p-3">Until<br><span class="mt-1 block font-black text-[#071a3b]">{{ $smartLockValidUntil?->format('d M, h:i A') }}</span></div>
                     </div>
+                    <div class="mt-3 rounded-2xl bg-blue-50 px-4 py-3">
+                        <p class="text-xs font-black uppercase tracking-[0.14em] text-blue-500">Door code</p>
+                        <div class="mt-1 flex items-center justify-between gap-3">
+                            <p class="min-w-0 break-all text-2xl font-black tracking-[0.28em] text-blue-700 max-[380px]:text-xl">{{ $smartLockCodeDisplay }}</p>
+                            <span class="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-white text-blue-600">
+                                <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 16H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v2" /><path d="M10 8h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-8a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2z" /></svg>
+                            </span>
+                        </div>
+                    </div>
                     @include('bookings.partials.tenant-smart-lock-slider', [
                         'booking' => $booking,
                         'smartLockValidFrom' => $smartLockValidFrom,
