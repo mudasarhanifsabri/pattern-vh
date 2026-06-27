@@ -127,7 +127,7 @@ class _HeroCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      minHeight: 190,
+      constraints: const BoxConstraints(minHeight: 190),
       padding: const EdgeInsets.all(22),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
@@ -156,7 +156,7 @@ class _HeroCard extends StatelessWidget {
                 width: 120,
                 height: 120,
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(.12),
+                  color: Colors.white.withValues(alpha: .12),
                   shape: BoxShape.circle,
                 ),
               ),
@@ -189,7 +189,7 @@ class _HeroCard extends StatelessWidget {
               Text(
                 subtitle,
                 style: TextStyle(
-                  color: Colors.white.withOpacity(.78),
+                  color: Colors.white.withValues(alpha: .78),
                   height: 1.45,
                   fontWeight: FontWeight.w600,
                 ),
@@ -352,9 +352,9 @@ class _SmartLockSlider extends StatelessWidget {
         height: 74,
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-          color: activeColor.withOpacity(.10),
+          color: activeColor.withValues(alpha: .10),
           borderRadius: BorderRadius.circular(28),
-          border: Border.all(color: activeColor.withOpacity(.22)),
+          border: Border.all(color: activeColor.withValues(alpha: .22)),
         ),
         child: Stack(
           alignment: Alignment.center,
@@ -393,7 +393,7 @@ class _SmartLockSlider extends StatelessWidget {
                   borderRadius: BorderRadius.circular(22),
                   boxShadow: [
                     BoxShadow(
-                      color: activeColor.withOpacity(.28),
+                      color: activeColor.withValues(alpha: .28),
                       blurRadius: 18,
                       offset: const Offset(0, 10),
                     ),
