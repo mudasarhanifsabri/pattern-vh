@@ -14,6 +14,8 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
+use Spatie\Permission\Models\Permission;
+use Spatie\Permission\Models\Role;
 use Spatie\Permission\PermissionRegistrar;
 use Tests\TestCase;
 
@@ -117,6 +119,23 @@ class AccountingModuleTest extends TestCase
             'owner_id' => null,
             'unit_id' => null,
         ]);
+    }
+
+    public function test_accounting_manager_can_open_reports_without_report_specific_permission(): void
+    {
+        $this->seed();
+
+        Permission::findOrCreate('accounting.manage', 'web');
+        $role = Role::findOrCreate('Accounting Manager', 'web');
+        $role->syncPermissions(['accounting.manage']);
+
+        $user = User::factory()->create();
+        $user->assignRole($role);
+
+        $this->actingAs($user)
+            ->get(route('reports.index'))
+            ->assertOk()
+            ->assertSeeText('Reports & Profit/Loss');
     }
 
     public function test_bank_statement_import_suggests_and_confirms_payment_match(): void

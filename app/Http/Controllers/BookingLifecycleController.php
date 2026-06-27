@@ -13,6 +13,7 @@ use App\Support\BookingInvoiceScheduler;
 use App\Support\PushEventLogger;
 use App\Support\TaxCalculator;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 
 class BookingLifecycleController extends Controller
 {
@@ -145,6 +146,7 @@ class BookingLifecycleController extends Controller
     {
         $tenant = $this->tenantFor($request);
         abort_unless($tenant && (int) $booking->tenant_id === (int) $tenant->id, 403);
+        $this->ensureBookingStatus($booking, ['confirmed', 'checked_in'], 'Checkout can only be requested after the booking is confirmed or checked in.');
 
         $booking->update(['booking_status' => 'checkout_requested']);
         $booking->notificationLogs()->create([
@@ -181,6 +183,8 @@ class BookingLifecycleController extends Controller
 
     public function completeCheckout(Booking $booking, BookingInvoiceScheduler $invoiceScheduler, PushEventLogger $push)
     {
+        $this->ensureBookingStatus($booking, ['checkout_requested'], 'Checkout can only be completed after the tenant checkout request is received.');
+
         $booking->update(['booking_status' => 'checked_out']);
         $cancelled = $invoiceScheduler->cancelFutureUnpaidInvoices($booking);
         $this->createCheckoutTasks($booking);
@@ -345,6 +349,13 @@ class BookingLifecycleController extends Controller
     private function tenantFor(Request $request): ?Tenant
     {
         return Tenant::query()->where('user_id', $request->user()->id)->orWhere('email', $request->user()->email)->first();
+    }
+
+    private function ensureBookingStatus(Booking $booking, array $allowedStatuses, string $message): void
+    {
+        if (! in_array($booking->booking_status, $allowedStatuses, true)) {
+            throw ValidationException::withMessages(['booking_status' => $message]);
+        }
     }
 
     private function nextInvoiceNo(): string

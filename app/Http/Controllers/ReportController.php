@@ -21,7 +21,7 @@ class ReportController extends Controller
             return $this->ownerIndex($request, $owner, $from, $to);
         }
 
-        abort_if($request->user()->can('portal.owner'), 403);
+        abort_if($this->ownerOnly($request), 403);
 
         $invoiceQuery = Invoice::whereNotIn('status', ['cancelled', 'draft'])->whereBetween('invoice_date', [$from, $to]);
         $rent = (float) (clone $invoiceQuery)->sum('rent_amount');
@@ -59,7 +59,7 @@ class ReportController extends Controller
         $type = $validated['type'];
         $owner = $this->ownerFor($request);
 
-        abort_if($request->user()->can('portal.owner') && ! $owner, 403);
+        abort_if($this->ownerOnly($request) && ! $owner, 403);
 
         return response()->streamDownload(function () use ($type, $from, $to, $owner): void {
             $handle = fopen('php://output', 'w');
@@ -117,7 +117,7 @@ class ReportController extends Controller
 
     private function ownerFor(Request $request): ?Owner
     {
-        if (! $request->user()?->can('portal.owner')) {
+        if (! $this->ownerOnly($request)) {
             return null;
         }
 
@@ -125,6 +125,16 @@ class ReportController extends Controller
             ->where('user_id', $request->user()->id)
             ->orWhere('email', $request->user()->email)
             ->first();
+    }
+
+    private function ownerOnly(Request $request): bool
+    {
+        $user = $request->user();
+
+        return $user?->can('portal.owner')
+            && ! $user->can('accounting.view')
+            && ! $user->can('accounting.manage')
+            && ! $user->can('users.manage');
     }
 
     private function ownerInvoiceQuery(Owner $owner)

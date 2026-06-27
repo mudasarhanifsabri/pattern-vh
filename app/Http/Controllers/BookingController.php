@@ -83,7 +83,7 @@ class BookingController extends Controller
 
     public function update(Request $request, Booking $booking, BookingWorkflow $workflow, BookingInvoiceScheduler $invoiceScheduler)
     {
-        $validated = $this->validated($request);
+        $validated = $this->validated($request, $booking);
         $validated['rental_periods'] = $this->rentalPeriods($request);
         $this->ensureTenantHasSingleActiveBooking($validated, $booking);
 
@@ -161,18 +161,18 @@ class BookingController extends Controller
             'tenants' => Tenant::query()->orderBy('full_name')->get(),
             'agents' => Agent::query()->orderBy('full_name')->get(),
             'types' => Booking::TYPES,
-            'statuses' => Booking::STATUSES,
+            'statuses' => ['draft', 'confirmed'],
         ];
     }
 
-    private function validated(Request $request): array
+    private function validated(Request $request, ?Booking $booking = null): array
     {
         $request->merge([
             'check_in_time' => $this->normalizeTime($request->input('check_in_time')),
             'check_out_time' => $this->normalizeTime($request->input('check_out_time')),
         ]);
 
-        return $request->validate([
+        $rules = [
             'booking_type' => ['required', Rule::in(Booking::TYPES)],
             'unit_id' => ['required', 'exists:units,id'],
             'tenant_id' => ['required', 'exists:tenants,id'],
@@ -193,10 +193,22 @@ class BookingController extends Controller
             'rental_periods.*.start' => ['nullable', 'date'],
             'rental_periods.*.end' => ['nullable', 'date'],
             'rental_periods.*.rent_amount' => ['nullable', 'numeric', 'min:0'],
-            'booking_status' => ['required', Rule::in(Booking::STATUSES)],
+            'booking_status' => ['required', Rule::in(['draft', 'confirmed'])],
             'source' => ['nullable', 'string', 'max:191'],
             'notes' => ['nullable', 'string', 'max:4000'],
-        ]);
+        ];
+
+        if ($booking) {
+            unset($rules['booking_status']);
+        }
+
+        $validated = $request->validate($rules);
+
+        if ($booking) {
+            $validated['booking_status'] = $booking->booking_status;
+        }
+
+        return $validated;
     }
 
     private function rentalPeriods(Request $request): array

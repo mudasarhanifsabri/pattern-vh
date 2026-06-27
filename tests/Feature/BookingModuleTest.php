@@ -313,6 +313,7 @@ class BookingModuleTest extends TestCase
         $tenantUser->assignRole('Tenant');
         $booking->tenant->update(['user_id' => $tenantUser->id]);
 
+        $this->actingAs($tenantUser)->post(route('bookings.request-checkout', $booking))->assertRedirect();
         $this->actingAs($admin)->post(route('bookings.complete-checkout', $booking))->assertRedirect();
         $refund = BookingDepositRefund::firstOrFail();
 
@@ -334,6 +335,38 @@ class BookingModuleTest extends TestCase
             ->assertDontSee('Auto tasks')
             ->assertDontSee('Internal technician notes should stay private.')
             ->assertDontSee('Operations controls');
+    }
+
+    public function test_booking_edit_cannot_bypass_status_workflow(): void
+    {
+        $this->seed();
+
+        $admin = User::where('email', 'admin@example.com')->firstOrFail();
+        $booking = Booking::where('booking_no', 'BK-DEMO-0001')->firstOrFail();
+
+        $this->actingAs($admin)
+            ->put(route('bookings.update', $booking), [
+                'booking_type' => $booking->booking_type,
+                'unit_id' => $booking->unit_id,
+                'tenant_id' => $booking->tenant_id,
+                'agent_id' => $booking->agent_id,
+                'check_in_date' => $booking->check_in_date->format('Y-m-d'),
+                'check_out_date' => $booking->check_out_date->format('Y-m-d'),
+                'check_in_time' => $booking->check_in_time,
+                'check_out_time' => $booking->check_out_time,
+                'guest_count' => $booking->guest_count,
+                'rent_amount' => $booking->rent_amount,
+                'deposit_amount' => $booking->deposit_amount,
+                'dtcm_fee' => $booking->dtcm_fee,
+                'cleaning_fee' => $booking->cleaning_fee,
+                'agency_fee' => $booking->agency_fee,
+                'booking_status' => 'checked_out',
+                'source' => $booking->source,
+                'notes' => $booking->notes,
+            ])
+            ->assertRedirect(route('bookings.show', $booking));
+
+        $this->assertSame('confirmed', $booking->fresh()->booking_status);
     }
 
     public function test_task_management_board_and_tenant_checkin_report_workflow(): void

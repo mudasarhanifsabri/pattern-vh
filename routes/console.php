@@ -14,6 +14,9 @@ use Illuminate\Support\Facades\Schedule;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Minishlink\WebPush\VAPID;
+use Spatie\Permission\Models\Permission;
+use Spatie\Permission\Models\Role;
+use Spatie\Permission\PermissionRegistrar;
 
 Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
@@ -35,6 +38,30 @@ Artisan::command('webpush:vapid', function () {
     $this->line('VAPID_PRIVATE_KEY='.$keys['privateKey']);
     $this->line('VAPID_SUBJECT='.config('app.url'));
 })->purpose('Generate VAPID keys for browser push notifications');
+
+Artisan::command('permissions:repair', function () {
+    app(PermissionRegistrar::class)->forgetCachedPermissions();
+
+    $permissions = [
+        'reports.view',
+        'reports.export',
+        'accounting.view',
+        'accounting.manage',
+        'portal.owner',
+    ];
+
+    foreach ($permissions as $permission) {
+        Permission::findOrCreate($permission, 'web');
+    }
+
+    Role::findOrCreate('Super Admin', 'web')->givePermissionTo($permissions);
+    Role::findOrCreate('Operations Team', 'web')->givePermissionTo($permissions);
+    Role::findOrCreate('Owner', 'web')->givePermissionTo(['reports.view', 'portal.owner']);
+
+    app(PermissionRegistrar::class)->forgetCachedPermissions();
+
+    $this->info('Report/accounting permissions repaired for Super Admin, Operations Team, and Owner roles.');
+})->purpose('Repair report and portal permissions after deployment');
 
 Artisan::command('bookings:send-reminders', function () {
     $count = 0;

@@ -1,10 +1,19 @@
 @csrf
+@php($editing = isset($booking) && $booking->exists)
 @if ($errors->any())<div class="mb-5 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700"><p class="font-bold">Please fix the highlighted fields.</p><ul class="mt-2 list-inside list-disc">@foreach ($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul></div>@endif
 <div class="grid gap-5 xl:grid-cols-[1fr_360px]">
     <div class="space-y-5">
         <div class="erp-card p-5"><h2 class="text-lg font-bold text-[#071a3b]">Booking details</h2><div class="mt-5 grid gap-4 md:grid-cols-2">
             <div><x-input-label for="booking_type" value="Booking type" /><select id="booking_type" name="booking_type" class="erp-focus mt-1 h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm">@foreach ($types as $type)<option value="{{ $type }}" @selected(old('booking_type', $booking->booking_type ?? 'holiday_home') === $type)>{{ str($type)->replace('_', ' ')->headline() }}</option>@endforeach</select></div>
-            <div><x-input-label for="booking_status" value="Status" /><select id="booking_status" name="booking_status" class="erp-focus mt-1 h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm">@foreach ($statuses as $status)<option value="{{ $status }}" @selected(old('booking_status', $booking->booking_status ?? 'draft') === $status)>{{ str($status)->headline() }}</option>@endforeach</select></div>
+            @if($editing)
+                <div>
+                    <x-input-label value="Status" />
+                    <div class="mt-1 flex h-11 items-center rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm font-black text-[#071a3b]">{{ str($booking->booking_status)->replace('_', ' ')->headline() }}</div>
+                    <p class="mt-1 text-xs font-semibold text-slate-500">Status changes only through the booking workflow steps.</p>
+                </div>
+            @else
+                <div><x-input-label for="booking_status" value="Status" /><select id="booking_status" name="booking_status" class="erp-focus mt-1 h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm">@foreach ($statuses as $status)<option value="{{ $status }}" @selected(old('booking_status', 'draft') === $status)>{{ str($status)->headline() }}</option>@endforeach</select><p class="mt-1 text-xs font-semibold text-slate-500">Further status changes happen from payment, check-in, checkout, and refund steps.</p></div>
+            @endif
             <div><x-input-label for="unit_id" value="Unit" /><select id="unit_id" name="unit_id" class="erp-focus mt-1 h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm" required><option value="">Select unit</option>@foreach ($units as $unit)<option value="{{ $unit->id }}" @selected(old('unit_id', $booking->unit_id ?? '') == $unit->id)>{{ $unit->building->name }} / {{ $unit->unit_no }}</option>@endforeach</select></div>
             <div><x-input-label for="tenant_id" value="Tenant" /><select id="tenant_id" name="tenant_id" class="erp-focus mt-1 h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm" required><option value="">Select tenant</option>@foreach ($tenants as $tenant)<option value="{{ $tenant->id }}" @selected(old('tenant_id', $booking->tenant_id ?? '') == $tenant->id)>{{ $tenant->full_name }}</option>@endforeach</select></div>
             <div><x-input-label for="agent_id" value="Agent / source partner" /><select id="agent_id" name="agent_id" class="erp-focus mt-1 h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm"><option value="">Direct booking</option>@foreach ($agents as $agent)<option value="{{ $agent->id }}" @selected(old('agent_id', $booking->agent_id ?? '') == $agent->id)>{{ $agent->full_name }} - {{ $agent->commission_percent ?? 0 }}%</option>@endforeach</select></div>

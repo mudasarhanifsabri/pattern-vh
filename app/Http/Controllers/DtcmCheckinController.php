@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\DtcmCheckin;
 use App\Support\ActivityLogger;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 
 class DtcmCheckinController extends Controller
 {
@@ -22,6 +23,12 @@ class DtcmCheckinController extends Controller
 
     public function complete(Request $request, DtcmCheckin $dtcmCheckin)
     {
+        if ($dtcmCheckin->booking->booking_status !== 'confirmed') {
+            throw ValidationException::withMessages([
+                'booking_status' => 'DTCM check-in can only be completed after the booking is confirmed.',
+            ]);
+        }
+
         $validated = $request->validate([
             'portal_reference' => ['nullable', 'string', 'max:191'],
             'notes' => ['nullable', 'string', 'max:1000'],
