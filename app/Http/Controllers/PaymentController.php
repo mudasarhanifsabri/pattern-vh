@@ -9,6 +9,7 @@ use App\Support\ActivityLogger;
 use App\Support\ErpStoragePath;
 use App\Support\InvoicePaymentWorkflow;
 use App\Support\PushEventLogger;
+use App\Support\ReferenceNumber;
 use App\Support\SimpleFinancePdf;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
@@ -203,6 +204,6 @@ class PaymentController extends Controller
 
     private function nextPaymentNo(): string
     {
-        return 'PAY-'.now()->format('Ymd').'-'.str_pad((string) (Payment::whereDate('created_at', today())->count() + 1), 4, '0', STR_PAD_LEFT);
+        return ReferenceNumber::next(Payment::class, 'payment_no', 'PAY');
     }
 }

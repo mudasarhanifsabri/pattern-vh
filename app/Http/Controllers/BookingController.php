@@ -10,6 +10,7 @@ use App\Support\ActivityLogger;
 use App\Support\BookingConfirmationPdf;
 use App\Support\BookingInvoiceScheduler;
 use App\Support\BookingWorkflow;
+use App\Support\ReferenceNumber;
 use App\Support\TaxCalculator;
 use App\Support\TtLockApi;
 use Illuminate\Support\Carbon;
@@ -451,7 +452,7 @@ class BookingController extends Controller
 
     private function nextBookingNumber(): string
     {
-        return 'BK-'.now()->format('Ymd').'-'.str_pad((string) (Booking::withTrashed()->whereDate('created_at', today())->count() + 1), 4, '0', STR_PAD_LEFT);
+        return ReferenceNumber::next(Booking::class, 'booking_no', 'BK', 'Ymd', 4, true);
     }
 
     private function tenantForAuth(): ?Tenant

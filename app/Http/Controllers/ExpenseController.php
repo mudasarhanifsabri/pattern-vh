@@ -10,6 +10,7 @@ use App\Models\Tenant;
 use App\Models\Unit;
 use App\Support\ActivityLogger;
 use App\Support\ErpStoragePath;
+use App\Support\ReferenceNumber;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -207,6 +208,6 @@ class ExpenseController extends Controller
 
     private function nextExpenseNo(): string
     {
-        return 'EXP-'.now()->format('Ymd').'-'.str_pad((string) (Expense::whereDate('created_at', today())->count() + 1), 4, '0', STR_PAD_LEFT);
+        return ReferenceNumber::next(Expense::class, 'expense_no', 'EXP');
     }
 }

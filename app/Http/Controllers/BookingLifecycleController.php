@@ -11,6 +11,7 @@ use App\Models\Tenant;
 use App\Support\ActivityLogger;
 use App\Support\BookingInvoiceScheduler;
 use App\Support\PushEventLogger;
+use App\Support\ReferenceNumber;
 use App\Support\TaxCalculator;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
@@ -360,6 +361,6 @@ class BookingLifecycleController extends Controller
 
     private function nextInvoiceNo(): string
     {
-        return 'INV-'.now()->format('Ymd').'-'.str_pad((string) (Invoice::withTrashed()->whereDate('created_at', today())->count() + 1), 4, '0', STR_PAD_LEFT);
+        return ReferenceNumber::next(Invoice::class, 'invoice_no', 'INV', 'Ymd', 4, true);
     }
 }

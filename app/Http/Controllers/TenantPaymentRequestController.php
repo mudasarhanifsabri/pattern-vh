@@ -7,6 +7,7 @@ use App\Models\PaymentCollectionRequest;
 use App\Models\Tenant;
 use App\Support\ActivityLogger;
 use App\Support\PushEventLogger;
+use App\Support\ReferenceNumber;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
@@ -98,6 +99,6 @@ class TenantPaymentRequestController extends Controller
 
     private function nextRequestNo(): string
     {
-        return 'PCR-'.now()->format('Ymd').'-'.str_pad((string) (PaymentCollectionRequest::whereDate('created_at', today())->count() + 1), 4, '0', STR_PAD_LEFT);
+        return ReferenceNumber::next(PaymentCollectionRequest::class, 'request_no', 'PCR');
     }
 }

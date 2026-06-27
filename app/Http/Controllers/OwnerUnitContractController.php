@@ -9,6 +9,7 @@ use App\Models\Unit;
 use App\Support\ActivityLogger;
 use App\Support\ErpStoragePath;
 use App\Support\OwnerContractPdf;
+use App\Support\ReferenceNumber;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Mail;
@@ -366,7 +367,7 @@ class OwnerUnitContractController extends Controller
 
     private function nextContractNo(): string
     {
-        return 'PMC-'.now()->format('ymd').'-'.str_pad((string) (OwnerUnitContract::withTrashed()->whereDate('created_at', today())->count() + 1), 4, '0', STR_PAD_LEFT);
+        return ReferenceNumber::next(OwnerUnitContract::class, 'contract_no', 'PMC', 'ymd', 4, true);
     }
 
     private function currentOwner(): ?Owner
