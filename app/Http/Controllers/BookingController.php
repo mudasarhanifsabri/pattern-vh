@@ -305,18 +305,56 @@ class BookingController extends Controller
         }
 
         $mode = $booking->smart_lock_code_mode ?: 'auto';
+        $validFrom = $this->bookingDateTime($booking->check_in_date, $booking->check_in_time, '15:00');
+        $validUntil = $this->bookingDateTime($booking->check_out_date, $booking->check_out_time, '11:00');
+        $code = $booking->smart_lock_code;
+        $durationChanged = ! $booking->smart_lock_code_valid_from?->equalTo($validFrom)
+            || ! $booking->smart_lock_code_valid_until?->equalTo($validUntil);
+        $ttLockAlreadyConfirmed = str_contains((string) $booking->smart_lock_code_note, 'TTLock passcode')
+            && ! str_contains((string) $booking->smart_lock_code_note, 'not confirmed');
+        $shouldSyncPasscode = $mode === 'auto' && ($force || ! $code || $durationChanged || ! $ttLockAlreadyConfirmed);
         $updates = [
             'smart_lock_code_mode' => $mode,
-            'smart_lock_code_valid_from' => $booking->smart_lock_code_valid_from ?: $this->bookingDateTime($booking->check_in_date, $booking->check_in_time, '15:00'),
-            'smart_lock_code_valid_until' => $booking->smart_lock_code_valid_until ?: $this->bookingDateTime($booking->check_out_date, $booking->check_out_time, '11:00'),
+            'smart_lock_code_valid_from' => $validFrom,
+            'smart_lock_code_valid_until' => $validUntil,
         ];
 
-        if ($mode === 'auto' && ($force || ! $booking->smart_lock_code)) {
-            $updates['smart_lock_code'] = (string) random_int(100000, 999999);
+        if ($shouldSyncPasscode && ($force || ! $code || $durationChanged)) {
+            $code = (string) random_int(100000, 999999);
+            $updates['smart_lock_code'] = $code;
             $updates['smart_lock_code_generated_at'] = now();
         }
 
         $booking->forceFill($updates)->save();
+        $booking->loadMissing(['unit.ttLock.setting']);
+
+        if (! $shouldSyncPasscode || ! $code || ! $booking->unit?->ttLock?->setting) {
+            return;
+        }
+
+        try {
+            $result = app(TtLockApi::class)->addTimedPasscode(
+                $booking->unit->ttLock,
+                $code,
+                $validFrom,
+                $validUntil,
+                "Booking {$booking->booking_no}",
+            );
+
+            $booking->forceFill([
+                'smart_lock_code_note' => trim(sprintf(
+                    'TTLock passcode %s%s for %s to %s.',
+                    $result['keyboardPwdId'] ? '#'.$result['keyboardPwdId'] : 'created',
+                    $result['verified'] ? ' verified' : ' sent',
+                    $validFrom->format('M d, Y H:i'),
+                    $validUntil->format('M d, Y H:i'),
+                )),
+            ])->save();
+        } catch (\Throwable $exception) {
+            $booking->forceFill([
+                'smart_lock_code_note' => 'TTLock passcode not confirmed: '.$exception->getMessage(),
+            ])->save();
+        }
     }
 
     private function bookingDateTime($date, ?string $time, string $fallbackTime): Carbon

@@ -167,6 +167,83 @@ class TtLockApi
         return $payload;
     }
 
+    public function addTimedPasscode(TtLock $lock, string $passcode, Carbon $startsAt, Carbon $endsAt, string $name): array
+    {
+        $setting = $lock->setting;
+
+        if (! $setting) {
+            throw new \RuntimeException('No TTLock API group is attached to this lock.');
+        }
+
+        $token = $this->validAccessToken($setting);
+        $response = Http::asForm()
+            ->timeout(30)
+            ->post($this->apiUrl('/keyboardPwd/add'), [
+                'clientId' => $setting->client_id,
+                'accessToken' => $token,
+                'lockId' => $lock->lock_id,
+                'keyboardPwd' => $passcode,
+                'keyboardPwdName' => $name,
+                'startDate' => $this->dateMilliseconds($startsAt),
+                'endDate' => $this->dateMilliseconds($endsAt),
+                'addType' => 2,
+                'date' => $this->milliseconds(),
+            ]);
+
+        $payload = $this->payloadOrFail($response->json(), 'Could not add TTLock passcode.');
+        $verified = $this->findPasscode($lock, $passcode);
+
+        $setting->forceFill([
+            'last_tested_at' => now(),
+            'last_error' => null,
+        ])->save();
+
+        return [
+            'keyboardPwdId' => $payload['keyboardPwdId'] ?? $verified['keyboardPwdId'] ?? null,
+            'verified' => (bool) $verified,
+            'status' => $verified['status'] ?? null,
+            'payload' => $payload,
+        ];
+    }
+
+    public function findPasscode(TtLock $lock, string $passcode): ?array
+    {
+        $setting = $lock->setting;
+
+        if (! $setting) {
+            return null;
+        }
+
+        $token = $this->validAccessToken($setting);
+        $pageNo = 1;
+
+        do {
+            $response = Http::asForm()
+                ->timeout(30)
+                ->post($this->apiUrl('/lock/listKeyboardPwd'), [
+                    'clientId' => $setting->client_id,
+                    'accessToken' => $token,
+                    'lockId' => $lock->lock_id,
+                    'pageNo' => $pageNo,
+                    'pageSize' => 100,
+                    'date' => $this->milliseconds(),
+                ]);
+
+            $payload = $this->payloadOrFail($response->json(), 'Could not verify TTLock passcode.');
+            $match = collect($payload['list'] ?? [])
+                ->first(fn ($item): bool => (string) ($item['keyboardPwd'] ?? '') === $passcode);
+
+            if ($match) {
+                return (array) $match;
+            }
+
+            $pages = (int) ($payload['pages'] ?? $pageNo);
+            $pageNo++;
+        } while ($pageNo <= $pages);
+
+        return null;
+    }
+
     public function token(TtLockSetting $setting): array
     {
         $payload = $this->requestToken($setting, $setting->password);
