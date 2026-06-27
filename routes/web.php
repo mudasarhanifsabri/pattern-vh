@@ -327,6 +327,12 @@ Route::middleware('auth')->group(function () {
     Route::get('tt-lock-settings', [TtLockSettingsController::class, 'index'])
         ->middleware('permission:users.manage|roles.manage')
         ->name('tt-lock-settings.index');
+    Route::get('tt-lock-settings/locks', [TtLockSettingsController::class, 'locks'])
+        ->middleware('permission:users.manage|roles.manage')
+        ->name('tt-lock-settings.locks.index');
+    Route::get('tt-lock-settings/activity', [TtLockSettingsController::class, 'activity'])
+        ->middleware('permission:users.manage|roles.manage')
+        ->name('tt-lock-settings.activity');
     Route::post('tt-lock-settings/groups', [TtLockSettingsController::class, 'storeSetting'])
         ->middleware('permission:users.manage|roles.manage')
         ->name('tt-lock-settings.groups.store');

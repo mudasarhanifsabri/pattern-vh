@@ -8,6 +8,8 @@ use App\Models\Invoice;
 use App\Models\OperationsTeamMember;
 use App\Models\Owner;
 use App\Models\Tenant;
+use App\Models\TtLockSetting;
+use App\Support\TtLockApi;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schedule;
@@ -145,6 +147,49 @@ Artisan::command('invoices:send-reminders', function () {
 })->purpose('Prepare due invoice reminders for tenants');
 
 Schedule::command('invoices:send-reminders')->dailyAt('10:00');
+
+Artisan::command('ttlock:sync-auto {--history-days=2 : Number of history days to sync}', function (TtLockApi $api) {
+    if (! Schema::hasTable('tt_lock_settings') || ! Schema::hasTable('tt_locks')) {
+        $this->warn('TTLock tables are not ready.');
+
+        return 0;
+    }
+
+    $days = max(1, min(30, (int) $this->option('history-days')));
+    $groups = TtLockSetting::query()->where('is_active', true)->get();
+
+    if ($groups->isEmpty()) {
+        $this->info('No active TTLock API groups to sync.');
+
+        return 0;
+    }
+
+    $lockTotal = 0;
+    $historyTotal = 0;
+
+    foreach ($groups as $group) {
+        try {
+            $lockResult = $api->syncLocks($group);
+            $historyResult = $api->syncHistory($group->fresh(), $days);
+            $lockTotal += (int) ($lockResult['synced'] ?? 0);
+            $historyTotal += (int) ($historyResult['synced'] ?? 0);
+            $this->info("{$group->name}: {$lockResult['synced']} locks, {$historyResult['synced']} history records.");
+        } catch (Throwable $exception) {
+            $group->forceFill([
+                'last_tested_at' => now(),
+                'last_error' => $exception->getMessage(),
+            ])->save();
+
+            $this->error("{$group->name}: ".$exception->getMessage());
+        }
+    }
+
+    $this->info("TTLock auto sync completed. Locks: {$lockTotal}. History records: {$historyTotal}.");
+
+    return 0;
+})->purpose('Auto-sync active TTLock groups, locks, and recent access history');
+
+Schedule::command('ttlock:sync-auto --history-days=2')->hourly();
 
 Artisan::command('people:dedupe {--apply : Soft-delete safe duplicate people records}', function () {
     $modules = [

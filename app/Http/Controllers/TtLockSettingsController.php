@@ -16,8 +16,8 @@ class TtLockSettingsController extends Controller
     public function index()
     {
         $settings = collect();
-        $locks = collect();
-        $events = collect();
+        $lockCount = 0;
+        $eventCount = 0;
 
         if (Schema::hasTable('tt_lock_settings')) {
             $settingsQuery = TtLockSetting::query()->latest();
@@ -26,26 +26,81 @@ class TtLockSettingsController extends Controller
                 $settingsQuery->withCount('locks');
             }
 
-            $settings = $settingsQuery->get();
+            $settings = $settingsQuery->paginate(10);
         }
 
         if (Schema::hasTable('tt_locks')) {
-            $locks = TtLock::query()
-                ->with(['setting', 'unit.building', 'events' => fn ($query) => $query->latest('event_at')->latest()->limit(25)])
-                ->orderBy('lock_name')
-                ->get();
+            $lockCount = TtLock::query()->count();
         }
 
         if (Schema::hasTable('tt_lock_events')) {
-            $events = TtLockEvent::query()->with(['ttLock.unit.building', 'unit.building'])->latest('event_at')->latest()->limit(100)->get();
+            $eventCount = TtLockEvent::query()->count();
         }
 
         return view('tt-lock-settings.index', [
             'settings' => $settings,
-            'locks' => $locks,
-            'events' => $events,
+            'lockCount' => $lockCount,
+            'eventCount' => $eventCount,
             'statuses' => TtLock::STATUSES,
             'callbackUrl' => route('ttlock.callback'),
+            'schemaReady' => $this->schemaReady(),
+        ]);
+    }
+
+    public function locks(Request $request)
+    {
+        $locks = Schema::hasTable('tt_locks')
+            ? TtLock::query()
+                ->with(['setting', 'unit.building', 'events' => fn ($query) => $query->latest('event_at')->latest()->limit(1)])
+                ->when($request->filled('search'), function ($query) use ($request): void {
+                    $search = $request->string('search')->toString();
+                    $query->where(function ($query) use ($search): void {
+                        $query->where('lock_name', 'like', "%{$search}%")
+                            ->orWhere('lock_alias', 'like', "%{$search}%")
+                            ->orWhere('lock_id', 'like', "%{$search}%")
+                            ->orWhereHas('unit', fn ($query) => $query->where('unit_no', 'like', "%{$search}%"));
+                    });
+                })
+                ->when($request->filled('status'), fn ($query) => $query->where('status', $request->string('status')->toString()))
+                ->orderBy('lock_name')
+                ->paginate(15)
+                ->withQueryString()
+            : collect();
+
+        return view('tt-lock-settings.locks', [
+            'settings' => Schema::hasTable('tt_lock_settings') ? TtLockSetting::query()->orderBy('name')->get() : collect(),
+            'locks' => $locks,
+            'statuses' => TtLock::STATUSES,
+            'schemaReady' => $this->schemaReady(),
+        ]);
+    }
+
+    public function activity(Request $request)
+    {
+        $events = Schema::hasTable('tt_lock_events')
+            ? TtLockEvent::query()
+                ->with(['ttLock.unit.building', 'unit.building'])
+                ->when($request->filled('search'), function ($query) use ($request): void {
+                    $search = $request->string('search')->toString();
+                    $query->where(function ($query) use ($search): void {
+                        $query->where('lock_name', 'like', "%{$search}%")
+                            ->orWhere('lock_id', 'like', "%{$search}%")
+                            ->orWhere('event_type', 'like', "%{$search}%")
+                            ->orWhere('operator_name', 'like', "%{$search}%")
+                            ->orWhere('record_id', 'like', "%{$search}%")
+                            ->orWhereHas('ttLock.unit', fn ($query) => $query->where('unit_no', 'like', "%{$search}%"));
+                    });
+                })
+                ->when($request->filled('event_type'), fn ($query) => $query->where('event_type', $request->string('event_type')->toString()))
+                ->latest('event_at')
+                ->latest()
+                ->paginate(25)
+                ->withQueryString()
+            : collect();
+
+        return view('tt-lock-settings.activity', [
+            'events' => $events,
+            'eventTypes' => Schema::hasTable('tt_lock_events') ? TtLockEvent::query()->select('event_type')->distinct()->orderBy('event_type')->pluck('event_type') : collect(),
             'schemaReady' => $this->schemaReady(),
         ]);
     }
