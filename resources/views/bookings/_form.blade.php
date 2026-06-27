@@ -12,9 +12,9 @@
         </div></div>
         <div class="erp-card p-5"><h2 class="text-lg font-bold text-[#071a3b]">Stay dates</h2><div class="mt-5 grid gap-4 md:grid-cols-4">
             <div><x-input-label for="check_in_date" value="Check-in date" /><x-text-input id="check_in_date" name="check_in_date" type="date" class="mt-1 block w-full" :value="old('check_in_date', isset($booking) && $booking->check_in_date ? $booking->check_in_date->format('Y-m-d') : '')" required /></div>
-            <div><x-input-label for="check_in_time" value="Check-in time" /><x-text-input id="check_in_time" name="check_in_time" type="time" class="mt-1 block w-full" :value="old('check_in_time', $booking->check_in_time ?? '15:00')" /></div>
+            <div><x-input-label for="check_in_time" value="Check-in time" /><x-text-input id="check_in_time" name="check_in_time" type="time" class="mt-1 block w-full" :value="old('check_in_time', isset($booking) && $booking->check_in_time ? \Illuminate\Support\Carbon::parse($booking->check_in_time)->format('H:i') : '15:00')" /></div>
             <div><x-input-label for="check_out_date" value="Check-out date" /><x-text-input id="check_out_date" name="check_out_date" type="date" class="mt-1 block w-full" :value="old('check_out_date', isset($booking) && $booking->check_out_date ? $booking->check_out_date->format('Y-m-d') : '')" required /></div>
-            <div><x-input-label for="check_out_time" value="Check-out time" /><x-text-input id="check_out_time" name="check_out_time" type="time" class="mt-1 block w-full" :value="old('check_out_time', $booking->check_out_time ?? '11:00')" /></div>
+            <div><x-input-label for="check_out_time" value="Check-out time" /><x-text-input id="check_out_time" name="check_out_time" type="time" class="mt-1 block w-full" :value="old('check_out_time', isset($booking) && $booking->check_out_time ? \Illuminate\Support\Carbon::parse($booking->check_out_time)->format('H:i') : '11:00')" /></div>
             <div><x-input-label for="guest_count" value="Guests" /><x-text-input id="guest_count" name="guest_count" type="number" min="1" class="mt-1 block w-full" :value="old('guest_count', $booking->guest_count ?? 1)" /></div>
         </div></div>
         <div class="erp-card p-5">

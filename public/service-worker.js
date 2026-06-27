@@ -1,5 +1,5 @@
-const CACHE_NAME = 'pattern-shell-v3';
-const OFFLINE_ASSETS = ['/offline', '/icons/erp-icon.svg', '/manifest.webmanifest'];
+const CACHE_NAME = 'pattern-shell-v4';
+const OFFLINE_ASSETS = ['/offline', '/icons/pattern-192.png', '/icons/pattern-512.png', '/manifest.webmanifest'];
 
 self.addEventListener('install', (event) => {
     event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(OFFLINE_ASSETS)));
@@ -29,8 +29,8 @@ self.addEventListener('push', (event) => {
     const title = payload.title || 'Pattern RMS';
     const options = {
         body: payload.body || 'You have a new notification.',
-        icon: payload.icon || '/icons/erp-icon.svg',
-        badge: payload.badge || '/icons/erp-icon.svg',
+        icon: payload.icon || '/icons/pattern-192.png',
+        badge: payload.badge || '/icons/pattern-192.png',
         data: { url: payload.url || '/support' },
     };
 

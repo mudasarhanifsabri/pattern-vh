@@ -437,7 +437,7 @@
             showSupportToast(title, body);
             if (!('Notification' in window) || Notification.permission !== 'granted') return;
             try {
-                new Notification(title, { body, icon: '/icons/erp-icon.svg', badge: '/icons/erp-icon.svg' });
+                new Notification(title, { body, icon: '/icons/pattern-192.png', badge: '/icons/pattern-192.png' });
             } catch (error) {}
         };
 
@@ -468,8 +468,8 @@
                     const registration = await navigator.serviceWorker.ready;
                     await registration.showNotification('Support alerts enabled', {
                         body: 'Pattern RMS support notifications are ready.',
-                        icon: '/icons/erp-icon.svg',
-                        badge: '/icons/erp-icon.svg',
+                        icon: '/icons/pattern-192.png',
+                        badge: '/icons/pattern-192.png',
                         data: { url: '{{ route('support.index') }}' },
                     });
                 } catch (error) {}

@@ -38,13 +38,14 @@ class WelcomePasswordSetupNotification extends Notification implements ShouldQue
         ]);
 
         return (new MailMessage)
-            ->subject('Welcome to '.$this->portalName.' - set your password')
-            ->greeting('Welcome, '.$notifiable->name)
-            ->line('Your owner portal access for Pattern Vacation Homes Rental is ready.')
-            ->line('Please set your password to securely access your account when the owner portal is enabled.')
-            ->action('Set my password', $setupUrl)
-            ->line('This secure link will expire according to the application password reset policy.')
-            ->salutation('Regards, Pattern RMS Team');
+            ->subject('Welcome to Pattern Vacation Homes - Owner Portal Access')
+            ->view('emails.welcome-password-setup', [
+                'ownerName' => $notifiable->name,
+                'ownerEmail' => $notifiable->getEmailForPasswordReset(),
+                'portalName' => $this->portalName,
+                'loginUrl' => URL::route('login'),
+                'setupUrl' => $setupUrl,
+            ]);
     }
 
     /**

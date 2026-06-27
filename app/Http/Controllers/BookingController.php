@@ -167,6 +167,11 @@ class BookingController extends Controller
 
     private function validated(Request $request): array
     {
+        $request->merge([
+            'check_in_time' => $this->normalizeTime($request->input('check_in_time')),
+            'check_out_time' => $this->normalizeTime($request->input('check_out_time')),
+        ]);
+
         return $request->validate([
             'booking_type' => ['required', Rule::in(Booking::TYPES)],
             'unit_id' => ['required', 'exists:units,id'],
@@ -252,6 +257,19 @@ class BookingController extends Controller
     private function bookingDateTime($date, ?string $time, string $fallbackTime): Carbon
     {
         return Carbon::parse($date->format('Y-m-d').' '.($time ?: $fallbackTime));
+    }
+
+    private function normalizeTime(?string $time): ?string
+    {
+        if (! filled($time)) {
+            return null;
+        }
+
+        try {
+            return Carbon::parse($time)->format('H:i');
+        } catch (\Throwable) {
+            return $time;
+        }
     }
 
     private function nextBookingNumber(): string

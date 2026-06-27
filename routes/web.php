@@ -296,10 +296,10 @@ Route::middleware('auth')->group(function () {
         ->middleware('permission:owner-payouts.manage')
         ->name('owner-payouts.transfers.store');
     Route::get('reports', [ReportController::class, 'index'])
-        ->middleware('permission:reports.view|reports.export')
+        ->middleware('permission:reports.view|reports.export|portal.owner')
         ->name('reports.index');
     Route::get('reports/export', [ReportController::class, 'export'])
-        ->middleware('permission:reports.export')
+        ->middleware('permission:reports.export|portal.owner')
         ->name('reports.export');
 
     Route::get('settings', [SystemSettingsController::class, 'index'])

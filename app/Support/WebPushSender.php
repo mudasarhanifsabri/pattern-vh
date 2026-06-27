@@ -127,8 +127,8 @@ class WebPushSender
             'title' => $notification->subject ?: 'Pattern RMS',
             'body' => $notification->message ?: 'You have a new Pattern RMS update.',
             'url' => data_get($notification->payload, 'url') ?: ($notification->booking_id ? route('bookings.show', $notification->booking_id) : route('dashboard')),
-            'icon' => asset('icons/erp-icon.svg'),
-            'badge' => asset('icons/erp-icon.svg'),
+            'icon' => asset('icons/pattern-192.png'),
+            'badge' => asset('icons/pattern-192.png'),
             'notification_id' => $notification->id,
         ];
     }
