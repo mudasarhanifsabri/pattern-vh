@@ -137,6 +137,36 @@ class TtLockApi
         ];
     }
 
+    public function controlLock(TtLock $lock, string $action): array
+    {
+        $setting = $lock->setting;
+
+        if (! $setting) {
+            throw new \RuntimeException('No TTLock API group is attached to this lock.');
+        }
+
+        $token = $this->validAccessToken($setting);
+        $endpoint = $action === 'lock' ? '/lock/lock' : '/lock/unlock';
+
+        $response = Http::asForm()
+            ->timeout(30)
+            ->post($this->apiUrl($endpoint), [
+                'clientId' => $setting->client_id,
+                'accessToken' => $token,
+                'lockId' => $lock->lock_id,
+                'date' => $this->milliseconds(),
+            ]);
+
+        $payload = $this->payloadOrFail($response->json(), 'Could not '.$action.' this smart lock.');
+
+        $setting->forceFill([
+            'last_tested_at' => now(),
+            'last_error' => null,
+        ])->save();
+
+        return $payload;
+    }
+
     public function token(TtLockSetting $setting): array
     {
         $payload = $this->requestToken($setting, $setting->password);

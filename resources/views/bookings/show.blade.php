@@ -30,8 +30,8 @@
         $wifiName = $booking->unit->wifi_name ?: 'Pattern_Guest';
         $wifiPassword = $booking->unit->wifi_password ?: 'Ask support';
         $smartLockCodeDisplay = $booking->smart_lock_code ? trim(chunk_split($booking->smart_lock_code, 1, ' ')) : 'Pending';
-        $smartLockValidFrom = $booking->smart_lock_code_valid_from ?: \Illuminate\Support\Carbon::parse($booking->check_in_date->format('Y-m-d').' '.($booking->check_in_time ?: '15:00'));
-        $smartLockValidUntil = $booking->smart_lock_code_valid_until ?: \Illuminate\Support\Carbon::parse($booking->check_out_date->format('Y-m-d').' '.($booking->check_out_time ?: '11:00'));
+        $smartLockValidFrom = \Illuminate\Support\Carbon::parse($booking->check_in_date->format('Y-m-d').' '.($booking->check_in_time ?: '15:00'));
+        $smartLockValidUntil = \Illuminate\Support\Carbon::parse($booking->check_out_date->format('Y-m-d').' '.($booking->check_out_time ?: '11:00'));
     @endphp
 
     <div class="space-y-5">
@@ -87,7 +87,7 @@
                     <div class="grid h-24 w-24 place-items-center rounded-full bg-blue-50 ring-[16px] ring-blue-50/60">
                         <svg class="h-12 w-12 text-blue-600" fill="currentColor" viewBox="0 0 24 24"><path d="M17 8h-1V6a4 4 0 0 0-8 0v2H7a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-9a2 2 0 0 0-2-2Zm-7-2a2 2 0 1 1 4 0v2h-4V6Z" /></svg>
                     </div>
-                    <p class="mt-3 text-sm font-black text-blue-600">Tap to Unlock</p>
+                    <p class="mt-3 text-sm font-black text-blue-600">Swipe Access</p>
                 </div>
                 <div>
                     <p class="text-sm font-black text-[#0b1736]">Main Door</p>
@@ -99,7 +99,11 @@
                     <p class="text-sm font-black text-blue-600">{{ $smartLockValidUntil->format('d M Y, h:i A') }}</p>
                 </div>
             </div>
-            <button class="mt-5 h-12 w-full rounded-2xl bg-blue-600 px-4 py-3 text-sm font-black text-white shadow-xl shadow-blue-600/20">Open Smart Lock</button>
+            @include('bookings.partials.tenant-smart-lock-slider', [
+                'booking' => $booking,
+                'smartLockValidFrom' => $smartLockValidFrom,
+                'smartLockValidUntil' => $smartLockValidUntil,
+            ])
         </section>
 
         <div class="grid grid-cols-2 gap-4">

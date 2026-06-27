@@ -183,6 +183,9 @@ Route::middleware('auth')->group(function () {
     Route::post('bookings/{booking}/smart-lock-access', [BookingController::class, 'updateSmartLockAccess'])
         ->middleware('permission:bookings.manage')
         ->name('bookings.smart-lock-access.update');
+    Route::post('bookings/{booking}/smart-lock-control', [BookingController::class, 'controlSmartLock'])
+        ->middleware('permission:portal.tenant')
+        ->name('bookings.smart-lock-control');
     Route::post('bookings/{booking}/request-extension', [BookingLifecycleController::class, 'requestExtension'])
         ->middleware('permission:portal.tenant')
         ->name('bookings.request-extension');

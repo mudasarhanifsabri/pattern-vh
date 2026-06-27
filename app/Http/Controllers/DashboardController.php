@@ -255,7 +255,7 @@ class DashboardController extends Controller
     private function currentTenantBooking(Tenant $tenant): ?Booking
     {
         return Booking::query()
-            ->with(['tenant', 'unit.building', 'dtcmCheckin', 'depositRefund'])
+            ->with(['tenant', 'unit.building', 'unit.ttLock.setting', 'dtcmCheckin', 'depositRefund'])
             ->where('tenant_id', $tenant->id)
             ->whereIn('booking_status', ['confirmed', 'checked_in', 'checkout_requested'])
             ->orderByDesc('check_in_date')

@@ -16,8 +16,8 @@
             $balanceDue = (float) $tenantBalanceDue;
             $openRefund = $tenantOpenRefund;
             $smartLockCodeDisplay = $booking?->smart_lock_code ? trim(chunk_split($booking->smart_lock_code, 1, ' ')) : 'Pending';
-            $smartLockValidFrom = $booking?->smart_lock_code_valid_from ?: ($booking ? \Illuminate\Support\Carbon::parse($booking->check_in_date->format('Y-m-d').' '.($booking->check_in_time ?: '15:00')) : null);
-            $smartLockValidUntil = $booking?->smart_lock_code_valid_until ?: ($booking ? \Illuminate\Support\Carbon::parse($booking->check_out_date->format('Y-m-d').' '.($booking->check_out_time ?: '11:00')) : null);
+            $smartLockValidFrom = $booking ? \Illuminate\Support\Carbon::parse($booking->check_in_date->format('Y-m-d').' '.($booking->check_in_time ?: '15:00')) : null;
+            $smartLockValidUntil = $booking ? \Illuminate\Support\Carbon::parse($booking->check_out_date->format('Y-m-d').' '.($booking->check_out_time ?: '11:00')) : null;
         @endphp
 
         <div class="tenant-app-screen space-y-5">
@@ -54,7 +54,7 @@
                                     <svg class="h-8 w-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
                                 </div>
                             </div>
-                            <p class="mt-3 text-base font-black text-blue-600">Tap to Unlock</p>
+                            <p class="mt-3 text-base font-black text-blue-600">Swipe Access</p>
                             <p class="text-xs font-semibold text-slate-500">Ensure you are near the door</p>
                         </div>
                         <div class="min-w-0">
@@ -67,6 +67,11 @@
                             <p class="font-black text-blue-600">{{ $smartLockValidUntil?->format('d M Y, h:i A') }}</p>
                         </div>
                     </div>
+                    @include('bookings.partials.tenant-smart-lock-slider', [
+                        'booking' => $booking,
+                        'smartLockValidFrom' => $smartLockValidFrom,
+                        'smartLockValidUntil' => $smartLockValidUntil,
+                    ])
                     <p class="mt-5 border-t border-slate-100 pt-4 text-sm font-semibold text-slate-600">This code is only valid during your stay.</p>
                 </section>
             @else

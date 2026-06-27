@@ -11,7 +11,9 @@ use App\Support\BookingConfirmationPdf;
 use App\Support\BookingInvoiceScheduler;
 use App\Support\BookingWorkflow;
 use App\Support\TaxCalculator;
+use App\Support\TtLockApi;
 use Illuminate\Support\Carbon;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
@@ -70,7 +72,7 @@ class BookingController extends Controller
         abort_if($tenant && ! auth()->user()->can('bookings.manage') && (int) $booking->tenant_id !== (int) $tenant->id, 403);
 
         return view('bookings.show', [
-            'booking' => $booking->load(['unit.building', 'unit.ttLock', 'tenant', 'agent', 'tasks.assignee', 'tasks.events.user', 'notificationLogs', 'dtcmCheckin', 'extensionRequests.invoice', 'depositRefund', 'checkInInspectionItems', 'invoices.payments']),
+            'booking' => $booking->load(['unit.building', 'unit.ttLock.setting', 'tenant', 'agent', 'tasks.assignee', 'tasks.events.user', 'notificationLogs', 'dtcmCheckin', 'extensionRequests.invoice', 'depositRefund', 'checkInInspectionItems', 'invoices.payments']),
         ]);
     }
 
@@ -152,6 +154,57 @@ class BookingController extends Controller
         ActivityLogger::log('bookings.smart_lock_access_updated', "Updated smart lock access for {$booking->booking_no}.", $booking);
 
         return redirect()->route('bookings.show', $booking)->with('status', 'Smart lock access updated.');
+    }
+
+    public function controlSmartLock(Request $request, Booking $booking, TtLockApi $api): JsonResponse
+    {
+        $validated = $request->validate([
+            'action' => ['required', Rule::in(['unlock', 'lock'])],
+        ]);
+
+        $tenant = $this->tenantForAuth();
+        abort_if(! $tenant || (int) $booking->tenant_id !== (int) $tenant->id, 403);
+
+        $booking->loadMissing(['unit.ttLock.setting']);
+        $validFrom = $this->bookingDateTime($booking->check_in_date, $booking->check_in_time, '15:00');
+        $validUntil = $this->bookingDateTime($booking->check_out_date, $booking->check_out_time, '11:00');
+
+        if (! in_array($booking->booking_status, ['confirmed', 'checked_in', 'checkout_requested'], true)) {
+            return response()->json(['message' => 'Smart lock access is not active for this booking.'], 423);
+        }
+
+        if (now()->lt($validFrom)) {
+            return response()->json(['message' => 'Smart lock access starts '.$validFrom->format('d M Y, h:i A').'.'], 423);
+        }
+
+        if (now()->gt($validUntil)) {
+            return response()->json(['message' => 'Smart lock access ended '.$validUntil->format('d M Y, h:i A').'.'], 423);
+        }
+
+        $lock = $booking->unit?->ttLock;
+        if (! $lock || ! $lock->setting) {
+            return response()->json(['message' => 'No connected smart lock is attached to this unit yet.'], 422);
+        }
+
+        try {
+            $payload = $api->controlLock($lock, $validated['action']);
+        } catch (\Throwable $exception) {
+            return response()->json(['message' => $exception->getMessage()], 422);
+        }
+
+        ActivityLogger::log(
+            'bookings.smart_lock_'.$validated['action'],
+            str($validated['action'])->headline()." command sent for {$booking->booking_no}.",
+            $booking,
+        );
+
+        return response()->json([
+            'ok' => true,
+            'status' => $validated['action'] === 'unlock' ? 'unlocked' : 'locked',
+            'next_action' => $validated['action'] === 'unlock' ? 'lock' : 'unlock',
+            'message' => $validated['action'] === 'unlock' ? 'Door unlocked. Swipe again to lock.' : 'Door locked. Swipe again to unlock.',
+            'payload' => $payload,
+        ]);
     }
 
     private function formData(): array
