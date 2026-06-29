@@ -152,11 +152,11 @@
             <div class="flex items-center justify-between">
                 <h2 class="text-lg font-black text-[#0b1736]">Booking Summary</h2>
                 <div class="flex items-center gap-3">
-                    <a href="{{ route('invoices.index', ['booking_id' => $booking->id]) }}" class="text-sm font-black text-amber-600">Payments</a>
+                    <a href="{{ route('tenant.invoices.index', ['booking_id' => $booking->id]) }}" class="text-sm font-black text-amber-600">Payments</a>
                     <a href="{{ route('bookings.confirmation-pdf', $booking) }}" target="_blank" class="text-sm font-black text-blue-600">View PDF</a>
                 </div>
             </div>
-            <a href="{{ route('invoices.index', ['booking_id' => $booking->id]) }}" class="mt-4 flex items-center justify-between rounded-2xl bg-amber-50 px-4 py-3 text-sm font-black text-amber-700">
+            <a href="{{ route('tenant.invoices.index', ['booking_id' => $booking->id]) }}" class="mt-4 flex items-center justify-between rounded-2xl bg-amber-50 px-4 py-3 text-sm font-black text-amber-700">
                 <span>Invoices & receipts</span>
                 <span>AED {{ number_format($bookingBalanceDue, 2) }} due</span>
             </a>

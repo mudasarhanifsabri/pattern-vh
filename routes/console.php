@@ -146,7 +146,7 @@ Artisan::command('invoices:send-reminders', function () {
                             'invoice_id' => $invoice->id,
                             'due_date' => $invoice->due_date?->toDateString(),
                             'balance_amount' => $invoice->balance_amount,
-                            'url' => route('invoices.show', $invoice),
+                            'url' => route('tenant.invoices.show', $invoice),
                             'integration_ready' => true,
                         ],
                     ],

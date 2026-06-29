@@ -129,7 +129,7 @@
                             <p class="text-xs font-bold text-amber-600">Balance due</p>
                             <p class="mt-1 text-lg font-black text-amber-700">AED {{ number_format($balanceDue, 0) }}</p>
                         </div>
-                        <a href="{{ route('invoices.index') }}" class="rounded-2xl bg-slate-900 p-3 text-center font-black text-white active:scale-[0.98]">
+                        <a href="{{ route('tenant.invoices.index') }}" class="rounded-2xl bg-slate-900 p-3 text-center font-black text-white active:scale-[0.98]">
                             Open payments
                             <span class="mt-1 block text-xs font-semibold text-white/70">Invoices & receipts</span>
                         </a>
@@ -164,7 +164,7 @@
                 <p class="mt-2 text-sm leading-6 text-slate-600">Book services, request collection, or contact our team.</p>
                 <div class="mt-5 grid grid-cols-2 gap-3">
                     <a href="{{ route('tenant.payment-requests.index') }}" class="rounded-2xl bg-blue-600 px-4 py-3 text-center text-sm font-black text-white shadow-lg shadow-blue-600/25">Request Collection</a>
-                    <a href="{{ route('invoices.index') }}" class="rounded-2xl bg-white px-4 py-3 text-center text-sm font-black text-blue-600">Invoices & Receipts</a>
+                    <a href="{{ route('tenant.invoices.index') }}" class="rounded-2xl bg-white px-4 py-3 text-center text-sm font-black text-blue-600">Invoices & Receipts</a>
                 </div>
                 <div class="mt-5 grid grid-cols-2 gap-3 text-sm">
                     <div class="rounded-2xl bg-white/80 p-3"><p class="font-semibold text-slate-500">Balance due</p><p class="mt-1 text-lg font-black text-[#071a3b]">AED {{ number_format($balanceDue, 0) }}</p></div>

@@ -39,6 +39,7 @@ use App\Http\Controllers\SoftwareUpdateController;
 use App\Http\Controllers\SystemSettingsController;
 use App\Http\Controllers\SupportCenterController;
 use App\Http\Controllers\TenantController;
+use App\Http\Controllers\TenantInvoiceController;
 use App\Http\Controllers\TenantPaymentRequestController;
 use App\Http\Controllers\TaskManagementController;
 use App\Http\Controllers\TtLockCallbackController;
@@ -462,6 +463,12 @@ Route::middleware('auth')->group(function () {
     Route::post('tenant/payment-requests', [TenantPaymentRequestController::class, 'store'])
         ->middleware('permission:portal.tenant')
         ->name('tenant.payment-requests.store');
+    Route::get('tenant/payments', [TenantInvoiceController::class, 'index'])
+        ->middleware('permission:portal.tenant')
+        ->name('tenant.invoices.index');
+    Route::get('tenant/payments/{invoice}', [TenantInvoiceController::class, 'show'])
+        ->middleware('permission:portal.tenant')
+        ->name('tenant.invoices.show');
 
     Route::prefix('admin')->name('admin.')->middleware('permission:users.view|roles.view|permissions.view|activity.view')->group(function () {
         Route::resource('users', UserController::class)->middleware('permission:users.manage');

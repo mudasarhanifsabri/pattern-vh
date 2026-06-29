@@ -5,8 +5,10 @@
         && ! auth()->user()?->can('users.manage');
     $tenantTopbarTitle = $ownerOnly
         ? (request()->routeIs('owner-statements.*') ? 'Statement' : (request()->routeIs('owner-payouts.*') ? 'Payouts' : (request()->routeIs('units.*') ? 'Property' : (request()->routeIs('reports.*') ? 'Income' : (request()->routeIs('support.*') ? 'Messages' : (request()->routeIs('profile.*') ? 'Profile' : 'Owner'))))))
-        : (request()->routeIs('bookings.show') ? 'Booking Details' : (request()->routeIs('bookings.*') ? 'Bookings' : (request()->routeIs('support.*') ? 'Messages' : (request()->routeIs('profile.*') ? 'Profile' : 'My Stay'))));
-    $tenantTopbarBackRoute = request()->routeIs('bookings.show') ? route('bookings.index') : null;
+        : (request()->routeIs('bookings.show') ? 'Booking Details' : (request()->routeIs('bookings.*') ? 'Bookings' : (request()->routeIs('tenant.invoices.*') ? 'Payments' : (request()->routeIs('support.*') ? 'Messages' : (request()->routeIs('profile.*') ? 'Profile' : 'My Stay')))));
+    $tenantTopbarBackRoute = request()->routeIs('bookings.show')
+        ? route('bookings.index')
+        : (request()->routeIs('tenant.invoices.show') ? route('tenant.invoices.index') : null);
 @endphp
 
 <header class="tenant-topbar sticky top-0 z-20 mx-auto flex h-[76px] w-full max-w-[430px] items-center gap-3 border-b-0 bg-[#f7f9fe]/95 px-4 pt-3 backdrop-blur max-[380px]:px-3">
