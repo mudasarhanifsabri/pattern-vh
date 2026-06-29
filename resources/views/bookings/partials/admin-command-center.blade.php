@@ -10,6 +10,7 @@
     $paidAmount = $invoices->sum(fn ($invoice) => (float) $invoice->paid_amount);
     $issueCount = $booking->checkInInspectionItems->whereIn('condition_status', ['damaged', 'missing', 'needs_attention'])->count();
     $checkoutDone = $booking->booking_status === 'checked_out';
+    $bookingConfirmed = in_array($booking->booking_status, ['confirmed', 'checked_in', 'checkout_requested', 'checked_out'], true);
     $paymentDone = $invoices->isNotEmpty() ? $balanceDue <= 0 : in_array($booking->booking_status, ['confirmed', 'checked_in', 'checkout_requested', 'checked_out'], true);
     $dtcmDone = $booking->dtcmCheckin?->status === 'registered';
     $accessDone = (bool) $booking->smart_lock_code;
@@ -23,7 +24,12 @@
         default => 'bg-slate-50 text-slate-600 ring-slate-100',
     };
     $timeline = [
-        ['label' => 'Booking Confirmed', 'date' => $booking->created_at, 'done' => true, 'state' => 'complete'],
+        [
+            'label' => $bookingConfirmed ? 'Booking Confirmed' : 'Pending Confirmation',
+            'date' => $bookingConfirmed ? $booking->updated_at : null,
+            'done' => $bookingConfirmed,
+            'state' => $bookingConfirmed ? 'complete' : 'pending',
+        ],
         ['label' => 'Payment Received', 'date' => $paymentDone ? $booking->updated_at : null, 'done' => $paymentDone, 'state' => $paymentDone ? 'complete' : 'pending'],
         ['label' => 'DTCM Check-in', 'date' => $booking->dtcmCheckin?->registered_at, 'done' => $dtcmDone, 'state' => $dtcmDone ? 'complete' : 'pending'],
         ['label' => 'Building Access', 'date' => $accessDone ? $booking->smart_lock_code_valid_from : null, 'done' => $accessDone, 'state' => $accessDone ? 'complete' : 'pending'],
