@@ -51,7 +51,7 @@ class BookingConfirmationPdf
     private function chargeRows(Booking $booking): array
     {
         return collect([
-            ['Accommodation charges', $this->stayNights($booking).' nights', (float) $booking->rent_amount],
+            ['Accommodation charges', $this->stayNights($booking).' days', (float) $booking->rent_amount],
             ['VAT 5% on rent', '-', (float) $booking->vat_amount],
             ['Security deposit', '1', (float) $booking->deposit_amount],
             ['DTCM fee', '1', (float) $booking->dtcm_fee],

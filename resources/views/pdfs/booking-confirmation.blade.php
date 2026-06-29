@@ -163,7 +163,7 @@
                     <table class="info">
                         <tr><td class="label">Check-in</td><td class="value">{{ $checkInDate }} at {{ $checkInTime }}</td></tr>
                         <tr><td class="label">Check-out</td><td class="value">{{ $checkOutDate }} at {{ $checkOutTime }}</td></tr>
-                        <tr><td class="label">Nights</td><td class="value">{{ $stayNights }} night(s)</td></tr>
+                        <tr><td class="label">Days</td><td class="value">{{ $stayNights }} day(s)</td></tr>
                         <tr><td class="label">Source</td><td class="value">{{ $booking->source ?: 'Direct booking' }}</td></tr>
                         <tr><td class="label">Door Code</td><td class="value">{{ $doorCode }}</td></tr>
                     </table>
