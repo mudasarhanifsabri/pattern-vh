@@ -189,11 +189,16 @@ class SoftwareUpdateController extends Controller
         }
 
         $file = $files->first();
+        $content = rescue(
+            fn () => $this->safeLogText(File::get($file->getPathname())),
+            'The latest update log could not be read.',
+            report: true
+        );
 
         return [
             'name' => $file->getFilename(),
             'updated_at' => date('M d, Y H:i:s', $file->getMTime()),
-            'content' => Str::limit(File::get($file->getPathname()), 120000, "\n... log truncated ..."),
+            'content' => Str::limit($content, 120000, "\n... log truncated ..."),
         ];
     }
 
@@ -223,8 +228,8 @@ class SoftwareUpdateController extends Controller
         ])
             ->filter(fn (array $log): bool => $log['path'] && is_file($log['path']))
             ->map(function (array $log): array {
-                $log['updated_at'] = date('M d, Y H:i:s', filemtime($log['path']));
-                $log['size'] = number_format(filesize($log['path']) / 1024, 1).' KB';
+                $log['updated_at'] = rescue(fn () => date('M d, Y H:i:s', filemtime($log['path'])), 'Not available', report: true);
+                $log['size'] = rescue(fn () => number_format(filesize($log['path']) / 1024, 1).' KB', 'Not available', report: true);
 
                 return $log;
             })
@@ -244,5 +249,22 @@ class SoftwareUpdateController extends Controller
             ->first();
 
         return $file?->getPathname();
+    }
+
+    private function safeLogText(string $content): string
+    {
+        $content = str_replace("\0", '', $content);
+
+        $isUtf8 = function_exists('mb_check_encoding')
+            ? mb_check_encoding($content, 'UTF-8')
+            : preg_match('//u', $content) === 1;
+
+        if ($isUtf8) {
+            return $content;
+        }
+
+        $converted = @iconv('UTF-8', 'UTF-8//IGNORE', $content);
+
+        return is_string($converted) ? $converted : '[Log contains unsupported characters and could not be displayed.]';
     }
 }
