@@ -112,7 +112,9 @@ class InvoiceController extends Controller
     {
         $this->authorizeTenantInvoice($invoice);
 
-        return response($pdf->invoice($invoice), 200, ['Content-Type' => 'application/pdf', 'Content-Disposition' => 'inline; filename="'.$invoice->invoice_no.'.pdf"']);
+        $disposition = request()->boolean('download') ? 'attachment' : 'inline';
+
+        return response($pdf->invoice($invoice), 200, ['Content-Type' => 'application/pdf', 'Content-Disposition' => $disposition.'; filename="'.$invoice->invoice_no.'.pdf"']);
     }
 
     private function validated(Request $request): array

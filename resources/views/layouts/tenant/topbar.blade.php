@@ -121,7 +121,7 @@
                             const status = escapeNotificationHtml(String(item.status || '').replaceAll('_', ' '));
 
                             return `
-                            <form method="POST" action="${item.url}" class="block">
+                            <form method="POST" action="${item.url}" class="mb-2 block last:mb-0" style="margin-bottom:0.5rem;">
                                 <input type="hidden" name="_token" value="{{ csrf_token() }}">
                                 <button class="w-full rounded-2xl p-3 text-left transition ${item.is_read ? 'hover:bg-slate-50' : 'bg-blue-50 hover:bg-blue-100'}">
                                     <span class="flex items-start gap-3">

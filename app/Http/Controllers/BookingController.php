@@ -197,7 +197,7 @@ class BookingController extends Controller
         return redirect()->route('bookings.show', $booking)->with('status', 'Booking cancelled. Related invoices were cancelled and payments were rejected so active reports ignore this booking.');
     }
 
-    public function confirmationPdf(Booking $booking, BookingConfirmationPdf $pdf)
+    public function confirmationPdf(Request $request, Booking $booking, BookingConfirmationPdf $pdf)
     {
         $booking->forceFill(['confirmation_sent_at' => now()])->save();
         $booking->notificationLogs()
@@ -207,9 +207,12 @@ class BookingController extends Controller
                 'sent_at' => now(),
             ]);
 
+        $filename = $booking->booking_no.'-confirmation.pdf';
+        $disposition = $request->boolean('download') ? 'attachment' : 'inline';
+
         return response($pdf->make($booking), 200, [
             'Content-Type' => 'application/pdf',
-            'Content-Disposition' => 'inline; filename="'.$booking->booking_no.'-confirmation.pdf"',
+            'Content-Disposition' => $disposition.'; filename="'.$filename.'"',
         ]);
     }
 

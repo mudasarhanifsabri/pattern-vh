@@ -73,7 +73,7 @@
                     <p class="mt-1 text-sm font-semibold text-slate-500">Dubai, UAE</p>
                 </div>
             </div>
-            <a href="{{ route('bookings.confirmation-pdf', $booking) }}" target="_blank" class="mt-4 flex h-11 items-center justify-center gap-2 rounded-2xl bg-blue-50 text-sm font-black text-blue-600">
+            <a href="{{ route('bookings.confirmation-pdf', ['booking' => $booking, 'download' => 1]) }}" download class="mt-4 flex h-11 items-center justify-center gap-2 rounded-2xl bg-blue-50 text-sm font-black text-blue-600">
                 <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M6 9V2h12v7" /><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" /><path d="M6 14h12v8H6z" /></svg>
                 Booking PDF
             </a>
@@ -153,7 +153,7 @@
                 <h2 class="text-lg font-black text-[#0b1736]">Booking Summary</h2>
                 <div class="flex items-center gap-3">
                     <a href="{{ route('tenant.invoices.index', ['booking_id' => $booking->id]) }}" class="text-sm font-black text-amber-600">Payments</a>
-                    <a href="{{ route('bookings.confirmation-pdf', $booking) }}" target="_blank" class="text-sm font-black text-blue-600">View PDF</a>
+                    <a href="{{ route('bookings.confirmation-pdf', ['booking' => $booking, 'download' => 1]) }}" download class="text-sm font-black text-blue-600">Download PDF</a>
                 </div>
             </div>
             <a href="{{ route('tenant.invoices.index', ['booking_id' => $booking->id]) }}" class="mt-4 flex items-center justify-between rounded-2xl bg-amber-50 px-4 py-3 text-sm font-black text-amber-700">
@@ -167,7 +167,7 @@
                 <div class="flex items-center justify-between gap-3 py-3">
                     <span class="font-semibold text-slate-500">Deposit receipt</span>
                     @if($depositReceipt)
-                        <a href="{{ route('receipts.pdf', $depositReceipt) }}" target="_blank" class="rounded-xl bg-emerald-600 px-3 py-2 text-xs font-black text-white">View receipt</a>
+                        <a href="{{ route('receipts.pdf', ['receipt' => $depositReceipt, 'download' => 1]) }}" download class="rounded-xl bg-emerald-600 px-3 py-2 text-xs font-black text-white">Download receipt</a>
                     @else
                         <span class="rounded-xl bg-amber-50 px-3 py-2 text-xs font-black text-amber-700">Pending</span>
                     @endif

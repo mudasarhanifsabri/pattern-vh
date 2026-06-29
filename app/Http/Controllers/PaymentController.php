@@ -168,7 +168,9 @@ class PaymentController extends Controller
             abort_unless((int) $receipt->invoice?->tenant_id === (int) $tenant->id, 403);
         }
 
-        return response($pdf->receipt($receipt), 200, ['Content-Type' => 'application/pdf', 'Content-Disposition' => 'inline; filename="'.$receipt->receipt_no.'.pdf"']);
+        $disposition = request()->boolean('download') ? 'attachment' : 'inline';
+
+        return response($pdf->receipt($receipt), 200, ['Content-Type' => 'application/pdf', 'Content-Disposition' => $disposition.'; filename="'.$receipt->receipt_no.'.pdf"']);
     }
 
     public function proof(Payment $payment)

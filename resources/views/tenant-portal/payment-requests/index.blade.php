@@ -137,7 +137,7 @@
                         <div class="rounded-2xl bg-slate-50 p-3"><p class="text-[10px] font-bold uppercase text-slate-400">Unit</p><p class="mt-1 text-sm font-bold text-[#071a3b]">{{ $requestRecord->booking->unit->unit_no }}</p></div>
                     </div>
                     @if ($requestRecord->payment?->receipt)
-                        <a href="{{ route('receipts.pdf', $requestRecord->payment->receipt) }}" target="_blank" class="mt-3 inline-flex rounded-xl bg-emerald-600 px-3 py-2 text-xs font-bold text-white">Receipt PDF / {{ $requestRecord->payment->receipt->check_in_code }}</a>
+                        <a href="{{ route('receipts.pdf', ['receipt' => $requestRecord->payment->receipt, 'download' => 1]) }}" download class="mt-3 inline-flex rounded-xl bg-emerald-600 px-3 py-2 text-xs font-bold text-white">Download receipt / {{ $requestRecord->payment->receipt->check_in_code }}</a>
                     @endif
                 </div>
             @empty

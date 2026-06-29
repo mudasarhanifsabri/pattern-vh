@@ -137,6 +137,7 @@
                 const pushButtons = () => Array.from(document.querySelectorAll('[data-push-enable]'));
                 const pushTestButtons = () => Array.from(document.querySelectorAll('[data-push-test]'));
                 const pushStatusNodes = () => Array.from(document.querySelectorAll('[data-push-status]'));
+                const pushPanels = () => Array.from(document.querySelectorAll('[data-push-panel]'));
                 const setPushStatus = (message, enabled = false) => {
                     pushStatusNodes().forEach((node) => { node.textContent = message; });
                     pushButtons().forEach((button) => {
@@ -145,6 +146,10 @@
                         button.classList.toggle('opacity-60', enabled);
                     });
                     pushTestButtons().forEach((button) => button.classList.toggle('hidden', !enabled));
+                    pushPanels().forEach((panel) => {
+                        panel.classList.toggle('hidden', enabled);
+                        panel.style.display = enabled ? 'none' : '';
+                    });
                 };
                 const urlBase64ToUint8Array = (base64String) => {
                     const padding = '='.repeat((4 - base64String.length % 4) % 4);

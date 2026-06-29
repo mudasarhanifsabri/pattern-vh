@@ -50,7 +50,7 @@
                     </form>
                 </div>
                 @if(config('services.webpush.public_key'))
-                    <div class="mt-3 rounded-2xl bg-blue-50 p-3">
+                    <div data-push-panel class="mt-3 rounded-2xl bg-blue-50 p-3">
                         <div class="flex items-center gap-3">
                             <div class="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-white text-blue-600">
                                 <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M15 17h5l-1.4-1.4A2 2 0 0 1 18 14.2V11a6 6 0 1 0-12 0v3.2a2 2 0 0 1-.6 1.4L4 17h5m6 0a3 3 0 0 1-6 0" /></svg>
@@ -67,7 +67,7 @@
                     <p class="mt-3 rounded-2xl bg-amber-50 px-3 py-2 text-[11px] font-bold text-amber-700">Push keys are not configured yet. Run <span class="font-black">php artisan webpush:vapid</span>.</p>
                 @endif
             </div>
-                <div data-notification-list class="max-h-[420px] overflow-y-auto p-2">
+                <div data-notification-list class="max-h-[420px] space-y-2 overflow-y-auto p-2">
                     @php
                         $safeTopbarNotifications = collect($topbarNotifications ?? [])->filter(
                             fn ($item) => $item instanceof \App\Models\NotificationLog
@@ -78,7 +78,7 @@
                             $displayStatus = $notification->sent_at ? 'sent' : $notification->status;
                             $isRead = (bool) $notification->is_read;
                         @endphp
-                        <form method="POST" action="{{ route('notifications.read', $notification) }}" class="block">
+                        <form method="POST" action="{{ route('notifications.read', $notification) }}" class="mb-2 block last:mb-0">
                             @csrf
                             <button class="w-full rounded-2xl p-3 text-left transition {{ $isRead ? 'hover:bg-slate-50' : 'bg-blue-50 hover:bg-blue-100' }}">
                                 <span class="flex items-start gap-3">
@@ -208,7 +208,7 @@
                             const status = escapeNotificationHtml(String(item.status || '').replaceAll('_', ' '));
 
                             return `
-                            <form method="POST" action="${item.url}" class="block">
+                            <form method="POST" action="${item.url}" class="mb-2 block last:mb-0" style="margin-bottom:0.5rem;">
                                 <input type="hidden" name="_token" value="{{ csrf_token() }}">
                                 <button class="w-full rounded-2xl p-3 text-left transition ${item.is_read ? 'hover:bg-slate-50' : 'bg-blue-50 hover:bg-blue-100'}">
                                     <span class="flex items-start gap-3">

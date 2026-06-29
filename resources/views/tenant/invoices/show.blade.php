@@ -29,7 +29,7 @@
                 </div>
             </div>
             <div class="mt-4 grid grid-cols-2 gap-3">
-                <a href="{{ route('invoices.pdf', $invoice) }}" target="_blank" class="rounded-2xl bg-blue-600 px-4 py-3 text-center text-sm font-black text-white">Invoice PDF</a>
+                <a href="{{ route('invoices.pdf', ['invoice' => $invoice, 'download' => 1]) }}" download class="rounded-2xl bg-blue-600 px-4 py-3 text-center text-sm font-black text-white">Download invoice</a>
                 <a href="{{ route('tenant.payment-requests.index') }}" class="rounded-2xl bg-slate-900 px-4 py-3 text-center text-sm font-black text-white">Request collection</a>
             </div>
         </section>
@@ -68,7 +68,7 @@
                             <span class="rounded-full {{ $payment->status === 'approved' ? 'bg-emerald-50 text-emerald-700' : ($payment->status === 'rejected' ? 'bg-rose-50 text-rose-700' : 'bg-amber-50 text-amber-700') }} px-3 py-1 text-xs font-black">{{ str($payment->status)->headline() }}</span>
                         </div>
                         @if($payment->receipt)
-                            <a href="{{ route('receipts.pdf', $payment->receipt) }}" target="_blank" class="mt-3 flex items-center justify-between rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-black text-white">
+                            <a href="{{ route('receipts.pdf', ['receipt' => $payment->receipt, 'download' => 1]) }}" download class="mt-3 flex items-center justify-between rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-black text-white">
                                 <span>Download receipt</span>
                                 <span>{{ $payment->receipt->receipt_no }}</span>
                             </a>
