@@ -3,6 +3,8 @@
     $lock = $booking->unit->ttLock;
     $refund = $booking->depositRefund;
     $invoices = $booking->invoices->sortBy('due_date');
+    $primaryInvoice = $invoices->first();
+    $depositReceipt = $booking->depositReceiptRecord;
     $pendingInvoices = $invoices->filter(fn ($invoice) => (float) $invoice->balance_amount > 0 && $invoice->status !== 'cancelled');
     $balanceDue = $pendingInvoices->sum(fn ($invoice) => (float) $invoice->balance_amount);
     $paidAmount = $invoices->sum(fn ($invoice) => (float) $invoice->paid_amount);
@@ -198,7 +200,14 @@
             <section id="finance" class="scroll-mt-32 rounded-[1.4rem] border border-slate-200 bg-white p-5 shadow-sm">
                 <div class="flex flex-wrap items-center justify-between gap-3">
                     <h2 class="text-lg font-black text-[#071a3b]">Financial summary</h2>
-                    <a href="{{ route('invoices.index', ['booking_id' => $booking->id]) }}" class="rounded-xl border border-slate-200 px-3 py-2 text-xs font-black text-blue-700">View statement</a>
+                    <div class="flex flex-wrap gap-2">
+                        @if($depositReceipt)
+                            <a href="{{ route('receipts.pdf', $depositReceipt) }}" target="_blank" class="rounded-xl bg-emerald-600 px-3 py-2 text-xs font-black text-white">Deposit receipt</a>
+                        @else
+                            <span class="rounded-xl bg-amber-50 px-3 py-2 text-xs font-black text-amber-700">Deposit receipt pending</span>
+                        @endif
+                        <a href="{{ route('invoices.index', ['booking_id' => $booking->id]) }}" class="rounded-xl border border-slate-200 px-3 py-2 text-xs font-black text-blue-700">View statement</a>
+                    </div>
                 </div>
                 <div class="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
                     @foreach([
@@ -424,7 +433,12 @@
                     <p class="text-xl font-black text-[#071a3b]">AED {{ number_format((float) ($refund?->deposit_amount ?? $booking->deposit_amount), 2) }}</p>
                     <p class="mt-1 text-sm font-semibold text-amber-600">{{ $inspectionDone ? 'Inspection complete' : 'Pending inspection' }}</p>
                 </div>
-                <button type="button" @click="modal = 'deposit'" class="mt-3 w-full rounded-xl border border-blue-100 px-4 py-2.5 text-sm font-black text-blue-700">View Deposit Details</button>
+                <div class="mt-3 grid gap-2">
+                    @if($depositReceipt)
+                        <a href="{{ route('receipts.pdf', $depositReceipt) }}" target="_blank" class="w-full rounded-xl bg-emerald-600 px-4 py-2.5 text-center text-sm font-black text-white">Deposit Receipt</a>
+                    @endif
+                    <button type="button" @click="modal = 'deposit'" class="w-full rounded-xl border border-blue-100 px-4 py-2.5 text-sm font-black text-blue-700">View Deposit Details</button>
+                </div>
             </section>
 
             <section class="rounded-[1.4rem] border border-slate-200 bg-white p-5 shadow-sm">

@@ -6,6 +6,7 @@
     $accessMode = old('smart_lock_code_mode', $booking->smart_lock_code_mode ?: 'auto');
     $accessValidFrom = old('smart_lock_code_valid_from', $booking->smart_lock_code_valid_from?->format('Y-m-d\TH:i'));
     $accessValidUntil = old('smart_lock_code_valid_until', $booking->smart_lock_code_valid_until?->format('Y-m-d\TH:i'));
+    $depositReceipt = $booking->depositReceiptRecord;
     $bookingJourneySteps = [
         ['key' => 'overview', 'label' => 'Booking information', 'complete' => true, 'status' => 'Complete', 'note' => $booking->unit->building->name.' / Unit '.$booking->unit->unit_no],
         ['key' => 'confirmation', 'label' => 'Booking confirmation', 'complete' => (bool) $booking->confirmation_signed_at, 'status' => $booking->confirmation_signed_at ? 'Signed' : 'Pending signature', 'note' => $booking->confirmation_link_sent_at ? 'Link sent '.$booking->confirmation_link_sent_at->format('M d, H:i') : 'Send confirmation link'],
@@ -134,6 +135,14 @@
                 <div class="flex justify-between py-3"><span class="font-semibold text-slate-500">Rent</span><span class="font-black text-[#0b1736]">AED {{ number_format((float) $booking->rent_amount, 2) }}</span></div>
                 <div class="flex justify-between py-3"><span class="font-semibold text-slate-500">VAT 5% on rent</span><span class="font-black text-[#0b1736]">AED {{ number_format((float) $booking->vat_amount, 2) }}</span></div>
                 <div class="flex justify-between py-3"><span class="font-semibold text-slate-500">Security deposit</span><span class="font-black text-[#0b1736]">AED {{ number_format((float) $booking->deposit_amount, 2) }}</span></div>
+                <div class="flex items-center justify-between gap-3 py-3">
+                    <span class="font-semibold text-slate-500">Deposit receipt</span>
+                    @if($depositReceipt)
+                        <a href="{{ route('receipts.pdf', $depositReceipt) }}" target="_blank" class="rounded-xl bg-emerald-600 px-3 py-2 text-xs font-black text-white">View receipt</a>
+                    @else
+                        <span class="rounded-xl bg-amber-50 px-3 py-2 text-xs font-black text-amber-700">Pending</span>
+                    @endif
+                </div>
                 <div class="flex justify-between py-3 text-base"><span class="font-black text-[#0b1736]">Total</span><span class="font-black text-blue-600">AED {{ number_format((float) $booking->total_amount, 2) }}</span></div>
             </div>
         </section>

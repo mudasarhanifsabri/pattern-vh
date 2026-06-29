@@ -11,14 +11,14 @@ class SecurityDepositController extends Controller
     public function index(Request $request)
     {
         $refunds = BookingDepositRefund::query()
-            ->with(['booking.unit.building', 'tenant'])
+            ->with(['booking.unit.building', 'booking.invoices.receipts', 'tenant'])
             ->when($request->filled('status'), fn ($query) => $query->where('status', $request->input('status')))
             ->latest()
             ->paginate(12)
             ->withQueryString();
 
         $activeBookings = Booking::query()
-            ->with(['tenant', 'unit.building', 'depositRefund'])
+            ->with(['tenant', 'unit.building', 'depositRefund', 'invoices.receipts'])
             ->where('deposit_amount', '>', 0)
             ->whereIn('booking_status', ['confirmed', 'checked_in', 'checkout_requested', 'checked_out'])
             ->latest('check_in_date')

@@ -76,7 +76,7 @@ class BookingController extends Controller
         abort_if($tenant && ! auth()->user()->can('bookings.manage') && (int) $booking->tenant_id !== (int) $tenant->id, 403);
 
         return view('bookings.show', [
-            'booking' => $booking->load(['unit.building', 'unit.ttLock.setting', 'tenant', 'agent', 'tasks.assignee', 'tasks.events.user', 'notificationLogs', 'dtcmCheckin', 'extensionRequests.invoice', 'depositRefund', 'checkInInspectionItems', 'invoices.payments']),
+            'booking' => $booking->load(['unit.building', 'unit.ttLock.setting', 'tenant', 'agent', 'tasks.assignee', 'tasks.events.user', 'notificationLogs', 'dtcmCheckin', 'extensionRequests.invoice', 'depositRefund', 'checkInInspectionItems', 'invoices.payments', 'invoices.receipts']),
         ]);
     }
 

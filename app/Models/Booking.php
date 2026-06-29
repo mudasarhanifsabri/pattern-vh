@@ -57,6 +57,19 @@ class Booking extends Model
         return $this->confirmation_signed_at ? 'signed' : 'not_signed';
     }
 
+    public function getDepositReceiptRecordAttribute(): ?Receipt
+    {
+        $invoices = $this->relationLoaded('invoices')
+            ? $this->invoices
+            : $this->invoices()->with('receipts')->get();
+
+        return $invoices
+            ->filter(fn (Invoice $invoice) => (float) $invoice->deposit_amount > 0)
+            ->flatMap(fn (Invoice $invoice) => $invoice->receipts)
+            ->sortByDesc(fn (Receipt $receipt) => $receipt->issued_at?->timestamp ?? $receipt->created_at?->timestamp ?? 0)
+            ->first();
+    }
+
     public function unit(): BelongsTo
     {
         return $this->belongsTo(Unit::class);
