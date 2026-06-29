@@ -5,8 +5,8 @@
 
     @if($tenantPortal)
         <div class="space-y-5">
-            @if (session('status') === 'profile-updated')
-                <div class="rounded-[1.35rem] border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700">Profile updated successfully.</div>
+            @if (session('status') === 'profile-updated' || session('status') === 'bank-details-updated')
+                <div class="rounded-[1.35rem] border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700">{{ session('status') === 'bank-details-updated' ? 'Refund bank details saved successfully.' : 'Profile updated successfully.' }}</div>
             @endif
 
             <section class="rounded-[1.8rem] bg-white p-5 shadow-[0_16px_40px_rgba(15,23,42,0.08)] ring-1 ring-slate-100">
@@ -26,6 +26,7 @@
                 <div class="mt-3 divide-y divide-slate-100">
                     @foreach([
                         ['Personal Information', 'M16 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0zM12 14a7 7 0 0 0-7 7h14a7 7 0 0 0-7-7z', '#edit-profile'],
+                        ['Refund Bank Details', 'M3 10h18M5 10V8l7-4 7 4v2M6 10v8M10 10v8M14 10v8M18 10v8M4 18h16', '#refund-bank-details'],
                         ['Payment Methods', 'M3 10h18M7 15h.01M11 15h2M5 6h14a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z', route('tenant.payment-requests.index')],
                         ['My Documents', 'M9 12h6m-6 4h6m2 5H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l5 5v11a2 2 0 0 1-2 2z', '#documents'],
                         ['Change Password', 'M12 15v2m-6 4h12a2 2 0 0 0 2-2v-6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2zm10-10V7a4 4 0 0 0-8 0v4h8z', '#change-password'],
@@ -59,6 +60,43 @@
                 <summary class="cursor-pointer text-lg font-black text-[#0b1736]">Personal Information</summary>
                 <div class="mt-5">@include('profile.partials.update-profile-information-form')</div>
             </details>
+
+            @if($tenant)
+                <details id="refund-bank-details" class="rounded-[1.8rem] bg-white p-5 shadow-sm ring-1 ring-slate-100" open>
+                    <summary class="cursor-pointer text-lg font-black text-[#0b1736]">Refund Bank Details</summary>
+                    <p class="mt-3 rounded-2xl bg-amber-50 p-4 text-sm font-semibold leading-6 text-amber-800">Please add the bank account where you want us to refund your security deposit after checkout. Refunds are processed within 7 working days after apartment inspection, subject to no damages, unpaid dues, or policy deductions.</p>
+                    <form method="POST" action="{{ route('profile.tenant-bank-details.update') }}" class="mt-5 space-y-4">
+                        @csrf
+                        @method('PATCH')
+                        <div>
+                            <x-input-label for="bank_account_name" value="Account holder name" />
+                            <x-text-input id="bank_account_name" name="bank_account_name" class="mt-1 block w-full" :value="old('bank_account_name', $tenant->bank_account_name)" required />
+                            <x-input-error :messages="$errors->get('bank_account_name')" class="mt-2" />
+                        </div>
+                        <div>
+                            <x-input-label for="iban" value="IBAN" />
+                            <x-text-input id="iban" name="iban" class="mt-1 block w-full uppercase" :value="old('iban', $tenant->iban)" required />
+                            <x-input-error :messages="$errors->get('iban')" class="mt-2" />
+                        </div>
+                        <div>
+                            <x-input-label for="bank_name" value="Bank name" />
+                            <x-text-input id="bank_name" name="bank_name" class="mt-1 block w-full" :value="old('bank_name', $tenant->bank_name)" />
+                            <x-input-error :messages="$errors->get('bank_name')" class="mt-2" />
+                        </div>
+                        <div>
+                            <x-input-label for="bank_account_no" value="Account number" />
+                            <x-text-input id="bank_account_no" name="bank_account_no" class="mt-1 block w-full" :value="old('bank_account_no', $tenant->bank_account_no)" />
+                            <x-input-error :messages="$errors->get('bank_account_no')" class="mt-2" />
+                        </div>
+                        <div>
+                            <x-input-label for="swift_code" value="SWIFT code" />
+                            <x-text-input id="swift_code" name="swift_code" class="mt-1 block w-full uppercase" :value="old('swift_code', $tenant->swift_code)" />
+                            <x-input-error :messages="$errors->get('swift_code')" class="mt-2" />
+                        </div>
+                        <x-primary-button>Save refund details</x-primary-button>
+                    </form>
+                </details>
+            @endif
 
             <details id="change-password" class="rounded-[1.8rem] bg-white p-5 shadow-sm ring-1 ring-slate-100">
                 <summary class="cursor-pointer text-lg font-black text-[#0b1736]">Change Password</summary>

@@ -29,6 +29,7 @@ use App\Http\Controllers\OperationsPlannerController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\PaymentCollectionRequestController;
 use App\Http\Controllers\OperationsTeamMemberController;
+use App\Http\Controllers\PortalPreviewController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\PublicSupportController;
 use App\Http\Controllers\PushSubscriptionController;
@@ -84,6 +85,11 @@ Route::get('owner-contract-signatures/{ownerContract}/{token}/document', [OwnerU
 Route::get('/dashboard', DashboardController::class)->middleware(['auth', 'verified'])->name('dashboard');
 
 Route::middleware('auth')->group(function () {
+    Route::get('admin/portal-preview/stop', [PortalPreviewController::class, 'stop'])->name('admin.portal-preview.stop');
+    Route::get('admin/portal-preview/{type}/{id}', [PortalPreviewController::class, 'start'])
+        ->whereNumber('id')
+        ->name('admin.portal-preview.start');
+
     Route::get('ceo', CeoDashboardController::class)->middleware('permission:ceo.dashboard')->name('ceo.dashboard');
     Route::get('support', [SupportCenterController::class, 'index'])->middleware('permission:support.view|support.manage')->name('support.index');
     Route::get('support/create', [SupportCenterController::class, 'create'])->middleware('permission:support.view|support.manage')->name('support.create');
@@ -112,6 +118,9 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
+    Route::patch('/profile/tenant-bank-details', [ProfileController::class, 'updateTenantBankDetails'])
+        ->middleware('permission:portal.tenant')
+        ->name('profile.tenant-bank-details.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
     Route::resource('owners', OwnerController::class)->except(['index', 'show'])->middleware('permission:owners.manage');

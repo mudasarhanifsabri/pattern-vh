@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\ProfileUpdateRequest;
+use App\Models\Tenant;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -18,6 +19,7 @@ class ProfileController extends Controller
     {
         return view('profile.edit', [
             'user' => $request->user(),
+            'tenant' => $this->tenantFor($request),
         ]);
     }
 
@@ -35,6 +37,24 @@ class ProfileController extends Controller
         $request->user()->save();
 
         return Redirect::route('profile.edit')->with('status', 'profile-updated');
+    }
+
+    public function updateTenantBankDetails(Request $request): RedirectResponse
+    {
+        $tenant = $this->tenantFor($request);
+        abort_unless($tenant, 403);
+
+        $validated = $request->validate([
+            'bank_name' => ['nullable', 'string', 'max:191'],
+            'bank_account_name' => ['required', 'string', 'max:191'],
+            'bank_account_no' => ['nullable', 'string', 'max:191'],
+            'iban' => ['required', 'string', 'max:191'],
+            'swift_code' => ['nullable', 'string', 'max:191'],
+        ]);
+
+        $tenant->update($validated);
+
+        return Redirect::route('profile.edit')->with('status', 'bank-details-updated');
     }
 
     /**
@@ -56,5 +76,17 @@ class ProfileController extends Controller
         $request->session()->regenerateToken();
 
         return Redirect::to('/');
+    }
+
+    private function tenantFor(Request $request): ?Tenant
+    {
+        if (! $request->user()?->can('portal.tenant')) {
+            return null;
+        }
+
+        return Tenant::query()
+            ->where('user_id', $request->user()->id)
+            ->orWhere('email', $request->user()->email)
+            ->first();
     }
 }

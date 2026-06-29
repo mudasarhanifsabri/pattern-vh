@@ -69,6 +69,9 @@
                                 </td>
                                 <td class="px-4 py-4">
                                     <div class="flex justify-end gap-2">
+                                        @if(auth()->user()?->hasRole('Super Admin'))
+                                            <a href="{{ route('admin.portal-preview.start', ['owner', $owner]) }}" target="_blank" rel="noopener" class="rounded-lg bg-blue-600 px-3 py-2 text-xs font-bold text-white hover:bg-blue-700">Open portal</a>
+                                        @endif
                                         <a href="{{ route('owners.show', $owner) }}" class="rounded-lg border border-slate-200 px-3 py-2 text-xs font-bold text-slate-600 hover:bg-slate-50">View</a>
                                         @can('owners.manage')
                                             <a href="{{ route('owners.edit', $owner) }}" class="rounded-lg border border-slate-200 px-3 py-2 text-xs font-bold text-slate-600 hover:bg-slate-50">Edit</a>

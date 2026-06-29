@@ -15,6 +15,7 @@
             $nights = $booking ? $booking->check_in_date->diffInDays($booking->check_out_date) : 0;
             $balanceDue = (float) $tenantBalanceDue;
             $openRefund = $tenantOpenRefund;
+            $tenantBankReady = filled($tenant->bank_account_name) && filled($tenant->iban);
             $smartLockCodeDisplay = $booking?->smart_lock_code ? trim(chunk_split($booking->smart_lock_code, 1, ' ')) : 'Pending';
             $smartLockValidFrom = $booking ? \Illuminate\Support\Carbon::parse($booking->check_in_date->format('Y-m-d').' '.($booking->check_in_time ?: '15:00')) : null;
             $smartLockValidUntil = $booking ? \Illuminate\Support\Carbon::parse($booking->check_out_date->format('Y-m-d').' '.($booking->check_out_time ?: '11:00')) : null;
@@ -24,6 +25,21 @@
             @if (session('status'))
                 <div class="rounded-3xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-700">{{ session('status') }}</div>
             @endif
+
+            @unless($tenantBankReady)
+                <section class="rounded-[1.6rem] border border-amber-100 bg-amber-50 p-5 shadow-[0_14px_32px_rgba(180,83,9,0.10)]">
+                    <div class="flex items-start gap-3">
+                        <span class="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-white text-amber-700">
+                            <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 10h18M5 10V8l7-4 7 4v2M6 10v8M10 10v8M14 10v8M18 10v8M4 18h16"/></svg>
+                        </span>
+                        <div>
+                            <h2 class="text-base font-black text-amber-950">Add refund bank details</h2>
+                            <p class="mt-1 text-sm font-semibold leading-6 text-amber-800">Please add the bank account where you want us to refund your security deposit after checkout. Refunds are processed within 7 working days after apartment inspection, subject to no damages, unpaid dues, or policy deductions.</p>
+                            <a href="{{ route('profile.edit') }}#refund-bank-details" class="mt-3 inline-flex rounded-2xl bg-amber-900 px-4 py-2.5 text-sm font-black text-white">Add bank details</a>
+                        </div>
+                    </div>
+                </section>
+            @endunless
 
             @if ($booking)
                 <section class="overflow-hidden rounded-[1.6rem] bg-white shadow-[0_18px_45px_rgba(15,23,42,0.08)]">
@@ -618,6 +634,19 @@
                     <a href="{{ route('tenant.payment-requests.index') }}" class="inline-flex h-14 items-center justify-center rounded-2xl bg-white px-5 text-sm font-black text-[#061a38]">Request payment collection</a>
                 </div>
             </section>
+
+            @unless(filled($tenant->bank_account_name) && filled($tenant->iban))
+                <section class="mb-5 rounded-[1.75rem] border border-amber-100 bg-amber-50 p-5 shadow-xl shadow-amber-900/5">
+                    <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                        <div>
+                            <p class="text-xs font-bold uppercase tracking-[0.18em] text-amber-700">Deposit refund</p>
+                            <h3 class="mt-2 text-xl font-black tracking-[-0.03em] text-amber-950">Add your refund bank details</h3>
+                            <p class="mt-1 max-w-3xl text-sm leading-6 text-amber-800">Security deposit refunds are processed within 7 working days after checkout inspection, subject to no damages, unpaid dues, or policy deductions.</p>
+                        </div>
+                        <a href="{{ route('profile.edit') }}#refund-bank-details" class="inline-flex items-center justify-center rounded-2xl bg-amber-900 px-5 py-3 text-sm font-black text-white">Add details</a>
+                    </div>
+                </section>
+            @endunless
 
             @if ($currentBooking)
                 <section class="mb-5 rounded-[1.75rem] border border-blue-100 bg-white p-5 shadow-xl shadow-blue-950/5">

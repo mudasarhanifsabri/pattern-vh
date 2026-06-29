@@ -37,6 +37,9 @@
 
                     @can('owners.manage')
                         <div class="flex flex-wrap gap-2">
+                            @if(auth()->user()?->hasRole('Super Admin'))
+                                <a href="{{ route('admin.portal-preview.start', ['owner', $owner]) }}" target="_blank" rel="noopener" class="inline-flex h-11 items-center rounded-xl bg-blue-600 px-4 text-sm font-bold text-white shadow-lg shadow-blue-600/20 hover:bg-blue-700">Open portal</a>
+                            @endif
                             <a href="{{ route('owners.edit', $owner) }}" class="inline-flex h-11 items-center rounded-xl border border-slate-200 px-4 text-sm font-bold text-slate-700 hover:bg-slate-50">Edit</a>
                             <button type="button" data-modal-open="owner-note-modal" class="inline-flex h-11 items-center rounded-xl border border-blue-200 px-4 text-sm font-bold text-blue-700 hover:bg-blue-50">Add note</button>
                             <button type="button" data-modal-open="owner-actions-modal" class="inline-flex h-11 items-center rounded-xl bg-[#111827] px-4 text-sm font-bold text-white hover:bg-black">More actions</button>
@@ -210,6 +213,9 @@
                     <button type="button" data-modal-close class="rounded-lg px-3 py-2 text-sm font-bold text-slate-500 hover:bg-slate-100">Close</button>
                 </div>
                 <div class="mt-5 space-y-3">
+                    @if(auth()->user()?->hasRole('Super Admin'))
+                        <a href="{{ route('admin.portal-preview.start', ['owner', $owner]) }}" target="_blank" rel="noopener" class="block w-full rounded-xl bg-blue-600 px-4 py-3 text-left text-sm font-bold text-white hover:bg-blue-700">Open owner portal</a>
+                    @endif
                     @if ($owner->email)
                         <form method="POST" action="{{ route('owners.send-invite', $owner) }}">
                             @csrf

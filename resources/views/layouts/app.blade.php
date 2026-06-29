@@ -58,6 +58,15 @@
                 </div>
             @endif
             <main class="flex-1 {{ $mobilePortal ? 'mobile-app-main mx-auto w-full max-w-[430px] px-4 pb-28 pt-2 mobile-app-safe max-[380px]:px-3' : ($ownerOnly ? 'mobile-app-main mx-auto w-full max-w-[430px] px-4 pb-28 pt-2 mobile-app-safe max-[380px]:px-3 lg:mx-0 lg:max-w-none lg:p-8 lg:pb-24 xl:p-9' : 'p-3 pb-24 sm:p-6 lg:p-8 xl:p-9') }}">
+                @if(session('portal_preview_admin_id'))
+                    @php($previewRecord = session('portal_preview_record', []))
+                    <div class="mb-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-bold text-amber-900 shadow-sm">
+                        <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                            <span>Viewing as {{ $previewRecord['name'] ?? auth()->user()?->name }}{{ isset($previewRecord['role']) ? ' ('.$previewRecord['role'].')' : '' }}.</span>
+                            <a href="{{ route('admin.portal-preview.stop') }}" class="inline-flex h-10 items-center justify-center rounded-xl bg-amber-900 px-4 text-xs font-black uppercase tracking-[0.12em] text-white">Return to Super Admin</a>
+                        </div>
+                    </div>
+                @endif
                 @if(! $mobilePortal)
                 @isset($header)
                     <div class="{{ $ownerOnly ? 'hidden lg:block' : '' }} mb-5 md:mb-7">

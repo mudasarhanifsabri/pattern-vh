@@ -53,6 +53,9 @@
 
                     @can($config['permission'].'.manage')
                         <div class="flex flex-wrap gap-2">
+                            @if(auth()->user()?->hasRole('Super Admin'))
+                                <a href="{{ route('admin.portal-preview.start', [$config['route'], $record]) }}" target="_blank" rel="noopener" class="inline-flex h-11 items-center rounded-xl bg-blue-600 px-4 text-sm font-bold text-white shadow-lg shadow-blue-600/20 hover:bg-blue-700">Open portal</a>
+                            @endif
                             <a href="{{ route($config['route'].'.edit', $record) }}" class="inline-flex h-11 items-center rounded-xl border border-slate-200 px-4 text-sm font-bold text-slate-700 hover:bg-slate-50">Edit</a>
                             <button type="button" data-modal-open="note-modal" class="inline-flex h-11 items-center rounded-xl border border-blue-200 px-4 text-sm font-bold text-blue-700 hover:bg-blue-50">Add note</button>
                             <button type="button" data-modal-open="actions-modal" class="inline-flex h-11 items-center rounded-xl bg-[#111827] px-4 text-sm font-bold text-white hover:bg-black">More actions</button>
@@ -218,6 +221,9 @@
                     <button type="button" data-modal-close class="rounded-lg px-3 py-2 text-sm font-bold text-slate-500 hover:bg-slate-100">Close</button>
                 </div>
                 <div class="mt-5 space-y-3">
+                    @if(auth()->user()?->hasRole('Super Admin'))
+                        <a href="{{ route('admin.portal-preview.start', [$config['route'], $record]) }}" target="_blank" rel="noopener" class="block w-full rounded-xl bg-blue-600 px-4 py-3 text-left text-sm font-bold text-white hover:bg-blue-700">Open {{ $config['singularTitle'] }} portal</a>
+                    @endif
                     @if ($record->email)
                         <form method="POST" action="{{ route($config['route'].'.send-invite', $record) }}">
                             @csrf
