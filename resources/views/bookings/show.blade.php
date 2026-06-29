@@ -151,8 +151,15 @@
         <section class="rounded-[1.8rem] bg-white p-5 shadow-[0_16px_40px_rgba(15,23,42,0.08)] ring-1 ring-slate-100">
             <div class="flex items-center justify-between">
                 <h2 class="text-lg font-black text-[#0b1736]">Booking Summary</h2>
-                <a href="{{ route('bookings.confirmation-pdf', $booking) }}" target="_blank" class="text-sm font-black text-blue-600">View PDF</a>
+                <div class="flex items-center gap-3">
+                    <a href="{{ route('invoices.index', ['booking_id' => $booking->id]) }}" class="text-sm font-black text-amber-600">Payments</a>
+                    <a href="{{ route('bookings.confirmation-pdf', $booking) }}" target="_blank" class="text-sm font-black text-blue-600">View PDF</a>
+                </div>
             </div>
+            <a href="{{ route('invoices.index', ['booking_id' => $booking->id]) }}" class="mt-4 flex items-center justify-between rounded-2xl bg-amber-50 px-4 py-3 text-sm font-black text-amber-700">
+                <span>Invoices & receipts</span>
+                <span>AED {{ number_format($bookingBalanceDue, 2) }} due</span>
+            </a>
             <div class="mt-4 divide-y divide-slate-100 text-sm">
                 <div class="flex justify-between py-3"><span class="font-semibold text-slate-500">Rent</span><span class="font-black text-[#0b1736]">AED {{ number_format((float) $booking->rent_amount, 2) }}</span></div>
                 <div class="flex justify-between py-3"><span class="font-semibold text-slate-500">VAT 5% on rent</span><span class="font-black text-[#0b1736]">AED {{ number_format((float) $booking->vat_amount, 2) }}</span></div>
