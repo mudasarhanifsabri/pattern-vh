@@ -33,6 +33,27 @@
         $smartLockCodeDisplay = $booking->smart_lock_code ? trim(chunk_split($booking->smart_lock_code, 1, ' ')) : 'Pending';
         $smartLockValidFrom = \Illuminate\Support\Carbon::parse($booking->check_in_date->format('Y-m-d').' '.($booking->check_in_time ?: '15:00'));
         $smartLockValidUntil = \Illuminate\Support\Carbon::parse($booking->check_out_date->format('Y-m-d').' '.($booking->check_out_time ?: '11:00'));
+        $bookingBalanceDue = (float) $booking->invoices->sum(fn ($invoice) => (float) $invoice->balance_amount);
+        $tenantBookingStatus = $bookingBalanceDue > 0 ? 'Pending Payment' : str($booking->booking_status)->replace('_', ' ')->headline()->toString();
+        $today = now()->startOfDay();
+        $checkInDay = $booking->check_in_date->copy()->startOfDay();
+        $checkOutDay = $booking->check_out_date->copy()->startOfDay();
+        if ($today->lt($checkInDay)) {
+            $daysUntilCheckIn = $today->diffInDays($checkInDay);
+            $stayCounterLabel = 'Check-in countdown';
+            $stayCounterValue = $daysUntilCheckIn.' '.str('day')->plural($daysUntilCheckIn);
+            $stayCounterNote = 'Until your stay begins';
+        } elseif ($today->lte($checkOutDay)) {
+            $daysLeft = max(0, $today->diffInDays($checkOutDay));
+            $stayCounterLabel = 'Days left';
+            $stayCounterValue = $daysLeft === 0 ? 'Checkout today' : $daysLeft.' '.str('day')->plural($daysLeft);
+            $stayCounterNote = $daysLeft === 0 ? 'Please complete checkout steps' : 'Remaining in your booking';
+        } else {
+            $daysSinceCheckout = $checkOutDay->diffInDays($today);
+            $stayCounterLabel = 'Checkout completed';
+            $stayCounterValue = $daysSinceCheckout.' '.str('day')->plural($daysSinceCheckout).' ago';
+            $stayCounterNote = 'Deposit refund follows inspection policy';
+        }
     @endphp
 
     <div class="space-y-5">
@@ -47,7 +68,7 @@
             <div class="grid grid-cols-[120px_1fr] gap-4">
                 <div class="h-28 overflow-hidden rounded-[1.35rem] bg-[linear-gradient(135deg,rgba(15,23,42,.18),rgba(37,99,235,.18)),url('https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=600&q=80')] bg-cover bg-center"></div>
                 <div class="min-w-0">
-                    <span class="inline-flex rounded-full bg-emerald-50 px-3 py-1 text-xs font-black text-emerald-700">{{ str($booking->booking_status)->replace('_', ' ')->headline() }}</span>
+                    <span class="inline-flex rounded-full {{ $bookingBalanceDue > 0 ? 'bg-amber-50 text-amber-700' : 'bg-emerald-50 text-emerald-700' }} px-3 py-1 text-xs font-black">{{ $tenantBookingStatus }}</span>
                     <h2 class="mt-3 text-lg font-black leading-tight text-[#0b1736]">{{ $booking->unit->building->name }} Apartment</h2>
                     <p class="mt-1 text-sm font-semibold text-slate-500">Dubai, UAE</p>
                 </div>
@@ -64,6 +85,7 @@
                     ['Check-in', $booking->check_in_date->format('d M Y, h:i A'), 'M8 7V3m8 0V3M7 11h10M5 21h14a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2z'],
                     ['Check-out', $booking->check_out_date->format('d M Y, h:i A'), 'M8 7V3m8 0V3M7 11h10M5 21h14a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2z'],
                     ['Guests', ($booking->guest_count ?: 1).' guest(s)', 'M17 20h5v-2a4 4 0 0 0-4-4h-1M9 20H4v-2a4 4 0 0 1 4-4h1m4-4a4 4 0 1 0-8 0 4 4 0 0 0 8 0zm8 0a4 4 0 1 0-8 0 4 4 0 0 0 8 0z'],
+                    [$stayCounterLabel, $stayCounterValue, 'M12 8v4l3 3m6-3a9 9 0 1 1-18 0 9 9 0 0 1 18 0z'],
                     ['Nights', $nights.' Nights', 'M12 8v4l3 3m6-3a9 9 0 1 1-18 0 9 9 0 0 1 18 0z'],
                     ['Booking ID', $booking->booking_no, 'M9 12h6m-6 4h6m2 5H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l5 5v11a2 2 0 0 1-2 2z'],
                 ] as [$label, $value, $path])
@@ -204,7 +226,7 @@
             </div>
             <div class="flex flex-wrap gap-2">
                 @can('bookings.manage')<a href="{{ route('bookings.edit', $booking) }}" class="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-600">Edit</a>@endcan
-                @can('invoices.manage')<a href="{{ route('invoices.create', ['booking_id' => $booking->id]) }}" class="rounded-xl border border-blue-200 px-4 py-2.5 text-sm font-bold text-blue-700">Create invoice</a>@endcan
+                @can('invoices.manage')<a href="{{ route('invoices.index', ['booking_id' => $booking->id]) }}" class="rounded-xl border border-blue-200 px-4 py-2.5 text-sm font-bold text-blue-700">View invoices</a>@endcan
                 <a href="{{ route('bookings.confirmation-pdf', $booking) }}" target="_blank" class="rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-bold text-white">Booking Confirmation PDF</a>
             </div>
         </div>

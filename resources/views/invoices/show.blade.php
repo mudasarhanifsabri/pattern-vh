@@ -108,11 +108,13 @@
                                 </div>
 
                                 <div class="flex flex-wrap justify-start gap-2 lg:justify-end">
-                                    @if ($payment->proof_path)
-                                        <a href="{{ route('payments.proof', $payment) }}" target="_blank" class="rounded-xl border border-slate-200 px-3 py-2 text-xs font-bold text-slate-600">View proof</a>
-                                    @else
-                                        <span class="rounded-xl border border-dashed border-slate-200 px-3 py-2 text-xs font-bold text-slate-400">No proof attached</span>
-                                    @endif
+                                    @can('payments.view')
+                                        @if ($payment->proof_path)
+                                            <a href="{{ route('payments.proof', $payment) }}" target="_blank" class="rounded-xl border border-slate-200 px-3 py-2 text-xs font-bold text-slate-600">View proof</a>
+                                        @else
+                                            <span class="rounded-xl border border-dashed border-slate-200 px-3 py-2 text-xs font-bold text-slate-400">No proof attached</span>
+                                        @endif
+                                    @endcan
                                     @if ($payment->receipt)
                                         <a href="{{ route('receipts.pdf', $payment->receipt) }}" target="_blank" class="rounded-xl bg-emerald-600 px-3 py-2 text-xs font-bold text-white">Receipt PDF / {{ $payment->receipt->check_in_code }}</a>
                                     @endif

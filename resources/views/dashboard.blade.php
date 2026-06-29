@@ -19,6 +19,35 @@
             $smartLockCodeDisplay = $booking?->smart_lock_code ? trim(chunk_split($booking->smart_lock_code, 1, ' ')) : 'Pending';
             $smartLockValidFrom = $booking ? \Illuminate\Support\Carbon::parse($booking->check_in_date->format('Y-m-d').' '.($booking->check_in_time ?: '15:00')) : null;
             $smartLockValidUntil = $booking ? \Illuminate\Support\Carbon::parse($booking->check_out_date->format('Y-m-d').' '.($booking->check_out_time ?: '11:00')) : null;
+            $today = now()->startOfDay();
+            $tenantBookingStatus = $booking ? str($booking->booking_status)->replace('_', ' ')->headline()->toString() : null;
+            if ($booking && $balanceDue > 0) {
+                $tenantBookingStatus = 'Pending Payment';
+            }
+            $stayCounterLabel = 'Stay';
+            $stayCounterValue = 'No booking';
+            $stayCounterNote = 'Your stay counter will appear here.';
+            if ($booking) {
+                $checkInDay = $booking->check_in_date->copy()->startOfDay();
+                $checkOutDay = $booking->check_out_date->copy()->startOfDay();
+
+                if ($today->lt($checkInDay)) {
+                    $daysUntilCheckIn = $today->diffInDays($checkInDay);
+                    $stayCounterLabel = 'Check-in countdown';
+                    $stayCounterValue = $daysUntilCheckIn.' '.str('day')->plural($daysUntilCheckIn);
+                    $stayCounterNote = 'Until your stay begins';
+                } elseif ($today->lte($checkOutDay)) {
+                    $daysLeft = max(0, $today->diffInDays($checkOutDay));
+                    $stayCounterLabel = 'Days left';
+                    $stayCounterValue = $daysLeft === 0 ? 'Checkout today' : $daysLeft.' '.str('day')->plural($daysLeft);
+                    $stayCounterNote = $daysLeft === 0 ? 'Please complete checkout steps' : 'Remaining in your booking';
+                } else {
+                    $daysSinceCheckout = $checkOutDay->diffInDays($today);
+                    $stayCounterLabel = 'Checkout completed';
+                    $stayCounterValue = $daysSinceCheckout.' '.str('day')->plural($daysSinceCheckout).' ago';
+                    $stayCounterNote = 'Deposit refund follows inspection policy';
+                }
+            }
         @endphp
 
         <div class="tenant-app-screen space-y-5 lg:hidden">
@@ -48,12 +77,13 @@
                         <div class="relative flex h-full flex-col justify-end">
                             <h2 class="max-w-[270px] text-[2rem] font-black leading-tight tracking-[-0.04em] max-[380px]:text-[1.65rem]">{{ $booking->unit->building->name }}<br>Unit {{ $booking->unit->unit_no }}</h2>
                             <p class="mt-2 text-sm font-bold text-white/80">Dubai, UAE</p>
-                            <span class="mt-4 inline-flex w-fit items-center gap-2 rounded-full bg-emerald-500/90 px-3 py-1.5 text-sm font-black"><span class="grid h-5 w-5 place-items-center rounded-full bg-white/20">✓</span>{{ str($booking->booking_status)->replace('_', ' ')->headline() }}</span>
+                            <span class="mt-4 inline-flex w-fit items-center gap-2 rounded-full {{ $balanceDue > 0 ? 'bg-amber-400 text-slate-950' : 'bg-emerald-500/90 text-white' }} px-3 py-1.5 text-sm font-black"><span class="grid h-5 w-5 place-items-center rounded-full bg-white/20">✓</span>{{ $tenantBookingStatus }}</span>
                         </div>
                     </div>
-                    <div class="grid grid-cols-3 divide-x divide-slate-100 px-2 py-4 text-center">
+                    <div class="grid grid-cols-4 divide-x divide-slate-100 px-2 py-4 text-center">
                         <div class="min-w-0 px-1"><p class="text-sm font-semibold text-slate-500 max-[380px]:text-xs">Check-in</p><p class="mt-1 text-base font-black text-blue-600 max-[380px]:text-sm">{{ $booking->check_in_date->format('d M Y') }}</p><p class="text-sm font-semibold text-slate-500 max-[380px]:text-xs">{{ $booking->check_in_time ? \Illuminate\Support\Carbon::parse($booking->check_in_time)->format('h:i A') : '03:00 PM' }}</p></div>
                         <div class="min-w-0 px-1"><p class="text-sm font-semibold text-slate-500 max-[380px]:text-xs">Check-out</p><p class="mt-1 text-base font-black text-blue-600 max-[380px]:text-sm">{{ $booking->check_out_date->format('d M Y') }}</p><p class="text-sm font-semibold text-slate-500 max-[380px]:text-xs">{{ $booking->check_out_time ? \Illuminate\Support\Carbon::parse($booking->check_out_time)->format('h:i A') : '11:00 AM' }}</p></div>
+                        <div class="min-w-0 px-1"><p class="text-sm font-semibold text-slate-500 max-[380px]:text-xs">{{ $stayCounterLabel }}</p><p class="mt-1 text-base font-black text-blue-600 max-[380px]:text-sm">{{ $stayCounterValue }}</p><p class="text-xs font-semibold text-slate-500 max-[380px]:text-[11px]">{{ $stayCounterNote }}</p></div>
                         <div class="min-w-0 px-1"><p class="text-sm font-semibold text-slate-500 max-[380px]:text-xs">Booking ID</p><p class="mx-auto mt-1 max-w-[7.5rem] break-words text-sm font-black leading-tight text-blue-600 max-[380px]:text-xs">{{ $booking->booking_no }}</p><p class="text-sm font-semibold text-slate-500 max-[380px]:text-xs">{{ $nights }} Nights</p></div>
                     </div>
                 </section>
@@ -654,7 +684,8 @@
                         <div>
                             <p class="text-xs font-bold uppercase tracking-[0.18em] text-blue-600">Current stay</p>
                             <h3 class="mt-2 text-2xl font-black tracking-[-0.04em] text-[#071a3b]">{{ $currentBooking->unit->building->name }} / Unit {{ $currentBooking->unit->unit_no }}</h3>
-                            <p class="mt-1 text-sm text-slate-500">{{ $currentBooking->check_in_date->format('M d') }} to {{ $currentBooking->check_out_date->format('M d, Y') }} - {{ str($currentBooking->booking_status)->replace('_', ' ')->headline() }}</p>
+                            <p class="mt-1 text-sm text-slate-500">{{ $currentBooking->check_in_date->format('M d') }} to {{ $currentBooking->check_out_date->format('M d, Y') }} - {{ $tenantBookingStatus }}</p>
+                            <div class="mt-3 inline-flex rounded-2xl bg-blue-50 px-4 py-2 text-sm font-black text-blue-700">{{ $stayCounterLabel }}: {{ $stayCounterValue }}</div>
                         </div>
                         <a href="{{ route('bookings.show', $currentBooking) }}" class="inline-flex items-center justify-center rounded-2xl bg-blue-600 px-5 py-3 text-sm font-black text-white">Open stay</a>
                     </div>

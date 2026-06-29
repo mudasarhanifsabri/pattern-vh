@@ -111,7 +111,10 @@ Artisan::command('invoices:send-reminders', function () {
         ->with(['booking.tenant', 'booking.unit.building', 'tenant'])
         ->whereIn('status', ['sent', 'partially_paid'])
         ->where('balance_amount', '>', 0)
-        ->whereIn('due_date', [today()->toDateString(), now()->addDays(3)->toDateString(), now()->addDays(7)->toDateString()])
+        ->where(function ($query): void {
+            $query->whereIn('due_date', [today()->toDateString(), now()->addDays(3)->toDateString(), now()->addDays(7)->toDateString()])
+                ->orWhereDate('due_date', '<', today());
+        })
         ->each(function (Invoice $invoice) use (&$count): void {
             $tenant = $invoice->tenant ?: $invoice->booking?->tenant;
             if (! $tenant || ! $invoice->booking) {
@@ -119,22 +122,31 @@ Artisan::command('invoices:send-reminders', function () {
             }
 
             $days = today()->diffInDays($invoice->due_date, false);
-            $label = $days === 0 ? 'today' : "in {$days} days";
+            $stage = match (true) {
+                $days < 0 => 'overdue',
+                $days === 0 => 'due-today',
+                default => 'due-in-'.$days.'-days',
+            };
+            $label = match (true) {
+                $days < 0 => abs($days).' '.str('day')->plural(abs($days)).' overdue',
+                $days === 0 => 'due today',
+                default => "due in {$days} ".str('day')->plural($days),
+            };
 
             foreach (['email', 'push'] as $channel) {
                 $invoice->booking->notificationLogs()->firstOrCreate(
-                    ['channel' => $channel, 'subject' => "Invoice reminder {$invoice->invoice_no}"],
+                    ['channel' => $channel, 'subject' => "Invoice {$stage} {$invoice->invoice_no}"],
                     [
                         'recipient' => $channel === 'email'
                             ? $tenant->email
                             : ($tenant->user_id ? 'user:'.$tenant->user_id : $tenant->email),
-                        'message' => "Invoice {$invoice->invoice_no} for AED ".number_format((float) $invoice->balance_amount, 2)." is due {$label}.",
+                        'message' => "Invoice {$invoice->invoice_no} for AED ".number_format((float) $invoice->balance_amount, 2)." is {$label}.",
                         'status' => 'queued',
                         'payload' => [
                             'invoice_id' => $invoice->id,
                             'due_date' => $invoice->due_date?->toDateString(),
                             'balance_amount' => $invoice->balance_amount,
-                            'url' => route('dashboard'),
+                            'url' => route('invoices.show', $invoice),
                             'integration_ready' => true,
                         ],
                     ],

@@ -163,6 +163,11 @@ class PaymentController extends Controller
 
     public function receiptPdf(Receipt $receipt, SimpleFinancePdf $pdf)
     {
+        if ($tenant = $this->tenantFor(request())) {
+            $receipt->loadMissing('invoice');
+            abort_unless((int) $receipt->invoice?->tenant_id === (int) $tenant->id, 403);
+        }
+
         return response($pdf->receipt($receipt), 200, ['Content-Type' => 'application/pdf', 'Content-Disposition' => 'inline; filename="'.$receipt->receipt_no.'.pdf"']);
     }
 
@@ -205,5 +210,17 @@ class PaymentController extends Controller
     private function nextPaymentNo(): string
     {
         return ReferenceNumber::next(Payment::class, 'payment_no', 'PAY');
+    }
+
+    private function tenantFor(Request $request): ?\App\Models\Tenant
+    {
+        if (! $request->user()?->can('portal.tenant') || $request->user()?->can('payments.manage')) {
+            return null;
+        }
+
+        return \App\Models\Tenant::query()
+            ->where('user_id', $request->user()->id)
+            ->orWhere('email', $request->user()->email)
+            ->first();
     }
 }
