@@ -1,4 +1,4 @@
-<nav class="tenant-bottom-nav {{ request()->routeIs('support.*') ? 'hidden' : 'grid' }} fixed inset-x-0 bottom-0 z-40 mx-auto max-w-[430px] grid-cols-5 border-t border-slate-100 bg-white/95 px-1.5 pt-1.5 shadow-[0_-12px_30px_rgba(15,23,42,0.08)] backdrop-blur">
+<nav class="tenant-bottom-nav {{ request()->routeIs('support.*') ? 'hidden' : '' }} fixed inset-x-0 bottom-0 z-40 mx-auto max-w-[430px] border-t border-slate-100 bg-white/95 px-1.5 pt-1.5 shadow-[0_-12px_30px_rgba(15,23,42,0.08)] backdrop-blur" style="{{ request()->routeIs('support.*') ? 'display:none;' : 'display:grid;grid-template-columns:repeat(5,minmax(0,1fr));align-items:center;gap:0;min-height:72px;' }}">
     @foreach ([
         ['route' => 'dashboard', 'label' => 'My Stay', 'icon' => 'M4 12 12 4l8 8M6 10v10h12V10'],
         ['route' => 'bookings.index', 'label' => 'Bookings', 'icon' => 'M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14H3V6a2 2 0 0 1 2-2z'],
@@ -7,11 +7,11 @@
         ['route' => 'profile.edit', 'label' => 'Profile', 'icon' => 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21a8 8 0 0 1 16 0'],
     ] as $tab)
         @php($active = request()->routeIs($tab['route']) || ($tab['route'] === 'bookings.index' && request()->routeIs('bookings.*')) || ($tab['route'] === 'tenant.invoices.index' && request()->routeIs('tenant.invoices.*')) || ($tab['route'] === 'support.index' && request()->routeIs('support.*')))
-        <a href="{{ route($tab['route']) }}" class="tenant-nav-item pressable flex min-w-0 flex-col items-center justify-center gap-0.5 px-0 py-1.5 text-[9px] font-black leading-none {{ $active ? 'tenant-nav-item-active text-blue-600' : 'text-slate-500' }}">
-            <span class="tenant-nav-icon {{ $active ? 'bg-blue-50' : '' }} grid h-8 w-8 place-items-center rounded-2xl">
-                <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="{{ $tab['icon'] }}"/></svg>
+        <a href="{{ route($tab['route']) }}" class="tenant-nav-item pressable flex min-w-0 flex-col items-center justify-center gap-0.5 px-0 py-1.5 text-[9px] font-black leading-none {{ $active ? 'tenant-nav-item-active text-blue-600' : 'text-slate-500' }}" style="display:flex;min-width:0;min-height:52px;align-items:center;justify-content:center;gap:2px;padding:6px 0;font-size:9px;line-height:1;color:{{ $active ? '#2563eb' : '#64748b' }};">
+            <span class="tenant-nav-icon {{ $active ? 'bg-blue-50' : '' }} grid h-8 w-8 place-items-center rounded-2xl" style="display:grid;width:32px;height:32px;place-items:center;border-radius:16px;{{ $active ? 'background:#eff6ff;' : '' }}">
+                <svg style="width:20px;height:20px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="{{ $tab['icon'] }}"/></svg>
             </span>
-            <span class="block max-w-full truncate">{{ $tab['label'] }}</span>
+            <span class="block max-w-full truncate" style="display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ $tab['label'] }}</span>
         </a>
     @endforeach
 </nav>

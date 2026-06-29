@@ -57,7 +57,7 @@
                     @include('layouts.topbar')
                 </div>
             @endif
-            <main class="flex-1 {{ $mobilePortal ? 'mobile-app-main mx-auto w-full max-w-[430px] px-4 pb-28 pt-2 mobile-app-safe max-[380px]:px-3' : ($ownerOnly ? 'mobile-app-main mx-auto w-full max-w-[430px] px-4 pb-28 pt-2 mobile-app-safe max-[380px]:px-3 lg:mx-0 lg:max-w-none lg:p-8 lg:pb-24 xl:p-9' : 'p-3 pb-24 sm:p-6 lg:p-8 xl:p-9') }}">
+            <main class="flex-1 {{ $mobilePortal ? 'mobile-app-main mx-auto w-full max-w-[430px] px-4 pb-32 pt-2 mobile-app-safe max-[380px]:px-3' : ($ownerOnly ? 'mobile-app-main mx-auto w-full max-w-[430px] px-4 pb-28 pt-2 mobile-app-safe max-[380px]:px-3 lg:mx-0 lg:max-w-none lg:p-8 lg:pb-24 xl:p-9' : 'p-3 pb-24 sm:p-6 lg:p-8 xl:p-9') }}" style="{{ $mobilePortal ? 'padding-bottom:8.5rem;' : '' }}">
                 @if(session('portal_preview_admin_id'))
                     @php
                         $previewRecord = session('portal_preview_record', []);

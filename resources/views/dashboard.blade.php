@@ -64,7 +64,7 @@
                         <div>
                             <h2 class="text-base font-black text-amber-950">Add refund bank details</h2>
                             <p class="mt-1 text-sm font-semibold leading-6 text-amber-800">Please add the bank account where you want us to refund your security deposit after checkout. Refunds are processed within 7 working days after apartment inspection, subject to no damages, unpaid dues, or policy deductions.</p>
-                            <a href="{{ route('profile.edit') }}#refund-bank-details" class="mt-3 inline-flex rounded-2xl bg-amber-900 px-4 py-2.5 text-sm font-black text-white">Add bank details</a>
+                            <a href="{{ route('profile.edit') }}#refund-bank-details" class="mt-3 inline-flex rounded-2xl bg-amber-900 px-4 py-2.5 text-sm font-black text-white" style="display:inline-flex;margin-top:0.75rem;border-radius:1rem;background:#78350f;padding:0.625rem 1rem;color:#fff;font-size:0.875rem;font-weight:900;">Add bank details</a>
                         </div>
                     </div>
                 </section>
