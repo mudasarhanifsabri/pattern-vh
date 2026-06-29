@@ -102,6 +102,10 @@ class OwnerPayoutController extends Controller
         return Payment::query()
             ->with(['invoice.booking.unit.building', 'invoice.booking.unit.owners', 'booking.unit.building', 'booking.unit.owners'])
             ->where('status', 'approved')
+            ->whereHas('invoice', fn ($query) => $query
+                ->where('status', 'paid')
+                ->where('balance_amount', '<=', 0)
+            )
             ->latest('approved_at')
             ->get()
             ->flatMap(function (Payment $payment) use ($owner, $transfers): Collection {
