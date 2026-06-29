@@ -111,7 +111,7 @@
             $ownerCollectionTotal = $recentPayments->sum(fn ($payment) => (float) $payment->amount);
         @endphp
 
-        <div class="tenant-app-screen space-y-5">
+        <div class="tenant-app-screen space-y-5 lg:hidden">
             @if (session('status'))
                 <div class="rounded-3xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-700">{{ session('status') }}</div>
             @endif
