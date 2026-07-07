@@ -58,6 +58,8 @@ class OwnerPayoutController extends Controller
                 'gross_share' => $row['gross_share'],
                 'management_fee' => $row['management_fee'],
                 'net_payout' => $row['net_payout'],
+                'collection_date' => $row['collection_date'],
+                'payable_on' => $row['payable_on'],
                 'transferred_at' => $data['transferred_at'],
                 'reference_no' => $data['reference_no'] ?? null,
                 'notes' => $data['notes'] ?? null,
@@ -75,6 +77,84 @@ class OwnerPayoutController extends Controller
         );
 
         return back()->with('status', 'Owner payout transfer recorded.');
+    }
+
+    public function updateCollectionDate(Request $request)
+    {
+        $data = $request->validate([
+            'owner_id' => ['required', 'exists:owners,id'],
+            'payment_id' => ['required', 'exists:payments,id'],
+            'collection_date' => ['required', 'date'],
+        ]);
+
+        $payment = Payment::query()
+            ->with(['invoice.booking.unit.owners', 'booking.unit.owners'])
+            ->where('status', 'approved')
+            ->findOrFail($data['payment_id']);
+
+        $row = $this->payoutRows(Owner::findOrFail($data['owner_id']))
+            ->firstWhere('payment.id', $payment->id);
+
+        abort_unless($row, 422, 'This payout row is not available.');
+
+        $collectionDate = \Illuminate\Support\Carbon::parse($data['collection_date']);
+
+        OwnerPayoutTransfer::updateOrCreate(
+            ['owner_id' => $data['owner_id'], 'payment_id' => $payment->id],
+            [
+                'booking_id' => $row['booking']?->id,
+                'unit_id' => $row['unit']?->id,
+                'gross_share' => $row['gross_share'],
+                'management_fee' => $row['management_fee'],
+                'net_payout' => $row['net_payout'],
+                'collection_date' => $collectionDate->toDateString(),
+                'payable_on' => $row['transfer']?->payable_on ?: $collectionDate->copy()->addDays(30)->toDateString(),
+                'transferred_at' => $row['transfer']?->transferred_at,
+                'reference_no' => $row['transfer']?->reference_no,
+                'notes' => $row['transfer']?->notes,
+                'created_by' => $request->user()->id,
+            ],
+        );
+
+        return back()->with('status', 'Payout collection date updated.');
+    }
+
+    public function updatePayableDate(Request $request)
+    {
+        $data = $request->validate([
+            'owner_id' => ['required', 'exists:owners,id'],
+            'payment_id' => ['required', 'exists:payments,id'],
+            'payable_on' => ['required', 'date'],
+        ]);
+
+        $payment = Payment::query()
+            ->with(['invoice.booking.unit.owners', 'booking.unit.owners'])
+            ->where('status', 'approved')
+            ->findOrFail($data['payment_id']);
+
+        $row = $this->payoutRows(Owner::findOrFail($data['owner_id']))
+            ->firstWhere('payment.id', $payment->id);
+
+        abort_unless($row, 422, 'This payout row is not available.');
+
+        OwnerPayoutTransfer::updateOrCreate(
+            ['owner_id' => $data['owner_id'], 'payment_id' => $payment->id],
+            [
+                'booking_id' => $row['booking']?->id,
+                'unit_id' => $row['unit']?->id,
+                'gross_share' => $row['gross_share'],
+                'management_fee' => $row['management_fee'],
+                'net_payout' => $row['net_payout'],
+                'collection_date' => $row['collection_date'],
+                'payable_on' => $data['payable_on'],
+                'transferred_at' => $row['transfer']?->transferred_at,
+                'reference_no' => $row['transfer']?->reference_no,
+                'notes' => $row['transfer']?->notes,
+                'created_by' => $request->user()->id,
+            ],
+        );
+
+        return back()->with('status', 'Payout payable date updated.');
     }
 
     private function ownerFor(Request $request): ?Owner
@@ -130,16 +210,16 @@ class OwnerPayoutController extends Controller
                     return collect();
                 }
 
-                $collectionDate = $payment->approved_at ?: $payment->paid_at;
-                $payableOn = $collectionDate?->copy()->addDays(30);
                 $managementPercent = (float) ($unit->management_fee_percent ?? 0);
 
-                return $owners->map(function (Owner $owner) use ($payment, $booking, $unit, $rentCollected, $collectionDate, $payableOn, $managementPercent, $transfers): array {
+                return $owners->map(function (Owner $owner) use ($payment, $booking, $unit, $rentCollected, $managementPercent, $transfers): array {
                     $sharePercent = (float) ($owner->pivot?->share_percent ?? 100);
                     $grossShare = $rentCollected * ($sharePercent / 100);
                     $managementFee = $grossShare * ($managementPercent / 100);
                     $netPayout = $grossShare - $managementFee;
                     $transfer = $transfers->get($owner->id.'-'.$payment->id);
+                    $collectionDate = $transfer?->collection_date ?: ($payment->approved_at ?: $payment->paid_at);
+                    $payableOn = $transfer?->payable_on ?: $collectionDate?->copy()->addDays(30);
 
                     return [
                         'owner' => $owner,
@@ -153,7 +233,7 @@ class OwnerPayoutController extends Controller
                         'management_fee' => $managementFee,
                         'net_payout' => $netPayout,
                         'transfer' => $transfer,
-                        'status' => $transfer ? 'transferred' : ($payableOn && $payableOn->isFuture() ? 'upcoming' : 'ready'),
+                        'status' => ($transfer && $transfer->transferred_at) ? 'transferred' : ($payableOn && $payableOn->isFuture() ? 'upcoming' : 'ready'),
                     ];
                 });
             })

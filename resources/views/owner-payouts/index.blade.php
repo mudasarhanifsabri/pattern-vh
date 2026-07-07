@@ -97,14 +97,40 @@
                             <tr>
                                 <td class="px-4 py-4 font-bold text-[#071a3b]">{{ $row['owner']->full_name }}</td>
                                 <td class="px-4 py-4"><div class="font-bold text-[#071a3b]">{{ $row['booking']?->booking_no }}</div><div class="text-xs text-slate-500">{{ $row['unit']->building?->name }} / Unit {{ $row['unit']->unit_no }}</div></td>
-                                <td class="px-4 py-4">{{ $row['collection_date']?->format('M d, Y') ?? '-' }}</td>
-                                <td class="px-4 py-4 font-bold text-[#071a3b]">{{ $row['payable_on']?->format('M d, Y') ?? '-' }}</td>
+                                <td class="px-4 py-4">
+                                    @can('owner-payouts.manage')
+                                        <form method="POST" action="{{ route('owner-payouts.collection-date.update') }}" class="grid gap-2">
+                                            @csrf
+                                            @method('PATCH')
+                                            <input type="hidden" name="owner_id" value="{{ $row['owner']->id }}">
+                                            <input type="hidden" name="payment_id" value="{{ $row['payment']->id }}">
+                                            <input type="date" name="collection_date" value="{{ $row['collection_date']?->toDateString() }}" class="erp-focus h-9 rounded-xl border border-slate-200 px-3 text-xs text-[#071a3b]" required>
+                                            <button class="rounded-xl bg-slate-100 px-3 py-2 text-xs font-black text-slate-700">Save</button>
+                                        </form>
+                                    @else
+                                        {{ $row['collection_date']?->format('M d, Y') ?? '-' }}
+                                    @endcan
+                                </td>
+                                <td class="px-4 py-4">
+                                    @can('owner-payouts.manage')
+                                        <form method="POST" action="{{ route('owner-payouts.payable-date.update') }}" class="grid gap-2">
+                                            @csrf
+                                            @method('PATCH')
+                                            <input type="hidden" name="owner_id" value="{{ $row['owner']->id }}">
+                                            <input type="hidden" name="payment_id" value="{{ $row['payment']->id }}">
+                                            <input type="date" name="payable_on" value="{{ $row['payable_on']?->toDateString() }}" class="erp-focus h-9 rounded-xl border border-slate-200 px-3 text-xs font-bold text-[#071a3b]" required>
+                                            <button class="rounded-xl bg-blue-50 px-3 py-2 text-xs font-black text-blue-700">Save date</button>
+                                        </form>
+                                    @else
+                                        <span class="font-bold text-[#071a3b]">{{ $row['payable_on']?->format('M d, Y') ?? '-' }}</span>
+                                    @endcan
+                                </td>
                                 <td class="px-4 py-4">AED {{ number_format($row['gross_share'], 2) }}<span class="block text-xs text-slate-400">{{ number_format($row['share_percent'], 2) }}% share</span></td>
                                 <td class="px-4 py-4">AED {{ number_format($row['management_fee'], 2) }}</td>
                                 <td class="px-4 py-4 font-black text-[#071a3b]">AED {{ number_format($row['net_payout'], 2) }}</td>
                                 <td class="px-4 py-4">
                                     <span class="rounded-full {{ $row['status'] === 'transferred' ? 'bg-violet-50 text-violet-700' : ($row['status'] === 'ready' ? 'bg-emerald-50 text-emerald-700' : 'bg-blue-50 text-blue-700') }} px-2.5 py-1 text-xs font-bold">{{ str($row['status'])->headline() }}</span>
-                                    @if($row['transfer'])
+                                    @if($row['transfer']?->transferred_at)
                                         <p class="mt-2 text-xs text-slate-500">{{ $row['transfer']->transferred_at->format('M d, Y') }} @if($row['transfer']->reference_no) / {{ $row['transfer']->reference_no }} @endif</p>
                                     @elseif($row['status'] === 'ready')
                                         @can('owner-payouts.manage')
@@ -142,6 +168,32 @@
                             <div class="rounded-2xl bg-slate-50 p-3"><p class="font-bold text-slate-400">Unit</p><p class="mt-1 font-bold text-[#071a3b]">{{ $row['unit']->unit_no }}</p></div>
                             <div class="rounded-2xl bg-slate-50 p-3"><p class="font-bold text-slate-400">Collected</p><p class="mt-1 font-bold text-[#071a3b]">{{ $row['collection_date']?->format('M d') }}</p></div>
                         </div>
+                        @can('owner-payouts.manage')
+                            <div class="mt-4 grid gap-3">
+                                <form method="POST" action="{{ route('owner-payouts.collection-date.update') }}" class="grid gap-2">
+                                    @csrf
+                                    @method('PATCH')
+                                    <input type="hidden" name="owner_id" value="{{ $row['owner']->id }}">
+                                    <input type="hidden" name="payment_id" value="{{ $row['payment']->id }}">
+                                    <label class="text-xs font-black uppercase tracking-[0.12em] text-slate-400">Collection date</label>
+                                    <div class="grid grid-cols-[1fr_auto] gap-2">
+                                        <input type="date" name="collection_date" value="{{ $row['collection_date']?->toDateString() }}" class="erp-focus h-11 rounded-2xl border border-slate-200 px-3 text-sm font-bold text-[#071a3b]" required>
+                                        <button class="rounded-2xl bg-slate-900 px-4 text-xs font-black text-white">Save</button>
+                                    </div>
+                                </form>
+                                <form method="POST" action="{{ route('owner-payouts.payable-date.update') }}" class="grid gap-2">
+                                    @csrf
+                                    @method('PATCH')
+                                    <input type="hidden" name="owner_id" value="{{ $row['owner']->id }}">
+                                    <input type="hidden" name="payment_id" value="{{ $row['payment']->id }}">
+                                    <label class="text-xs font-black uppercase tracking-[0.12em] text-slate-400">Payable date</label>
+                                    <div class="grid grid-cols-[1fr_auto] gap-2">
+                                        <input type="date" name="payable_on" value="{{ $row['payable_on']?->toDateString() }}" class="erp-focus h-11 rounded-2xl border border-slate-200 px-3 text-sm font-bold text-[#071a3b]" required>
+                                        <button class="rounded-2xl bg-blue-600 px-4 text-xs font-black text-white">Save</button>
+                                    </div>
+                                </form>
+                            </div>
+                        @endcan
                     </article>
                 @empty
                     <p class="rounded-2xl border border-dashed border-slate-200 px-4 py-10 text-center text-sm text-slate-500">No approved rent collections found for payout.</p>
