@@ -403,7 +403,7 @@
                         <button type="button" @click="modal = 'dtcm'" class="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-xs font-black text-emerald-700">Check In</button>
                         <button type="button" @click="modal = 'checkout'" class="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2.5 text-xs font-black text-rose-700">Check Out</button>
                     @endcan
-                    <a href="#operations" class="rounded-xl border border-blue-200 bg-blue-50 px-3 py-2.5 text-center text-xs font-black text-blue-700">Extend Stay</a>
+                    <button type="button" @click="modal = 'extension'" class="rounded-xl border border-blue-200 bg-blue-50 px-3 py-2.5 text-center text-xs font-black text-blue-700">Extend Stay</button>
                     @can('invoices.manage')
                         <a href="{{ route('invoices.create', ['booking_id' => $booking->id]) }}" class="rounded-xl border border-violet-200 bg-violet-50 px-3 py-2.5 text-center text-xs font-black text-violet-700">Generate Invoice</a>
                     @endcan
