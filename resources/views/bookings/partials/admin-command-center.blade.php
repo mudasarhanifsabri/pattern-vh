@@ -563,15 +563,23 @@
                 </div>
 
                 <div x-show="modal === 'extension'" class="space-y-4">
-                    <form method="POST" action="{{ route('bookings.request-extension', $booking) }}" class="space-y-3">
+                    <form method="POST" action="{{ route('bookings.extension-invoice.store', $booking) }}" class="space-y-3">
                         @csrf
-                        <label class="block text-sm font-black text-[#071a3b]">Requested checkout date
-                            <input name="requested_check_out_date" type="date" class="erp-focus mt-1 h-11 w-full rounded-xl border border-slate-200 px-3">
+                        <div class="rounded-2xl bg-slate-50 p-4">
+                            <p class="text-xs font-black uppercase tracking-[0.12em] text-slate-400">Current checkout</p>
+                            <p class="mt-1 text-lg font-black text-[#071a3b]">{{ $booking->check_out_date?->format('M d, Y') }} / {{ $booking->check_out_time ? \Illuminate\Support\Carbon::parse($booking->check_out_time)->format('h:i A') : '11:00 AM' }}</p>
+                        </div>
+                        <label class="block text-sm font-black text-[#071a3b]">New checkout date
+                            <input name="requested_check_out_date" type="date" min="{{ $booking->check_out_date?->copy()->addDay()->toDateString() }}" class="erp-focus mt-1 h-11 w-full rounded-xl border border-slate-200 px-3" required>
                         </label>
-                        <label class="block text-sm font-black text-[#071a3b]">Reason / notes
-                            <textarea name="tenant_notes" rows="3" class="erp-focus mt-1 w-full rounded-xl border border-slate-200 px-3 py-2"></textarea>
+                        <label class="block text-sm font-black text-[#071a3b]">Extra rent invoice amount
+                            <input name="extra_rent_amount" type="number" min="0.01" step="0.01" class="erp-focus mt-1 h-11 w-full rounded-xl border border-slate-200 px-3" placeholder="AED 0.00" required>
                         </label>
-                        <button class="w-full rounded-xl bg-blue-600 px-4 py-3 text-sm font-black text-white">Send extension request</button>
+                        <label class="block text-sm font-black text-[#071a3b]">Internal note
+                            <textarea name="approval_notes" rows="3" class="erp-focus mt-1 w-full rounded-xl border border-slate-200 px-3 py-2" placeholder="Optional note for this extension invoice"></textarea>
+                        </label>
+                        <p class="rounded-2xl bg-blue-50 p-4 text-xs font-bold leading-5 text-blue-700">This creates only the extension rent invoice. The booking checkout date will update after this invoice is fully paid.</p>
+                        <button class="w-full rounded-xl bg-blue-600 px-4 py-3 text-sm font-black text-white">Create extension invoice</button>
                     </form>
                 </div>
 

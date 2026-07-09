@@ -65,35 +65,9 @@ class BookingLifecycleController extends Controller
         ]);
 
         $booking = $extensionRequest->booking()->with(['tenant', 'unit'])->firstOrFail();
-        $rent = (float) $validated['extra_rent_amount'];
-        $vat = TaxCalculator::rentVat($rent);
-        $total = $rent + $vat;
+        $this->ensureExtensionHasNoConflict($booking, $extensionRequest->requested_check_out_date);
 
-        $invoice = Invoice::create([
-            'invoice_no' => $this->nextInvoiceNo(),
-            'booking_id' => $booking->id,
-            'tenant_id' => $booking->tenant_id,
-            'unit_id' => $booking->unit_id,
-            'invoice_date' => now()->toDateString(),
-            'due_date' => now()->addDay()->toDateString(),
-            'rent_amount' => $rent,
-            'vat_amount' => $vat,
-            'total_amount' => $total,
-            'balance_amount' => $total,
-            'status' => 'sent',
-            'notes' => 'Extension invoice for checkout date '.$extensionRequest->requested_check_out_date->format('M d, Y'),
-            'created_by' => auth()->id(),
-            'updated_by' => auth()->id(),
-        ]);
-
-        $extensionRequest->update([
-            'invoice_id' => $invoice->id,
-            'extra_rent_amount' => $validated['extra_rent_amount'],
-            'approval_notes' => $validated['approval_notes'] ?? null,
-            'status' => 'approved_pending_payment',
-            'approved_by' => auth()->id(),
-            'approved_at' => now(),
-        ]);
+        $invoice = $this->createExtensionInvoice($booking, $extensionRequest, (float) $validated['extra_rent_amount'], $validated['approval_notes'] ?? null);
 
         $booking->notificationLogs()->create([
             'channel' => 'email',
@@ -116,6 +90,42 @@ class BookingLifecycleController extends Controller
         );
 
         return redirect()->route('invoices.show', $invoice)->with('status', 'Extension approved and invoice generated.');
+    }
+
+    public function createExtensionInvoiceFromBooking(Request $request, Booking $booking, PushEventLogger $push)
+    {
+        $validated = $request->validate([
+            'requested_check_out_date' => ['required', 'date', 'after:'.$booking->check_out_date->format('Y-m-d')],
+            'extra_rent_amount' => ['required', 'numeric', 'min:0.01'],
+            'approval_notes' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        $booking->loadMissing(['tenant', 'unit']);
+        $requestedCheckout = \Illuminate\Support\Carbon::parse($validated['requested_check_out_date'])->startOfDay();
+        $this->ensureExtensionHasNoConflict($booking, $requestedCheckout);
+
+        $extension = $booking->extensionRequests()->create([
+            'tenant_id' => $booking->tenant_id,
+            'requested_check_out_date' => $requestedCheckout->toDateString(),
+            'extra_rent_amount' => $validated['extra_rent_amount'],
+            'tenant_notes' => null,
+            'approval_notes' => $validated['approval_notes'] ?? 'Extension created by reservations from booking page.',
+            'status' => 'requested',
+        ]);
+
+        $invoice = $this->createExtensionInvoice($booking, $extension, (float) $validated['extra_rent_amount'], $validated['approval_notes'] ?? 'Extension created by reservations from booking page.');
+
+        ActivityLogger::log('booking_extensions.invoice_created', "Created extension invoice for {$booking->booking_no}.", $extension);
+
+        $push->toTenant(
+            $booking->tenant,
+            'Extension invoice ready',
+            "Your booking extension to {$requestedCheckout->format('M d, Y')} is ready for payment.",
+            ['type' => 'extension_invoice', 'invoice_id' => $invoice->id, 'url' => route('dashboard')],
+            $booking
+        );
+
+        return redirect()->route('invoices.show', $invoice)->with('status', 'Extension invoice generated. Booking will extend after this invoice is fully paid.');
     }
 
     public function rejectExtension(Request $request, BookingExtensionRequest $extensionRequest, PushEventLogger $push)
@@ -345,6 +355,57 @@ class BookingLifecycleController extends Controller
                 $booking
             );
         }
+    }
+
+    private function ensureExtensionHasNoConflict(Booking $booking, \Illuminate\Support\Carbon|string $requestedCheckout): void
+    {
+        $hasConflict = Booking::query()
+            ->whereKeyNot($booking->id)
+            ->where('unit_id', $booking->unit_id)
+            ->whereIn('booking_status', ['confirmed', 'checked_in', 'checkout_requested'])
+            ->whereDate('check_in_date', '<', $requestedCheckout)
+            ->whereDate('check_out_date', '>', $booking->check_out_date)
+            ->exists();
+
+        if ($hasConflict) {
+            throw ValidationException::withMessages([
+                'requested_check_out_date' => 'This extension overlaps another confirmed booking for the same apartment.',
+            ]);
+        }
+    }
+
+    private function createExtensionInvoice(Booking $booking, BookingExtensionRequest $extensionRequest, float $rent, ?string $approvalNotes): Invoice
+    {
+        $vat = TaxCalculator::rentVat($rent);
+        $total = $rent + $vat;
+
+        $invoice = Invoice::create([
+            'invoice_no' => $this->nextInvoiceNo(),
+            'booking_id' => $booking->id,
+            'tenant_id' => $booking->tenant_id,
+            'unit_id' => $booking->unit_id,
+            'invoice_date' => now()->toDateString(),
+            'due_date' => now()->addDay()->toDateString(),
+            'rent_amount' => $rent,
+            'vat_amount' => $vat,
+            'total_amount' => $total,
+            'balance_amount' => $total,
+            'status' => 'sent',
+            'notes' => 'Extension rent invoice from '.$booking->check_out_date->format('M d, Y').' to '.$extensionRequest->requested_check_out_date->format('M d, Y'),
+            'created_by' => auth()->id(),
+            'updated_by' => auth()->id(),
+        ]);
+
+        $extensionRequest->update([
+            'invoice_id' => $invoice->id,
+            'extra_rent_amount' => $rent,
+            'approval_notes' => $approvalNotes,
+            'status' => 'approved_pending_payment',
+            'approved_by' => auth()->id(),
+            'approved_at' => now(),
+        ]);
+
+        return $invoice;
     }
 
     private function tenantFor(Request $request): ?Tenant

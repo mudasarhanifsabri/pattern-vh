@@ -53,6 +53,7 @@ class BookingController extends Controller
         $validated = $this->validated($request);
         $validated['rental_periods'] = $this->rentalPeriods($request);
         $this->ensureTenantHasSingleActiveBooking($validated);
+        $this->ensureUnitHasNoOverlappingActiveBooking($validated);
 
         $validated['booking_no'] = $this->nextBookingNumber();
         $validated['vat_amount'] = TaxCalculator::rentVat(TaxCalculator::rentFromBookingData($validated));
@@ -92,6 +93,7 @@ class BookingController extends Controller
         $validated = $this->validated($request, $booking);
         $validated['rental_periods'] = $this->rentalPeriods($request);
         $this->ensureTenantHasSingleActiveBooking($validated, $booking);
+        $this->ensureUnitHasNoOverlappingActiveBooking($validated, $booking);
 
         $validated['vat_amount'] = TaxCalculator::rentVat(TaxCalculator::rentFromBookingData($validated));
         $validated['total_amount'] = TaxCalculator::bookingTotal($validated);
@@ -456,6 +458,27 @@ class BookingController extends Controller
         if ($exists) {
             throw ValidationException::withMessages([
                 'tenant_id' => 'This tenant already has an active booking. Complete checkout or cancel the existing booking before creating another active booking.',
+            ]);
+        }
+    }
+
+    private function ensureUnitHasNoOverlappingActiveBooking(array $data, ?Booking $currentBooking = null): void
+    {
+        if (! in_array($data['booking_status'] ?? null, ['confirmed', 'checked_in', 'checkout_requested'], true)) {
+            return;
+        }
+
+        $exists = Booking::query()
+            ->when($currentBooking, fn ($query) => $query->whereKeyNot($currentBooking->id))
+            ->where('unit_id', $data['unit_id'])
+            ->whereIn('booking_status', ['confirmed', 'checked_in', 'checkout_requested'])
+            ->whereDate('check_in_date', '<', $data['check_out_date'])
+            ->whereDate('check_out_date', '>', $data['check_in_date'])
+            ->exists();
+
+        if ($exists) {
+            throw ValidationException::withMessages([
+                'unit_id' => 'This apartment already has a confirmed booking for the selected dates. Please choose another unit or change the stay dates.',
             ]);
         }
     }

@@ -206,6 +206,9 @@ Route::middleware('auth')->group(function () {
     Route::post('bookings/{booking}/request-extension', [BookingLifecycleController::class, 'requestExtension'])
         ->middleware('permission:portal.tenant')
         ->name('bookings.request-extension');
+    Route::post('bookings/{booking}/extension-invoice', [BookingLifecycleController::class, 'createExtensionInvoiceFromBooking'])
+        ->middleware('permission:bookings.manage')
+        ->name('bookings.extension-invoice.store');
     Route::post('bookings/{booking}/request-checkout', [BookingLifecycleController::class, 'requestCheckout'])
         ->middleware('permission:portal.tenant')
         ->name('bookings.request-checkout');

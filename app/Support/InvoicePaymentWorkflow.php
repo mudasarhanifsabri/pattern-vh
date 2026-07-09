@@ -80,6 +80,7 @@ class InvoicePaymentWorkflow
         ]);
 
         $extension->update(['status' => 'paid_extended']);
+        $this->refreshExtensionDependentDates($extension->booking->fresh());
 
         $extension->booking->notificationLogs()->create([
             'channel' => 'email',
@@ -94,6 +95,27 @@ class InvoicePaymentWorkflow
         $securityEmails = collect($extension->booking->unit->building->security_emails ?? [])->filter()->values();
         if ($securityEmails->isNotEmpty()) {
             Mail::to($securityEmails->all())->queue(new BookingSecurityCheckInMail($extension->booking->fresh(['unit.building', 'tenant'])));
+        }
+    }
+
+    private function refreshExtensionDependentDates(Booking $booking): void
+    {
+        $booking->tasks()
+            ->where('task_type', 'checkout_cleaning')
+            ->whereNotIn('status', ['completed', 'cancelled'])
+            ->update(['due_at' => $booking->check_out_date?->copy()->setTime(11, 0)]);
+
+        $booking->tasks()
+            ->where('task_type', 'checkout_inspection')
+            ->whereNotIn('status', ['completed', 'cancelled'])
+            ->update(['due_at' => $booking->check_out_date?->copy()->setTime(15, 0)]);
+
+        if ($booking->smart_lock_code_valid_until) {
+            $booking->forceFill([
+                'smart_lock_code_valid_until' => \Illuminate\Support\Carbon::parse(
+                    $booking->check_out_date?->format('Y-m-d').' '.($booking->check_out_time ?: '11:00')
+                ),
+            ])->save();
         }
     }
 

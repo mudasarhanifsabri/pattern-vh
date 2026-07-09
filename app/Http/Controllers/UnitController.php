@@ -24,9 +24,14 @@ class UnitController extends Controller
     public function index()
     {
         $owner = $this->currentOwner();
+        $activeBookingStatuses = ['confirmed', 'checked_in', 'checkout_requested'];
+        $activeBookingFilter = fn ($query) => $query
+            ->whereIn('booking_status', $activeBookingStatuses)
+            ->whereDate('check_out_date', '>=', today());
 
         $units = Unit::query()
             ->with(['building', 'owners'])
+            ->with(['bookings' => fn ($query) => $activeBookingFilter($query)->with('tenant')->oldest('check_in_date')])
             ->withCount('bookings')
             ->when($owner, fn ($query) => $query->whereHas('owners', fn ($owners) => $owners->whereKey($owner->id)))
             ->when(request('search'), function ($query, string $search): void {
@@ -36,7 +41,24 @@ class UnitController extends Controller
                         ->orWhereHas('building', fn ($query) => $query->where('name', 'like', "%{$search}%"));
                 });
             })
-            ->when(request('status'), fn ($query, string $status) => $query->where('availability_status', $status))
+            ->when(request('status'), function ($query, string $status) use ($activeBookingFilter): void {
+                if ($status === 'available') {
+                    $query->where('availability_status', 'available')
+                        ->whereDoesntHave('bookings', $activeBookingFilter);
+
+                    return;
+                }
+
+                if ($status === 'occupied') {
+                    $query->where(fn ($query) => $query
+                        ->where('availability_status', 'occupied')
+                        ->orWhereHas('bookings', $activeBookingFilter));
+
+                    return;
+                }
+
+                $query->where('availability_status', $status);
+            })
             ->when(request('type'), fn ($query, string $type) => $query->where('unit_type', $type))
             ->latest()
             ->paginate(12)
@@ -49,8 +71,8 @@ class UnitController extends Controller
             'units' => $units,
             'stats' => [
                 'total' => (clone $statsQuery)->count(),
-                'available' => (clone $statsQuery)->where('availability_status', 'available')->count(),
-                'occupied' => (clone $statsQuery)->where('availability_status', 'occupied')->count(),
+                'available' => (clone $statsQuery)->where('availability_status', 'available')->whereDoesntHave('bookings', $activeBookingFilter)->count(),
+                'occupied' => (clone $statsQuery)->where(fn ($query) => $query->where('availability_status', 'occupied')->orWhereHas('bookings', $activeBookingFilter))->count(),
                 'maintenance' => (clone $statsQuery)->where('availability_status', 'maintenance')->count(),
             ],
         ]);
