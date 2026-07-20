@@ -89,7 +89,7 @@ class OwnerStatementController extends Controller
         $bookings = Booking::query()
             ->with('unit.building')
             ->whereIn('unit_id', $unitIds)
-            ->whereIn('booking_status', ['confirmed', 'checked_in', 'checkout_requested', 'checked_out'])
+            ->whereIn('booking_status', array_merge(Booking::ACTIVE_STATUSES, ['checked_out']))
             ->whereBetween('check_in_date', [$from->toDateString(), $to->toDateString()])
             ->get();
 
@@ -101,6 +101,10 @@ class OwnerStatementController extends Controller
             return [
                 'date' => $booking->check_in_date,
                 'description' => $booking->booking_no.' / '.$booking->unit->building->name.' '.$booking->unit->unit_no,
+                'booking_rent' => (float) $booking->rent_amount,
+                'booking_from' => $booking->check_in_date,
+                'booking_to' => $booking->check_out_date,
+                'booking_duration' => $booking->check_in_date->format('M d, Y').' to '.$booking->check_out_date->format('M d, Y'),
                 'gross' => $gross,
                 'management_fee' => $management,
                 'owner_expense' => 0,
@@ -116,6 +120,10 @@ class OwnerStatementController extends Controller
             ->map(fn (Expense $expense): array => [
                 'date' => $expense->incurred_on,
                 'description' => $expense->name.' / '.($expense->unit?->unit_no ? $expense->unit->building->name.' '.$expense->unit->unit_no : str($expense->type)->headline()),
+                'booking_rent' => null,
+                'booking_from' => null,
+                'booking_to' => null,
+                'booking_duration' => null,
                 'gross' => 0,
                 'management_fee' => 0,
                 'owner_expense' => (float) $expense->amount,
@@ -138,11 +146,21 @@ class OwnerStatementController extends Controller
         return response()->streamDownload(function () use ($owner, $statement): void {
             $handle = fopen('php://output', 'w');
             fputcsv($handle, ['Owner', $owner->full_name]);
-            fputcsv($handle, ['Date', 'Description', 'Gross', 'Management Fee', 'Owner Expense', 'Net']);
+            fputcsv($handle, ['Date', 'Description', 'Booking Rent', 'Booking From', 'Booking To', 'Gross', 'Management Fee', 'Owner Expense', 'Net']);
             foreach ($statement['rows'] as $row) {
-                fputcsv($handle, [$row['date']->format('Y-m-d'), $row['description'], $row['gross'], $row['management_fee'], $row['owner_expense'], $row['net']]);
+                fputcsv($handle, [
+                    $row['date']->format('Y-m-d'),
+                    $row['description'],
+                    $row['booking_rent'],
+                    $row['booking_from']?->format('Y-m-d'),
+                    $row['booking_to']?->format('Y-m-d'),
+                    $row['gross'],
+                    $row['management_fee'],
+                    $row['owner_expense'],
+                    $row['net'],
+                ]);
             }
-            fputcsv($handle, ['Totals', '', $statement['gross'], $statement['management_fee'], $statement['expenses'], $statement['net']]);
+            fputcsv($handle, ['Totals', '', '', '', '', $statement['gross'], $statement['management_fee'], $statement['expenses'], $statement['net']]);
             fclose($handle);
         }, 'owner-statement-'.$owner->id.'-'.$from->format('Ymd').'-'.$to->format('Ymd').'.csv', ['Content-Type' => 'text/csv']);
     }

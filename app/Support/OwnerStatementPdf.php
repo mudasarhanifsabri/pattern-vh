@@ -36,13 +36,13 @@ class OwnerStatementPdf
 
         $this->text(38, 612, 'Accounts Summary', 12, 'bold')
             ->summaryLine(38, 590, 'Opening Balance', $openingBalance)
-            ->summaryLine(38, 572, 'Billed Amount', $billedAmount)
+            ->summaryLine(38, 572, 'Rent Share Billed', $billedAmount)
             ->summaryLine(38, 554, 'Amount Paid', $amountPaid)
             ->summaryLine(38, 536, 'Balance Due', $balanceDue);
 
         $this->line(38, 512, 555, 512, '000000')
             ->text(38, 498, 'Date', 8, 'bold')
-            ->text(108, 498, 'Transactoins', 8, 'bold')
+            ->text(108, 498, 'Transactions', 8, 'bold')
             ->text(190, 498, 'Details', 8, 'bold')
             ->text(398, 498, 'Amount', 8, 'bold')
             ->text(470, 498, 'Payments', 8, 'bold')
@@ -51,25 +51,30 @@ class OwnerStatementPdf
 
         $ledgerRows = $this->ledgerRows(collect($statement['rows']), $openingBalance);
         $y = 468;
-        foreach ($ledgerRows->take(13) as $row) {
+        foreach ($ledgerRows->take(11) as $row) {
             $this->text(38, $y, $row['date'], 7)
                 ->text(108, $y, $this->shorten($row['transaction'], 18), 7)
                 ->text(190, $y, $this->shorten($row['details'], 42), 7)
                 ->text(398, $y, $row['amount'], 7)
                 ->text(470, $y, $row['payments'], 7)
                 ->text(530, $y, $row['balance'], 7);
-            $y -= 23;
+
+            if ($row['booking_meta']) {
+                $this->text(190, $y - 10, $this->shorten($row['booking_meta'], 56), 6);
+            }
+
+            $y -= $row['booking_meta'] ? 30 : 23;
         }
 
-        if ($ledgerRows->count() > 13) {
-            $this->text(38, $y, '+ '.($ledgerRows->count() - 13).' more rows. Use CSV export for full transaction detail.', 8, 'bold');
+        if ($ledgerRows->count() > 11) {
+            $this->text(38, $y, '+ '.($ledgerRows->count() - 11).' more rows. Use CSV export for full transaction detail.', 8, 'bold');
             $y -= 20;
         }
 
         $this->line(398, 116, 555, 116, '000000')
             ->text(438, 96, 'Balance Due', 10, 'bold')
             ->text(500, 96, $this->money($balanceDue), 10, 'bold')
-            ->text(38, 52, 'Generated from Pattern RMS confirmed bookings, approved payments, management fees, and owner expenses.', 7)
+            ->text(38, 52, 'Generated from Pattern RMS rent collections only. Security deposits are company-held tenant liabilities and excluded from owner income.', 7)
             ->text(38, 38, 'Statement generated '.now()->format('d M Y H:i'), 7);
 
         return $this->output();
@@ -89,6 +94,7 @@ class OwnerStatementPdf
                 'date' => '***Opening',
                 'transaction' => 'Balance***',
                 'details' => '',
+                'booking_meta' => '',
                 'amount' => $this->money($openingBalance),
                 'payments' => $this->money(0),
                 'balance' => $this->money($balance),
@@ -102,6 +108,9 @@ class OwnerStatementPdf
                     'date' => $row['date']->format('j M Y'),
                     'transaction' => 'Bill',
                     'details' => $row['description'],
+                    'booking_meta' => $row['booking_duration']
+                        ? 'Booking rent '.$this->money((float) $row['booking_rent']).' | '.$row['booking_duration']
+                        : '',
                     'amount' => $this->money((float) $row['gross']),
                     'payments' => $this->money(0),
                     'balance' => $this->money($balance),
@@ -114,6 +123,7 @@ class OwnerStatementPdf
                     'date' => $row['date']->format('j M Y'),
                     'transaction' => 'Journal',
                     'details' => 'Management Fee',
+                    'booking_meta' => '',
                     'amount' => $this->money(-1 * (float) $row['management_fee']),
                     'payments' => $this->money(0),
                     'balance' => $this->money($balance),
@@ -126,6 +136,7 @@ class OwnerStatementPdf
                     'date' => $row['date']->format('j M Y'),
                     'transaction' => 'Payment Made',
                     'details' => $row['description'],
+                    'booking_meta' => '',
                     'amount' => $this->money(0),
                     'payments' => $this->money((float) $row['owner_expense']),
                     'balance' => $this->money($balance),

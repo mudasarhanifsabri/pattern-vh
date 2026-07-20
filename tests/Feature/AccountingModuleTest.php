@@ -64,9 +64,20 @@ class AccountingModuleTest extends TestCase
         $this->assertNotNull($expense->receipt_path);
 
         $this->actingAs($admin)->get(route('expenses.show', $expense))->assertOk()->assertSee('Owner AC service');
-        $this->actingAs($admin)->get(route('owner-statements.index', ['owner_id' => $owner->id]))->assertOk()->assertSee('Owner Account Statement')->assertSee('Statement PDF');
+        $bookingDuration = now()->addDays(3)->format('M d, Y').' to '.now()->addDays(8)->format('M d, Y');
+
+        $this->actingAs($admin)->get(route('owner-statements.index', ['owner_id' => $owner->id]))
+            ->assertOk()
+            ->assertSee('Owner Account Statement')
+            ->assertSee('Booking rent')
+            ->assertSee('AED 8,500.00')
+            ->assertSee($bookingDuration)
+            ->assertSee('PDF');
         $this->actingAs($admin)->get(route('owner-statements.pdf', ['owner_id' => $owner->id]))->assertOk()->assertHeader('content-type', 'application/pdf');
-        $this->actingAs($admin)->get(route('owner-payouts.index', ['owner_id' => $owner->id]))->assertOk()->assertSee('Owner Payouts')->assertSee('30 days');
+        $this->actingAs($admin)->get(route('owner-payouts.index', ['owner_id' => $owner->id]))
+            ->assertOk()
+            ->assertSee('Owner Account Manager')
+            ->assertSee('Payout and transfer schedule');
         $this->actingAs($admin)->get(route('reports.index'))->assertOk()->assertSeeText('Reports & Profit/Loss');
         $this->actingAs($admin)->get(route('reports.export', ['type' => 'expenses']))->assertOk()->assertHeader('content-type', 'text/csv; charset=UTF-8');
     }
