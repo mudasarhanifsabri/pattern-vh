@@ -13,7 +13,7 @@ class BookingInvoiceScheduler
     {
         $booking->loadMissing(['tenant', 'unit']);
 
-        if (! in_array($booking->booking_status, ['confirmed', 'checked_in', 'checkout_requested'], true)) {
+        if (! in_array($booking->booking_status, Booking::ACTIVE_STATUSES, true)) {
             return;
         }
 

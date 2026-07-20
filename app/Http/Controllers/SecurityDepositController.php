@@ -29,7 +29,7 @@ class SecurityDepositController extends Controller
             'refunds' => $refunds,
             'activeBookings' => $activeBookings,
             'stats' => [
-                'held' => Booking::where('deposit_amount', '>', 0)->whereIn('booking_status', ['confirmed', 'checked_in', 'checkout_requested'])->sum('deposit_amount'),
+                'held' => Booking::where('deposit_amount', '>', 0)->whereIn('booking_status', Booking::ACTIVE_STATUSES)->sum('deposit_amount'),
                 'pending_review' => BookingDepositRefund::whereIn('status', ['pending_inspection', 'tenant_review'])->sum('deposit_amount'),
                 'damage' => BookingDepositRefund::sum('damage_amount'),
                 'refunded' => BookingDepositRefund::where('status', 'refunded')->sum('refund_amount'),

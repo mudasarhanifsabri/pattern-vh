@@ -12,13 +12,14 @@
 @php
     $cellWidth = 96;
     $unitWidth = 178;
-    $activeStatuses = ['confirmed', 'checked_in', 'checkout_requested'];
+    $activeStatuses = \App\Models\Booking::ACTIVE_STATUSES;
     $selectedDays = (int) request('days', 14);
     $mode = request('mode', $selectedDays > 14 ? 'month' : 'week');
     $statusStyles = [
         'confirmed' => 'border-blue-600 bg-blue-100 text-[#071a3b]',
         'checked_in' => 'border-indigo-600 bg-indigo-100 text-[#071a3b]',
         'checkout_requested' => 'border-violet-600 bg-violet-100 text-[#071a3b]',
+        'extended' => 'border-blue-600 bg-blue-100 text-[#071a3b]',
     ];
     $mobileCards = $units->flatMap(fn ($unit) => ($bookingsByUnit[$unit->id] ?? collect())->map(fn ($booking) => [$unit, $booking]))->take(8);
 @endphp

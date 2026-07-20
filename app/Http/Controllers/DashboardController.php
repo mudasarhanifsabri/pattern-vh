@@ -59,7 +59,7 @@ class DashboardController extends Controller
         $periodStart = now()->startOfMonth();
         $periodEnd = now()->endOfMonth();
         $unitCount = max(Unit::count(), 1);
-        $activeBookingStatuses = ['confirmed', 'checked_in', 'checkout_requested'];
+        $activeBookingStatuses = Booking::ACTIVE_STATUSES;
         $activeBookings = Booking::whereIn('booking_status', $activeBookingStatuses)->count();
         $occupiedUnits = Unit::where('availability_status', 'occupied')->count();
         $occupancy = round(($occupiedUnits / $unitCount) * 100, 1);
@@ -204,7 +204,7 @@ class DashboardController extends Controller
     private function workspaceStats(): array
     {
         return [
-            ['label' => 'Active bookings', 'value' => Booking::whereIn('booking_status', ['confirmed', 'checked_in', 'checkout_requested'])->count(), 'note' => 'Confirmed, checked-in, or checkout pending', 'tone' => 'blue'],
+            ['label' => 'Active bookings', 'value' => Booking::whereIn('booking_status', Booking::ACTIVE_STATUSES)->count(), 'note' => 'Confirmed, extended, checked-in, or checkout pending', 'tone' => 'blue'],
             ['label' => 'Open balance', 'value' => 'AED '.number_format((float) Invoice::where('balance_amount', '>', 0)->sum('balance_amount'), 0), 'note' => 'Unpaid invoice balance', 'tone' => 'amber'],
             ['label' => 'Pending payments', 'value' => Payment::where('status', 'pending')->count(), 'note' => 'Proof waiting for finance approval', 'tone' => 'violet'],
             ['label' => 'Units managed', 'value' => Unit::count(), 'note' => Building::count().' buildings / '.Owner::count().' owners', 'tone' => 'cyan'],
@@ -238,7 +238,7 @@ class DashboardController extends Controller
         return Booking::query()
             ->with(['tenant', 'unit.building'])
             ->when($tenant, fn ($query) => $query->where('tenant_id', $tenant->id))
-            ->whereIn('booking_status', ['confirmed', 'checked_in', 'checkout_requested'])
+            ->whereIn('booking_status', Booking::ACTIVE_STATUSES)
             ->orderBy('check_in_date')
             ->limit(5)
             ->get();
@@ -249,7 +249,7 @@ class DashboardController extends Controller
         return Booking::query()
             ->with(['tenant', 'unit.building', 'unit.ttLock.setting', 'dtcmCheckin', 'depositRefund'])
             ->where('tenant_id', $tenant->id)
-            ->whereIn('booking_status', ['confirmed', 'checked_in', 'checkout_requested'])
+            ->whereIn('booking_status', Booking::ACTIVE_STATUSES)
             ->orderByDesc('check_in_date')
             ->first();
     }
@@ -259,7 +259,7 @@ class DashboardController extends Controller
         return Booking::query()
             ->with(['unit.building'])
             ->where('tenant_id', $tenant->id)
-            ->whereNotIn('booking_status', ['confirmed', 'checked_in', 'checkout_requested'])
+            ->whereNotIn('booking_status', Booking::ACTIVE_STATUSES)
             ->latest('check_out_date')
             ->limit(8)
             ->get();
@@ -271,7 +271,7 @@ class DashboardController extends Controller
             return [
                 ['label' => 'Invoices waiting payment', 'value' => Invoice::where('tenant_id', $tenant->id)->where('balance_amount', '>', 0)->count(), 'route' => 'invoices.index'],
                 ['label' => 'Deposit reports to review', 'value' => BookingDepositRefund::where('tenant_id', $tenant->id)->where('status', 'tenant_review')->count(), 'route' => 'bookings.index'],
-                ['label' => 'Upcoming checkouts', 'value' => Booking::where('tenant_id', $tenant->id)->whereIn('booking_status', ['confirmed', 'checked_in'])->whereBetween('check_out_date', [now()->toDateString(), now()->addDays(7)->toDateString()])->count(), 'route' => 'bookings.index'],
+                ['label' => 'Upcoming checkouts', 'value' => Booking::where('tenant_id', $tenant->id)->whereIn('booking_status', ['confirmed', 'extended', 'checked_in'])->whereBetween('check_out_date', [now()->toDateString(), now()->addDays(7)->toDateString()])->count(), 'route' => 'bookings.index'],
             ];
         }
 

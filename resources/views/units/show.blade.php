@@ -10,8 +10,8 @@
         $primaryOwner = $unit->owners->sortByDesc(fn ($owner) => (float) ($owner->pivot?->share_percent ?? 0))->first();
         $lock = $unit->ttLock;
         $pictures = collect($unit->pictures ?? []);
-        $activeBookings = $unit->bookings->whereIn('booking_status', ['confirmed', 'checked_in', 'checkout_requested']);
-        $pastBookings = $unit->bookings->whereNotIn('booking_status', ['confirmed', 'checked_in', 'checkout_requested']);
+        $activeBookings = $unit->bookings->whereIn('booking_status', \App\Models\Booking::ACTIVE_STATUSES);
+        $pastBookings = $unit->bookings->whereNotIn('booking_status', \App\Models\Booking::ACTIVE_STATUSES);
         $ownerPortal = auth()->user()?->can('portal.owner') && ! auth()->user()?->can('units.manage');
         $statusClass = match ($unit->availability_status) {
             'available' => 'bg-emerald-50 text-emerald-700',

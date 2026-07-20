@@ -30,7 +30,9 @@ class InvoicePaymentWorkflow
         }
 
         $booking = $invoice->booking;
-        $booking->forceFill(['booking_status' => 'confirmed'])->save();
+        if (! in_array($booking->booking_status, ['extended', 'checked_in', 'checkout_requested', 'checked_out'], true)) {
+            $booking->forceFill(['booking_status' => 'confirmed'])->save();
+        }
 
         app(BookingWorkflow::class)->afterSaved($booking->fresh(['unit', 'tenant']));
         $this->applyPaidExtension($invoice);
@@ -76,7 +78,7 @@ class InvoicePaymentWorkflow
 
         $extension->booking->update([
             'check_out_date' => $extension->requested_check_out_date,
-            'booking_status' => 'confirmed',
+            'booking_status' => 'extended',
         ]);
 
         $extension->update(['status' => 'paid_extended']);

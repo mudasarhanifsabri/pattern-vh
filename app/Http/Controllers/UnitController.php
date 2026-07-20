@@ -24,7 +24,7 @@ class UnitController extends Controller
     public function index()
     {
         $owner = $this->currentOwner();
-        $activeBookingStatuses = ['confirmed', 'checked_in', 'checkout_requested'];
+        $activeBookingStatuses = Booking::ACTIVE_STATUSES;
         $activeBookingFilter = fn ($query) => $query
             ->whereIn('booking_status', $activeBookingStatuses)
             ->whereDate('check_out_date', '>=', today());

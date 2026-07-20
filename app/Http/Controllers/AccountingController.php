@@ -22,7 +22,7 @@ class AccountingController extends Controller
             ],
             'recentExpenses' => Expense::with(['owner', 'unit.building'])->latest('incurred_on')->limit(6)->get(),
             'ownerCount' => Owner::count(),
-            'activeBookings' => Booking::whereIn('booking_status', ['confirmed', 'checked_in', 'checkout_requested'])->count(),
+            'activeBookings' => Booking::whereIn('booking_status', Booking::ACTIVE_STATUSES)->count(),
         ]);
     }
 }

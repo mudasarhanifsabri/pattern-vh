@@ -11,7 +11,7 @@ class BookingWorkflow
 {
     public function afterSaved(Booking $booking): void
     {
-        if (! in_array($booking->booking_status, ['confirmed', 'checked_in'], true)) {
+        if (! in_array($booking->booking_status, ['confirmed', 'extended', 'checked_in'], true)) {
             return;
         }
 

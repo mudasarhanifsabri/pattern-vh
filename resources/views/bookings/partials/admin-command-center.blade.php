@@ -10,14 +10,15 @@
     $paidAmount = $invoices->sum(fn ($invoice) => (float) $invoice->paid_amount);
     $issueCount = $booking->checkInInspectionItems->whereIn('condition_status', ['damaged', 'missing', 'needs_attention'])->count();
     $checkoutDone = $booking->booking_status === 'checked_out';
-    $bookingConfirmed = in_array($booking->booking_status, ['confirmed', 'checked_in', 'checkout_requested', 'checked_out'], true);
-    $paymentDone = $invoices->isNotEmpty() ? $balanceDue <= 0 : in_array($booking->booking_status, ['confirmed', 'checked_in', 'checkout_requested', 'checked_out'], true);
+    $bookingConfirmed = in_array($booking->booking_status, ['confirmed', 'extended', 'checked_in', 'checkout_requested', 'checked_out'], true);
+    $paymentDone = $invoices->isNotEmpty() ? $balanceDue <= 0 : in_array($booking->booking_status, ['confirmed', 'extended', 'checked_in', 'checkout_requested', 'checked_out'], true);
     $dtcmDone = $booking->dtcmCheckin?->status === 'registered';
     $accessDone = (bool) $booking->smart_lock_code;
     $inspectionDone = (bool) $refund?->inspection_completed_at;
     $refundDone = $refund?->status === 'refunded';
     $statusClass = match ($booking->booking_status) {
         'confirmed', 'checked_in' => 'bg-emerald-50 text-emerald-700 ring-emerald-100',
+        'extended' => 'bg-blue-50 text-blue-700 ring-blue-100',
         'checkout_requested' => 'bg-amber-50 text-amber-700 ring-amber-100',
         'checked_out' => 'bg-blue-50 text-blue-700 ring-blue-100',
         'cancelled' => 'bg-rose-50 text-rose-700 ring-rose-100',
@@ -100,9 +101,9 @@
                     </a>
                 @endcan
                 @can('invoices.manage')
-                    <a href="{{ route('invoices.create', ['booking_id' => $booking->id]) }}" class="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-black text-slate-700 shadow-sm hover:border-blue-200 hover:text-blue-700">
+                    <a href="{{ $primaryInvoice ? route('invoices.show', $primaryInvoice) : route('invoices.index', ['booking_id' => $booking->id]) }}" class="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-black text-slate-700 shadow-sm hover:border-blue-200 hover:text-blue-700">
                         <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 12h6m-6 4h6M7 3h7l5 5v13H7z" /></svg>
-                        Generate Invoice
+                        {{ $invoices->count() > 1 ? 'View Invoices' : ($primaryInvoice ? 'Open Invoice' : 'Invoice Pending') }}
                     </a>
                 @endcan
                 <a href="{{ route('bookings.confirmation-pdf', $booking) }}" target="_blank" class="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-3 text-sm font-black text-white shadow-xl shadow-blue-600/20">
@@ -403,9 +404,9 @@
                         <button type="button" @click="modal = 'dtcm'" class="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-xs font-black text-emerald-700">Check In</button>
                         <button type="button" @click="modal = 'checkout'" class="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2.5 text-xs font-black text-rose-700">Check Out</button>
                     @endcan
-                    <button type="button" @click="modal = 'extension'" class="rounded-xl border border-blue-200 bg-blue-50 px-3 py-2.5 text-center text-xs font-black text-blue-700">Extend Stay</button>
+                    <button type="button" onclick="document.getElementById('extend-stay-dialog')?.showModal()" class="rounded-xl border border-blue-200 bg-blue-50 px-3 py-2.5 text-center text-xs font-black text-blue-700">Extend Stay</button>
                     @can('invoices.manage')
-                        <a href="{{ route('invoices.create', ['booking_id' => $booking->id]) }}" class="rounded-xl border border-violet-200 bg-violet-50 px-3 py-2.5 text-center text-xs font-black text-violet-700">Generate Invoice</a>
+                        <a href="{{ route('invoices.index', ['booking_id' => $booking->id]) }}" class="rounded-xl border border-violet-200 bg-violet-50 px-3 py-2.5 text-center text-xs font-black text-violet-700">View Invoices</a>
                     @endcan
                     <a href="https://wa.me/{{ preg_replace('/\D+/', '', (string) $booking->tenant->mobile_no) }}" target="_blank" class="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-center text-xs font-black text-emerald-700">Send WhatsApp</a>
                     <a href="mailto:{{ $booking->tenant->email }}" class="rounded-xl border border-blue-200 bg-blue-50 px-3 py-2.5 text-center text-xs font-black text-blue-700">Send Email</a>
@@ -413,6 +414,41 @@
                     <button type="button" @click="modal = 'note'" class="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-xs font-black text-slate-700">Add Note</button>
                 </div>
             </section>
+
+            @can('bookings.manage')
+                <dialog id="extend-stay-dialog" class="w-[min(92vw,42rem)] rounded-[1.6rem] bg-white p-0 text-left shadow-2xl backdrop:bg-slate-950/50">
+                    <form method="dialog" class="border-b border-slate-100 p-5">
+                        <div class="flex items-start justify-between gap-4">
+                            <div>
+                                <p class="text-xs font-black uppercase tracking-[0.18em] text-blue-600">Booking action</p>
+                                <h2 class="mt-1 text-xl font-black text-[#071a3b]">Extend stay</h2>
+                            </div>
+                            <button type="submit" class="grid h-10 w-10 place-items-center rounded-full border border-slate-200 text-slate-500">x</button>
+                        </div>
+                    </form>
+                    <form method="POST" action="{{ route('bookings.extension-invoice.store', $booking) }}" class="space-y-3 p-5">
+                        @csrf
+                        <div class="rounded-2xl bg-slate-50 p-4">
+                            <p class="text-xs font-black uppercase tracking-[0.12em] text-slate-400">Current checkout</p>
+                            <p class="mt-1 text-lg font-black text-[#071a3b]">{{ $booking->check_out_date?->format('M d, Y') }} / {{ $booking->check_out_time ? \Illuminate\Support\Carbon::parse($booking->check_out_time)->format('h:i A') : '11:00 AM' }}</p>
+                        </div>
+                        <label class="block text-sm font-black text-[#071a3b]">New checkout date
+                            <input name="requested_check_out_date" type="date" min="{{ $booking->check_out_date?->copy()->addDay()->toDateString() }}" class="erp-focus mt-1 h-11 w-full rounded-xl border border-slate-200 px-3" required>
+                        </label>
+                        <label class="block text-sm font-black text-[#071a3b]">Extra rent invoice amount
+                            <input name="extra_rent_amount" type="number" min="0.01" step="0.01" class="erp-focus mt-1 h-11 w-full rounded-xl border border-slate-200 px-3" placeholder="AED 0.00" required>
+                        </label>
+                        <label class="block text-sm font-black text-[#071a3b]">Internal note
+                            <textarea name="approval_notes" rows="3" class="erp-focus mt-1 w-full rounded-xl border border-slate-200 px-3 py-2" placeholder="Optional note for this extension invoice"></textarea>
+                        </label>
+                        <div class="rounded-2xl bg-blue-50 p-4 text-xs font-bold leading-5 text-blue-700">
+                            <p>Confirmation: this will mark the booking as Extended, update checkout and smart lock validity to the new date, move checkout tasks, and create an invoice for the period from the old checkout date to the new checkout date.</p>
+                            <p class="mt-2">Old checkout: {{ $booking->check_out_date?->format('M d, Y') }}. Invoice status: Sent.</p>
+                        </div>
+                        <button class="w-full rounded-xl bg-blue-600 px-4 py-3 text-sm font-black text-white">Confirm extension and create invoice</button>
+                    </form>
+                </dialog>
+            @endcan
 
             <section class="rounded-[1.4rem] border border-slate-200 bg-white p-5 shadow-sm">
                 <div class="flex items-center justify-between gap-3">
@@ -578,8 +614,11 @@
                         <label class="block text-sm font-black text-[#071a3b]">Internal note
                             <textarea name="approval_notes" rows="3" class="erp-focus mt-1 w-full rounded-xl border border-slate-200 px-3 py-2" placeholder="Optional note for this extension invoice"></textarea>
                         </label>
-                        <p class="rounded-2xl bg-blue-50 p-4 text-xs font-bold leading-5 text-blue-700">This creates only the extension rent invoice. The booking checkout date will update after this invoice is fully paid.</p>
-                        <button class="w-full rounded-xl bg-blue-600 px-4 py-3 text-sm font-black text-white">Create extension invoice</button>
+                        <div class="rounded-2xl bg-blue-50 p-4 text-xs font-bold leading-5 text-blue-700">
+                            <p>Confirmation: this will mark the booking as Extended, update checkout and smart lock validity to the new date, move checkout tasks, and create an invoice for the period from the old checkout date to the new checkout date.</p>
+                            <p class="mt-2">Old checkout: {{ $booking->check_out_date?->format('M d, Y') }}. Invoice status: Sent.</p>
+                        </div>
+                        <button class="w-full rounded-xl bg-blue-600 px-4 py-3 text-sm font-black text-white">Confirm extension and create invoice</button>
                     </form>
                 </div>
 

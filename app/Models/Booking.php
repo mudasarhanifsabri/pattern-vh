@@ -26,7 +26,9 @@ class Booking extends Model
 
     public const TYPES = ['holiday_home', 'long_term'];
 
-    public const STATUSES = ['draft', 'confirmed', 'checked_in', 'checkout_requested', 'checked_out', 'cancelled'];
+    public const STATUSES = ['draft', 'confirmed', 'extended', 'checked_in', 'checkout_requested', 'checked_out', 'cancelled'];
+
+    public const ACTIVE_STATUSES = ['confirmed', 'extended', 'checked_in', 'checkout_requested'];
 
     protected function casts(): array
     {

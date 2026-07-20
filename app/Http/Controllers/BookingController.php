@@ -260,7 +260,7 @@ class BookingController extends Controller
         $validFrom = $this->bookingDateTime($booking->check_in_date, $booking->check_in_time, '15:00');
         $validUntil = $this->bookingDateTime($booking->check_out_date, $booking->check_out_time, '11:00');
 
-        if (! in_array($booking->booking_status, ['confirmed', 'checked_in', 'checkout_requested'], true)) {
+        if (! in_array($booking->booking_status, Booking::ACTIVE_STATUSES, true)) {
             return response()->json(['message' => 'Smart lock access is not active for this booking.'], 423);
         }
 
@@ -325,7 +325,7 @@ class BookingController extends Controller
         $validFrom = $this->bookingDateTime($booking->check_in_date, $booking->check_in_time, '15:00');
         $validUntil = $this->bookingDateTime($booking->check_out_date, $booking->check_out_time, '11:00');
 
-        if (! in_array($booking->booking_status, ['confirmed', 'checked_in', 'checkout_requested'], true)) {
+        if (! in_array($booking->booking_status, Booking::ACTIVE_STATUSES, true)) {
             return back()->withErrors(['door_code' => 'Smart lock access is not active for this booking.']);
         }
 
@@ -445,14 +445,14 @@ class BookingController extends Controller
 
     private function ensureTenantHasSingleActiveBooking(array $data, ?Booking $currentBooking = null): void
     {
-        if (! in_array($data['booking_status'] ?? null, ['confirmed', 'checked_in', 'checkout_requested'], true)) {
+        if (! in_array($data['booking_status'] ?? null, Booking::ACTIVE_STATUSES, true)) {
             return;
         }
 
         $exists = Booking::query()
             ->when($currentBooking, fn ($query) => $query->whereKeyNot($currentBooking->id))
             ->where('tenant_id', $data['tenant_id'])
-            ->whereIn('booking_status', ['confirmed', 'checked_in', 'checkout_requested'])
+            ->whereIn('booking_status', Booking::ACTIVE_STATUSES)
             ->exists();
 
         if ($exists) {
@@ -464,14 +464,14 @@ class BookingController extends Controller
 
     private function ensureUnitHasNoOverlappingActiveBooking(array $data, ?Booking $currentBooking = null): void
     {
-        if (! in_array($data['booking_status'] ?? null, ['confirmed', 'checked_in', 'checkout_requested'], true)) {
+        if (! in_array($data['booking_status'] ?? null, Booking::ACTIVE_STATUSES, true)) {
             return;
         }
 
         $exists = Booking::query()
             ->when($currentBooking, fn ($query) => $query->whereKeyNot($currentBooking->id))
             ->where('unit_id', $data['unit_id'])
-            ->whereIn('booking_status', ['confirmed', 'checked_in', 'checkout_requested'])
+            ->whereIn('booking_status', Booking::ACTIVE_STATUSES)
             ->whereDate('check_in_date', '<', $data['check_out_date'])
             ->whereDate('check_out_date', '>', $data['check_in_date'])
             ->exists();
@@ -485,7 +485,7 @@ class BookingController extends Controller
 
     private function syncSmartLockAccess(Booking $booking, bool $force = false): void
     {
-        if (! in_array($booking->booking_status, ['confirmed', 'checked_in', 'checkout_requested'], true)) {
+        if (! in_array($booking->booking_status, Booking::ACTIVE_STATUSES, true)) {
             return;
         }
 

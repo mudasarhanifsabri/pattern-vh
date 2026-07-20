@@ -282,7 +282,7 @@
                 <p class="mt-1 text-sm text-slate-500">Stay, payment, workflow, tenant, unit, and status at a glance.</p>
                 <div class="mt-5 grid gap-3 md:grid-cols-4">
                     @foreach([
-                        ['Paid / confirmed', in_array($booking->booking_status, ['confirmed','checked_in','checkout_requested','checked_out'], true)],
+                        ['Paid / confirmed', in_array($booking->booking_status, ['confirmed','extended','checked_in','checkout_requested','checked_out'], true)],
                         [$tenantPortal ? 'Authority check-in' : 'DTCM check-in', $booking->dtcmCheckin?->status === 'registered'],
                         ['Checkout', $booking->booking_status === 'checked_out'],
                         ['Deposit refund', in_array($booking->depositRefund?->status, ['accepted','refund_processing','refunded'], true)],

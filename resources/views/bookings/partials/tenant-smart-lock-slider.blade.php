@@ -1,14 +1,14 @@
 @php
     $smartLockNow = now();
     $smartLockCanControl = $booking
-        && in_array($booking->booking_status, ['confirmed', 'checked_in', 'checkout_requested'], true)
+        && in_array($booking->booking_status, \App\Models\Booking::ACTIVE_STATUSES, true)
         && $smartLockValidFrom
         && $smartLockValidUntil
         && $smartLockNow->betweenIncluded($smartLockValidFrom, $smartLockValidUntil)
         && (bool) $booking->unit?->ttLock?->setting;
 
     $smartLockDisabledMessage = 'Smart lock is not ready yet.';
-    if ($booking && ! in_array($booking->booking_status, ['confirmed', 'checked_in', 'checkout_requested'], true)) {
+    if ($booking && ! in_array($booking->booking_status, \App\Models\Booking::ACTIVE_STATUSES, true)) {
         $smartLockDisabledMessage = 'Smart lock access is not active for this booking.';
     } elseif ($smartLockValidFrom && $smartLockNow->lt($smartLockValidFrom)) {
         $smartLockDisabledMessage = 'Access starts '.$smartLockValidFrom->format('d M Y, h:i A').'.';

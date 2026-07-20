@@ -54,7 +54,7 @@ class CeoDashboardController extends Controller
                 ['label' => 'Overdue invoices', 'value' => Invoice::where('balance_amount', '>', 0)->whereDate('due_date', '<', today())->count(), 'route' => 'invoices.index', 'tone' => 'amber'],
                 ['label' => 'Urgent tasks', 'value' => BookingTask::where('priority', 'urgent')->whereNotIn('status', ['completed', 'cancelled'])->count(), 'route' => 'tasks.index', 'tone' => 'rose'],
                 ['label' => 'Payouts transferred', 'value' => OwnerPayoutTransfer::whereBetween('transferred_at', [$from, $to])->count(), 'route' => 'owner-payouts.index', 'tone' => 'blue'],
-                ['label' => 'Active bookings', 'value' => Booking::whereIn('booking_status', ['confirmed', 'checked_in', 'checkout_requested'])->count(), 'route' => 'bookings.index', 'tone' => 'emerald'],
+                ['label' => 'Active bookings', 'value' => Booking::whereIn('booking_status', Booking::ACTIVE_STATUSES)->count(), 'route' => 'bookings.index', 'tone' => 'emerald'],
             ],
             'recentExpenses' => Expense::with(['owner', 'unit.building'])->latest('incurred_on')->limit(6)->get(),
             'upcomingPayouts' => OwnerPayoutTransfer::with('owner')->latest()->limit(6)->get(),

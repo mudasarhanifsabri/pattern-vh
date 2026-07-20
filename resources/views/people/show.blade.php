@@ -10,8 +10,8 @@
         $isTenant = $config['extra'] === 'tenant';
         $isAgent = $config['extra'] === 'agent';
         $isOperations = $config['extra'] === 'operations';
-        $activeBookings = $isTenant ? $record->bookings->whereIn('booking_status', ['confirmed', 'checked_in', 'checkout_requested']) : collect();
-        $pastBookings = $isTenant ? $record->bookings->whereNotIn('booking_status', ['confirmed', 'checked_in', 'checkout_requested']) : collect();
+        $activeBookings = $isTenant ? $record->bookings->whereIn('booking_status', \App\Models\Booking::ACTIVE_STATUSES) : collect();
+        $pastBookings = $isTenant ? $record->bookings->whereNotIn('booking_status', \App\Models\Booking::ACTIVE_STATUSES) : collect();
         $statusText = $record->is_blacklisted ? 'Blacklisted' : 'Active';
         $autoAssignments = $isOperations
             ? collect([
