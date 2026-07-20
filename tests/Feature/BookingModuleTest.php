@@ -256,6 +256,40 @@ class BookingModuleTest extends TestCase
         $this->assertDatabaseHas('notification_logs', ['booking_id' => $booking->id, 'subject' => 'Building security extension details']);
     }
 
+    public function test_admin_can_extend_stay_from_booking_page_and_create_invoice(): void
+    {
+        $this->seed();
+
+        $admin = User::where('email', 'admin@example.com')->firstOrFail();
+        $booking = Booking::where('booking_no', 'BK-DEMO-0001')->firstOrFail();
+        $oldCheckout = $booking->check_out_date->copy();
+        $newCheckout = $oldCheckout->copy()->addDays(3);
+
+        $this->actingAs($admin)
+            ->post(route('bookings.extension-invoice.store', $booking), [
+                'requested_check_out_date' => $newCheckout->toDateString(),
+                'extra_rent_amount' => 1800,
+                'approval_notes' => 'Guest confirmed three more nights.',
+            ])
+            ->assertRedirect(route('bookings.show', $booking))
+            ->assertSessionHas('status');
+
+        $booking->refresh();
+        $extension = BookingExtensionRequest::where('booking_id', $booking->id)->firstOrFail();
+        $invoice = $extension->invoice()->firstOrFail();
+
+        $this->assertSame('extended', $booking->booking_status);
+        $this->assertSame($newCheckout->toDateString(), $booking->check_out_date->format('Y-m-d'));
+        $this->assertSame('approved_pending_payment', $extension->status);
+        $this->assertSame($newCheckout->toDateString(), $extension->requested_check_out_date->format('Y-m-d'));
+        $this->assertSame($oldCheckout->toDateString(), $invoice->period_start->format('Y-m-d'));
+        $this->assertSame($newCheckout->toDateString(), $invoice->period_end->format('Y-m-d'));
+        $this->assertSame('sent', $invoice->status);
+        $this->assertEquals(1800, (float) $invoice->rent_amount);
+        $this->assertEquals(90, (float) $invoice->vat_amount);
+        $this->assertEquals(1890, (float) $invoice->balance_amount);
+    }
+
     public function test_checkout_inspection_and_deposit_refund_flow(): void
     {
         $this->seed();

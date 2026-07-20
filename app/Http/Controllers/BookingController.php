@@ -490,6 +490,12 @@ class BookingController extends Controller
         }
 
         $mode = $booking->smart_lock_code_mode ?: 'auto';
+
+        if ($mode === 'manual') {
+            $booking->forceFill(['smart_lock_code_mode' => $mode])->save();
+            return;
+        }
+
         $validFrom = $this->bookingDateTime($booking->check_in_date, $booking->check_in_time, '15:00');
         $validUntil = $this->bookingDateTime($booking->check_out_date, $booking->check_out_time, '11:00');
         $code = $booking->smart_lock_code;
