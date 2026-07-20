@@ -210,7 +210,11 @@ class BookingLifecycleController extends Controller
 
     public function completeCheckout(Booking $booking, BookingInvoiceScheduler $invoiceScheduler, PushEventLogger $push)
     {
-        $this->ensureBookingStatus($booking, ['checkout_requested'], 'Checkout can only be completed after the tenant checkout request is received.');
+        if ($booking->booking_status === 'checked_out') {
+            return back()->with('status', 'Booking is already checked out.');
+        }
+
+        $this->ensureBookingStatus($booking, Booking::ACTIVE_STATUSES, 'Checkout can only be completed for an active booking.');
 
         $booking->update(['booking_status' => 'checked_out']);
         $cancelled = $invoiceScheduler->cancelFutureUnpaidInvoices($booking);

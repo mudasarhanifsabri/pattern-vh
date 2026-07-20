@@ -338,6 +338,28 @@ class BookingModuleTest extends TestCase
         ]);
     }
 
+    public function test_admin_can_checkout_active_booking_directly_from_booking_page(): void
+    {
+        $this->seed();
+
+        $admin = User::where('email', 'admin@example.com')->firstOrFail();
+        $booking = Booking::where('booking_no', 'BK-DEMO-0001')->firstOrFail();
+
+        $this->actingAs($admin)
+            ->post(route('bookings.complete-checkout', $booking))
+            ->assertRedirect()
+            ->assertSessionHas('status', 'Booking checked out. Cleaning/inspection tasks and deposit refund workflow are ready.');
+
+        $booking->refresh();
+
+        $this->assertSame('checked_out', $booking->booking_status);
+        $this->assertDatabaseHas(BookingDepositRefund::class, [
+            'booking_id' => $booking->id,
+            'tenant_id' => $booking->tenant_id,
+            'status' => 'pending_inspection',
+        ]);
+    }
+
     public function test_tenant_booking_page_hides_internal_logs_and_tasks(): void
     {
         $this->seed();

@@ -528,7 +528,7 @@
                 </div>
 
                 <div x-show="modal === 'checkout'" class="space-y-4">
-                    <p class="rounded-2xl bg-amber-50 p-4 text-sm font-semibold text-amber-700">This will mark the booking checked out, cancel future unpaid invoices, create checkout cleaning and technician inspection tasks, and start the deposit refund workflow.</p>
+                    <p class="rounded-2xl bg-amber-50 p-4 text-sm font-semibold text-amber-700">This will mark the booking checked out now, cancel future unpaid invoices, create or update checkout cleaning and technician inspection tasks, and start the deposit refund workflow. Tenant checkout request is not required for admin checkout.</p>
                     <form method="POST" action="{{ route('bookings.complete-checkout', $booking) }}">
                         @csrf
                         <button class="w-full rounded-xl bg-slate-900 px-4 py-3 text-sm font-black text-white">Confirm checkout and start deposit workflow</button>
