@@ -39,7 +39,15 @@ class DashboardController extends Controller
             'currentBooking' => $tenant ? $this->currentTenantBooking($tenant) : null,
             'tenantBalanceDue' => $tenant ? $this->tenantBalanceDue($tenant) : 0,
             'tenantOpenRefund' => $tenant ? $this->tenantOpenRefund($tenant) : null,
-            'ownerUnits' => $owner ? $owner->units()->with('building')->get() : collect(),
+            'ownerUnits' => $owner ? $owner->units()
+                ->with([
+                    'building',
+                    'bookings' => fn ($query) => $query
+                        ->with('tenant')
+                        ->whereIn('booking_status', Booking::ACTIVE_STATUSES)
+                        ->orderBy('check_in_date'),
+                ])
+                ->get() : collect(),
             'stats' => $tenant ? $this->tenantStats($tenant) : ($owner ? $this->ownerStats($owner) : $this->workspaceStats()),
             'quickActions' => $tenant ? $this->tenantActions() : ($owner ? $this->ownerActions() : $this->workspaceActions()),
             'upcomingBookings' => $this->upcomingBookings($tenant),

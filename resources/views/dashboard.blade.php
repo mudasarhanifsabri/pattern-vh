@@ -331,15 +331,13 @@
             <section class="erp-card p-5">
                 <h2 class="text-lg font-black text-[#071a3b]">My units status</h2>
                 <div class="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-                    @forelse($ownerUnits as $unit)
-                        <a href="{{ route('units.show', $unit) }}" class="rounded-3xl border border-slate-200 bg-white p-4 hover:bg-slate-50">
-                            <p class="text-xs font-bold text-slate-500">{{ $unit->building->name }}</p>
-                            <h3 class="mt-1 text-lg font-black text-[#071a3b]">Unit {{ $unit->unit_no }}</h3>
-                            <p class="mt-1 text-xs text-slate-500">{{ $unit->unit_type }} / {{ str($unit->availability_status)->headline() }}</p>
-                        </a>
-                    @empty
+                    @if($ownerUnits->isEmpty())
                         <p class="rounded-2xl border border-dashed border-slate-200 px-4 py-8 text-center text-sm text-slate-500">No units assigned yet.</p>
-                    @endforelse
+                    @else
+                        @foreach($ownerUnits as $unit)
+                            @include('dashboard.partials.owner-unit-status-card', ['unit' => $unit])
+                        @endforeach
+                    @endif
                 </div>
             </section>
         </div>
@@ -755,15 +753,13 @@
             <section class="mt-5 erp-card p-5">
                 <h2 class="text-lg font-black text-[#071a3b]">My units status</h2>
                 <div class="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-                    @forelse($ownerUnits as $unit)
-                        <a href="{{ route('units.show', $unit) }}" class="rounded-3xl border border-slate-200 bg-white p-4 hover:bg-slate-50">
-                            <p class="text-xs font-bold text-slate-500">{{ $unit->building->name }}</p>
-                            <h3 class="mt-1 text-lg font-black text-[#071a3b]">Unit {{ $unit->unit_no }}</h3>
-                            <p class="mt-1 text-xs text-slate-500">{{ $unit->unit_type }} / {{ str($unit->availability_status)->headline() }}</p>
-                        </a>
-                    @empty
+                    @if($ownerUnits->isEmpty())
                         <p class="rounded-2xl border border-dashed border-slate-200 px-4 py-8 text-center text-sm text-slate-500">No units assigned yet.</p>
-                    @endforelse
+                    @else
+                        @foreach($ownerUnits as $unit)
+                            @include('dashboard.partials.owner-unit-status-card', ['unit' => $unit])
+                        @endforeach
+                    @endif
                 </div>
             </section>
         @endif

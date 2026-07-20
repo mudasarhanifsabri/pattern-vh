@@ -39,6 +39,22 @@ class ErpFoundationTest extends TestCase
         $this->assertTrue($admin->hasRole('Super Admin'));
     }
 
+    public function test_owner_dashboard_shows_unit_rent_and_booking_duration(): void
+    {
+        $this->seed();
+
+        $owner = User::where('email', 'demo.owner@example.com')->firstOrFail();
+
+        $this->actingAs($owner)
+            ->get(route('dashboard'))
+            ->assertOk()
+            ->assertSee('My units status')
+            ->assertSee('Unit 1402')
+            ->assertSee('Rent AED 8,500.00')
+            ->assertSee('Nora Al Mansoori')
+            ->assertSee('Jul 23, 2026 to Jul 28, 2026');
+    }
+
     public function test_manifest_and_service_worker_are_available(): void
     {
         $this->assertFileExists(public_path('manifest.webmanifest'));
