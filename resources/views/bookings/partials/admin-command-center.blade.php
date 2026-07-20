@@ -402,7 +402,7 @@
                 <div class="mt-4 grid grid-cols-2 gap-3">
                     @can('bookings.manage')
                         <button type="button" @click="modal = 'dtcm'" class="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-xs font-black text-emerald-700">Check In</button>
-                        <button type="button" @click="modal = 'checkout'" class="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2.5 text-xs font-black text-rose-700">Check Out</button>
+                        <button type="button" onclick="document.getElementById('checkout-dialog')?.showModal()" class="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2.5 text-xs font-black text-rose-700">Check Out</button>
                     @endcan
                     <button type="button" onclick="document.getElementById('extend-stay-dialog')?.showModal()" class="rounded-xl border border-blue-200 bg-blue-50 px-3 py-2.5 text-center text-xs font-black text-blue-700">Extend Stay</button>
                     @can('invoices.manage')
@@ -416,6 +416,35 @@
             </section>
 
             @can('bookings.manage')
+                <dialog id="checkout-dialog" class="w-[min(92vw,42rem)] rounded-[1.6rem] bg-white p-0 text-left shadow-2xl backdrop:bg-slate-950/50">
+                    <form method="dialog" class="border-b border-slate-100 p-5">
+                        <div class="flex items-start justify-between gap-4">
+                            <div>
+                                <p class="text-xs font-black uppercase tracking-[0.18em] text-rose-600">Booking action</p>
+                                <h2 class="mt-1 text-xl font-black text-[#071a3b]">Complete checkout</h2>
+                            </div>
+                            <button type="submit" class="grid h-10 w-10 place-items-center rounded-full border border-slate-200 text-slate-500">x</button>
+                        </div>
+                    </form>
+                    <div class="space-y-4 p-5">
+                        <div class="grid gap-3 sm:grid-cols-2">
+                            <div class="rounded-2xl bg-slate-50 p-4">
+                                <p class="text-xs font-black uppercase tracking-[0.12em] text-slate-400">Current status</p>
+                                <p class="mt-1 text-lg font-black text-[#071a3b]">{{ str($booking->booking_status)->replace('_', ' ')->headline() }}</p>
+                            </div>
+                            <div class="rounded-2xl bg-slate-50 p-4">
+                                <p class="text-xs font-black uppercase tracking-[0.12em] text-slate-400">Checkout date</p>
+                                <p class="mt-1 text-lg font-black text-[#071a3b]">{{ $booking->check_out_date?->format('M d, Y') }}</p>
+                            </div>
+                        </div>
+                        <p class="rounded-2xl bg-amber-50 p-4 text-sm font-semibold text-amber-700">This will mark the booking checked out now, cancel future unpaid invoices, create or update checkout cleaning and technician inspection tasks, and start the deposit refund workflow. Tenant checkout request is not required for admin checkout.</p>
+                        <form method="POST" action="{{ route('bookings.complete-checkout', $booking) }}">
+                            @csrf
+                            <button class="w-full rounded-xl bg-slate-900 px-4 py-3 text-sm font-black text-white">Confirm checkout and start deposit workflow</button>
+                        </form>
+                    </div>
+                </dialog>
+
                 <dialog id="extend-stay-dialog" class="w-[min(92vw,42rem)] rounded-[1.6rem] bg-white p-0 text-left shadow-2xl backdrop:bg-slate-950/50">
                     <form method="dialog" class="border-b border-slate-100 p-5">
                         <div class="flex items-start justify-between gap-4">
