@@ -65,6 +65,8 @@ class AccountingModuleTest extends TestCase
 
         $this->actingAs($admin)->get(route('expenses.show', $expense))->assertOk()->assertSee('Owner AC service');
         $bookingDuration = now()->addDays(3)->format('M d, Y').' to '.now()->addDays(8)->format('M d, Y');
+        $bookingCheckIn = now()->addDays(3)->format('M d, Y');
+        $bookingCheckOut = now()->addDays(8)->format('M d, Y');
 
         $this->actingAs($admin)->get(route('owner-statements.index', ['owner_id' => $owner->id]))
             ->assertOk()
@@ -77,7 +79,13 @@ class AccountingModuleTest extends TestCase
         $this->actingAs($admin)->get(route('owner-payouts.index', ['owner_id' => $owner->id]))
             ->assertOk()
             ->assertSee('Owner Account Manager')
-            ->assertSee('Payout and transfer schedule');
+            ->assertSee('Payout and transfer schedule')
+            ->assertSee('Balance Amount = Rent Collected - Management Fee - All Owner Expenses')
+            ->assertSee('AED 770.00')
+            ->assertSee('AED 4,109.00')
+            ->assertSee($bookingCheckIn)
+            ->assertSee($bookingCheckOut)
+            ->assertDontSee('Save date');
         $this->actingAs($admin)->get(route('reports.index'))->assertOk()->assertSeeText('Reports & Profit/Loss');
         $this->actingAs($admin)->get(route('reports.export', ['type' => 'expenses']))->assertOk()->assertHeader('content-type', 'text/csv; charset=UTF-8');
     }

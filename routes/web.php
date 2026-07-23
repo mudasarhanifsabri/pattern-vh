@@ -321,12 +321,6 @@ Route::middleware('auth')->group(function () {
     Route::post('owner-payouts/transfers', [OwnerPayoutController::class, 'storeTransfer'])
         ->middleware('permission:owner-payouts.manage')
         ->name('owner-payouts.transfers.store');
-    Route::patch('owner-payouts/collection-date', [OwnerPayoutController::class, 'updateCollectionDate'])
-        ->middleware('permission:owner-payouts.manage')
-        ->name('owner-payouts.collection-date.update');
-    Route::patch('owner-payouts/payable-date', [OwnerPayoutController::class, 'updatePayableDate'])
-        ->middleware('permission:owner-payouts.manage')
-        ->name('owner-payouts.payable-date.update');
     Route::get('reports', [ReportController::class, 'index'])
         ->middleware('permission:reports.view|reports.export|accounting.view|accounting.manage|users.manage|portal.owner')
         ->name('reports.index');
