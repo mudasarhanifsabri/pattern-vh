@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Mail\UnitAccessCardRequestMail;
+use App\Models\Booking;
 use App\Models\Building;
 use App\Models\Owner;
 use App\Models\TtLock;
