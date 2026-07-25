@@ -239,13 +239,13 @@ Route::middleware('auth')->group(function () {
         ->name('booking-deposit-refunds.process');
 
     Route::get('tasks', [TaskManagementController::class, 'index'])
-        ->middleware('permission:booking-tasks.view|booking-tasks.manage')
+        ->middleware('permission:booking-tasks.manage')
         ->name('tasks.index');
     Route::post('tasks', [TaskManagementController::class, 'store'])
         ->middleware('permission:booking-tasks.manage')
         ->name('tasks.store');
     Route::get('tasks/{bookingTask}', [TaskManagementController::class, 'show'])
-        ->middleware('permission:booking-tasks.view|booking-tasks.manage')
+        ->middleware('permission:booking-tasks.manage')
         ->name('tasks.show');
     Route::patch('tasks/{bookingTask}', [TaskManagementController::class, 'update'])
         ->middleware('permission:booking-tasks.manage')
@@ -266,10 +266,15 @@ Route::middleware('auth')->group(function () {
         ->middleware('permission:portal.tenant')
         ->name('bookings.tenant-check-in-report');
 
-    Route::prefix('maintainer')->name('maintainer.')->group(function () {
+    Route::prefix('maintainer')->name('maintainer.')->middleware('maintainer_app')->group(function () {
         Route::get('/', [MaintainerPwaController::class, 'dashboard'])->name('dashboard');
         Route::get('tasks', [MaintainerPwaController::class, 'index'])->name('tasks.index');
         Route::get('tasks/live', [MaintainerPwaController::class, 'liveTasks'])->name('tasks.live');
+        Route::get('tasks/{task}/accept', [MaintainerPwaController::class, 'acceptForm'])->name('tasks.accept.form');
+        Route::get('tasks/{task}/remarks/create', [MaintainerPwaController::class, 'remarkForm'])->name('tasks.remarks.create');
+        Route::get('tasks/{task}/timeline', [MaintainerPwaController::class, 'timeline'])->name('tasks.timeline');
+        Route::get('tasks/{task}/costs/create', [MaintainerPwaController::class, 'costForm'])->name('tasks.costs.create');
+        Route::get('tasks/{task}/complete', [MaintainerPwaController::class, 'completeForm'])->name('tasks.complete.form');
         Route::get('tasks/{task}', [MaintainerPwaController::class, 'show'])->name('tasks.show');
         Route::post('tasks/{task}/accept', [MaintainerPwaController::class, 'accept'])->name('tasks.accept');
         Route::post('tasks/{task}/start', [MaintainerPwaController::class, 'start'])->name('tasks.start');

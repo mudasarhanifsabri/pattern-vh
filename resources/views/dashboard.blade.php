@@ -175,8 +175,8 @@
     @elseif ($owner)
         @php
             $ownerUnitsCount = $ownerUnits->count();
-            $occupiedOwnerUnits = $ownerUnits->where('availability_status', 'occupied')->count();
-            $availableOwnerUnits = $ownerUnits->where('availability_status', 'available')->count();
+            $occupiedOwnerUnits = $ownerUnits->filter(fn ($unit) => in_array($unit->availability_status, ['booked', 'occupied'], true) || $unit->bookings->isNotEmpty())->count();
+            $availableOwnerUnits = $ownerUnits->filter(fn ($unit) => $unit->availability_status === 'available' && $unit->bookings->isEmpty())->count();
             $ownerCollectionTotal = $recentPayments->sum(fn ($payment) => (float) $payment->amount);
         @endphp
 
@@ -250,7 +250,8 @@
                                     <h3 class="mt-1 text-lg font-black text-[#071a3b]">Unit {{ $unit->unit_no }}</h3>
                                     <p class="mt-1 text-sm font-semibold text-slate-500">{{ $unit->unit_type ?: 'Property' }}</p>
                                 </div>
-                                <span class="shrink-0 rounded-full {{ $unit->availability_status === 'occupied' ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700' }} px-2.5 py-1 text-[11px] font-black">{{ str($unit->availability_status)->headline() }}</span>
+                                @php($ownerUnitStatus = $unit->bookings->isNotEmpty() ? 'booked' : $unit->availability_status)
+                                <span class="shrink-0 rounded-full {{ in_array($ownerUnitStatus, ['occupied', 'booked'], true) ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700' }} px-2.5 py-1 text-[11px] font-black">{{ str($ownerUnitStatus)->headline() }}</span>
                             </div>
                             <div class="mt-4 grid grid-cols-2 gap-3 text-sm">
                                 <div class="rounded-2xl bg-slate-50 p-3">

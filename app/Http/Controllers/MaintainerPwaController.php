@@ -41,6 +41,41 @@ class MaintainerPwaController extends Controller
         return view('maintainer.tasks.show', compact('task'));
     }
 
+    public function acceptForm(BookingTask $task)
+    {
+        $this->authorizeTask($task);
+
+        return view('maintainer.tasks.accept', ['task' => $this->taskForScreen($task)]);
+    }
+
+    public function remarkForm(BookingTask $task)
+    {
+        $this->authorizeTask($task);
+
+        return view('maintainer.tasks.remark', ['task' => $this->taskForScreen($task)]);
+    }
+
+    public function timeline(BookingTask $task)
+    {
+        $this->authorizeTask($task);
+
+        return view('maintainer.tasks.timeline', ['task' => $this->taskForScreen($task)]);
+    }
+
+    public function costForm(BookingTask $task)
+    {
+        $this->authorizeTask($task);
+
+        return view('maintainer.tasks.cost', ['task' => $this->taskForScreen($task)]);
+    }
+
+    public function completeForm(BookingTask $task)
+    {
+        $this->authorizeTask($task);
+
+        return view('maintainer.tasks.complete', ['task' => $this->taskForScreen($task)]);
+    }
+
     public function profile()
     {
         $member = $this->member();
@@ -208,6 +243,11 @@ class MaintainerPwaController extends Controller
     private function authorizeTask(BookingTask $task): void
     {
         abort_unless($this->member()?->id === $task->assigned_to_id, 403);
+    }
+
+    private function taskForScreen(BookingTask $task): BookingTask
+    {
+        return $task->load(['booking.tenant', 'unit.building', 'assignee', 'events.user', 'remarks.user', 'costItems']);
     }
 
     private function setupRequired()

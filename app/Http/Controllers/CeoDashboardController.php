@@ -26,7 +26,13 @@ class CeoDashboardController extends Controller
         $collections = (float) Payment::where('status', 'approved')->whereBetween('paid_at', [$from->copy()->startOfDay(), $to->copy()->endOfDay()])->sum('amount');
         $revenue = $rentRevenue + $serviceRevenue;
         $unitCount = max(Unit::count(), 1);
-        $occupied = Unit::where('availability_status', 'occupied')->count();
+        $occupied = Unit::query()
+            ->where(fn ($query) => $query
+                ->whereIn('availability_status', ['booked', 'occupied'])
+                ->orWhereHas('bookings', fn ($booking) => $booking
+                    ->whereIn('booking_status', Booking::ACTIVE_STATUSES)
+                    ->whereDate('check_out_date', '>=', today())))
+            ->count();
 
         $months = collect(range(5, 0))->map(function (int $back): array {
             $month = now()->subMonths($back);

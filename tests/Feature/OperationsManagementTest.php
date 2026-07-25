@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\InventoryItem;
+use App\Models\BookingTask;
 use App\Models\OperationsTeamMember;
 use App\Models\Unit;
 use App\Models\User;
@@ -114,5 +115,37 @@ class OperationsManagementTest extends TestCase
             ->assertRedirect();
 
         $this->assertEquals(17, (float) $item->fresh()->quantity);
+    }
+
+    public function test_cleaner_uses_maintainer_mobile_tasks_instead_of_admin_task_board(): void
+    {
+        $this->seed();
+
+        $cleaner = User::where('email', 'demo.cleaner@example.com')->firstOrFail();
+        $task = BookingTask::whereHas('assignee', fn ($query) => $query->where('user_id', $cleaner->id))->firstOrFail();
+
+        $this->actingAs($cleaner)
+            ->get(route('dashboard'))
+            ->assertRedirect(route('maintainer.tasks.index'));
+
+        $this->actingAs($cleaner)
+            ->get(route('maintainer.tasks.index'))
+            ->assertOk()
+            ->assertSee('My Tasks');
+
+        $this->actingAs($cleaner)
+            ->get(route('tasks.index'))
+            ->assertForbidden();
+
+        foreach ([
+            route('maintainer.tasks.show', $task) => 'Task Details',
+            route('maintainer.tasks.accept.form', $task) => 'Accept Task',
+            route('maintainer.tasks.remarks.create', $task) => 'Add Remark',
+            route('maintainer.tasks.timeline', $task) => 'Timeline',
+            route('maintainer.tasks.costs.create', $task) => 'Add Cost',
+            route('maintainer.tasks.complete.form', $task) => 'Complete Task',
+        ] as $url => $text) {
+            $this->actingAs($cleaner)->get($url)->assertOk()->assertSee($text);
+        }
     }
 }

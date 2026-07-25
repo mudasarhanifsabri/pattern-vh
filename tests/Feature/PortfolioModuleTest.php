@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Http\Controllers\DashboardController;
 use App\Mail\UnitAccessCardRequestMail;
 use App\Models\Building;
 use App\Models\Owner;
@@ -93,6 +94,30 @@ class PortfolioModuleTest extends TestCase
             ->assertSee('Bookings')
             ->assertSee('Current / upcoming')
             ->assertSee('Booking history');
+    }
+
+    public function test_dashboard_occupancy_counts_booked_and_occupied_units(): void
+    {
+        $building = Building::create(['name' => 'Horizon Tower']);
+
+        foreach (['available', 'booked', 'occupied'] as $index => $status) {
+            Unit::create([
+                'building_id' => $building->id,
+                'unit_no' => '12'.($index + 1),
+                'unit_type' => '1 BHK',
+                'availability_status' => $status,
+                'rent_period' => 'monthly',
+            ]);
+        }
+
+        $method = new \ReflectionMethod(DashboardController::class, 'unitOccupancyCounts');
+        $method->setAccessible(true);
+        $counts = $method->invoke(new DashboardController());
+
+        $this->assertSame(3, $counts['total']);
+        $this->assertSame(2, $counts['occupied']);
+        $this->assertSame(1, $counts['available']);
+        $this->assertSame(66.7, $counts['occupancy']);
     }
 
     public function test_owner_can_only_view_assigned_units(): void

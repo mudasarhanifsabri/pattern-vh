@@ -29,6 +29,10 @@ class DashboardController extends Controller
             return redirect()->route('ceo.dashboard');
         }
 
+        if ($this->shouldUseMaintainerPortal($request)) {
+            return redirect()->route('maintainer.tasks.index');
+        }
+
         $tenant = $this->tenantFor($request);
         $owner = $tenant ? null : $this->ownerFor($request);
 
@@ -69,8 +73,12 @@ class DashboardController extends Controller
         $unitCount = max(Unit::count(), 1);
         $activeBookingStatuses = Booking::ACTIVE_STATUSES;
         $activeBookings = Booking::whereIn('booking_status', $activeBookingStatuses)->count();
-        $occupiedUnits = Unit::where('availability_status', 'occupied')->count();
-        $occupancy = round(($occupiedUnits / $unitCount) * 100, 1);
+        $unitOccupancy = $this->unitOccupancyCounts();
+        $occupiedUnits = $unitOccupancy['occupied'];
+        $availableUnits = $unitOccupancy['available'];
+        $occupancy = $unitOccupancy['occupancy'];
+        $occupiedNights = $this->occupiedNightsForPeriod($periodStart, $periodEnd);
+        $availableNights = max(($unitCount * $periodStart->daysInMonth) - $occupiedNights, 0);
         $revenue = (float) Payment::where('status', 'approved')
             ->whereBetween('paid_at', [$periodStart, $periodEnd])
             ->sum('amount');
@@ -118,7 +126,7 @@ class DashboardController extends Controller
             'updatedLabel' => now()->format('H:i'),
             'cards' => [
                 ['label' => 'Revenue', 'value' => 'AED '.number_format($revenue >= 1000 ? $revenue / 1000 : $revenue, $revenue >= 1000 ? 1 : 0).($revenue >= 1000 ? 'k' : ''), 'note' => '+12.4% vs last month', 'tone' => 'blue', 'icon' => 'M4 19V5m0 14h16M8 15l3-3 3 2 4-6'],
-                ['label' => 'Occupancy', 'value' => $occupancy.'%', 'note' => $occupiedUnits.' occupied / '.Unit::where('availability_status', 'available')->count().' available', 'tone' => 'cyan', 'icon' => 'M7 3h10v18H7zM10 7h4M10 11h4M10 15h4'],
+                ['label' => 'Occupancy', 'value' => $occupancy.'%', 'note' => $occupiedUnits.' booked / '.$availableUnits.' available', 'tone' => 'cyan', 'icon' => 'M7 3h10v18H7zM10 7h4M10 11h4M10 15h4'],
                 ['label' => 'Active bookings', 'value' => $activeBookings, 'note' => '+'.Booking::whereDate('created_at', today())->count().' today', 'tone' => 'violet', 'icon' => 'M8 2v4m8-4v4M4 10h16M6 5h12a2 2 0 0 1 2 2v12H4V7a2 2 0 0 1 2-2z'],
                 ['label' => 'Pending payments', 'value' => 'AED '.number_format($pendingBalance >= 1000 ? $pendingBalance / 1000 : $pendingBalance, $pendingBalance >= 1000 ? 1 : 0).($pendingBalance >= 1000 ? 'k' : ''), 'note' => Invoice::where('balance_amount', '>', 0)->count().' invoices pending', 'tone' => 'amber', 'icon' => 'M8 4h8M9 4c0 3 6 3 6 6s-6 3-6 6h6m-6 4h8'],
             ],
@@ -131,8 +139,8 @@ class DashboardController extends Controller
                 'value' => (int) $row->total,
                 'percent' => round(((int) $row->total / $sourceTotal) * 100),
             ]),
-            'occupiedNights' => Booking::whereIn('booking_status', $activeBookingStatuses)->sum('guest_count'),
-            'availableNights' => Unit::where('availability_status', 'available')->count() * 30,
+            'occupiedNights' => $occupiedNights,
+            'availableNights' => $availableNights,
             'todayMovements' => $todayMovements,
             'checkinsToday' => Booking::whereDate('check_in_date', today())->count(),
             'checkoutsToday' => Booking::whereDate('check_out_date', today())->count(),
@@ -143,12 +151,12 @@ class DashboardController extends Controller
             ],
             'miniCards' => [
                 ['label' => 'Total units', 'value' => Unit::count(), 'note' => Building::count().' buildings in portfolio', 'tone' => 'rose'],
-                ['label' => 'Occupancy rate', 'value' => $occupancy.'%', 'note' => $occupiedUnits.' of '.$unitCount.' units occupied', 'tone' => 'emerald'],
+                ['label' => 'Occupancy rate', 'value' => $occupancy.'%', 'note' => $occupiedUnits.' of '.$unitCount.' units booked', 'tone' => 'emerald'],
                 ['label' => 'Monthly revenue', 'value' => 'AED '.number_format($revenue, 0), 'note' => 'Current month collected', 'tone' => 'emerald'],
                 ['label' => 'Collection rate', 'value' => $collectionRate.'%', 'note' => 'Payment collection efficiency', 'tone' => 'cyan'],
                 ['label' => 'Active tenants', 'value' => Tenant::count(), 'note' => Booking::whereIn('booking_status', $activeBookingStatuses)->count().' active stays', 'tone' => 'rose'],
                 ['label' => 'Maintenance requests', 'value' => BookingTask::whereNotIn('status', ['completed', 'cancelled'])->count(), 'note' => BookingTask::where('priority', 'urgent')->count().' urgent', 'tone' => 'amber'],
-                ['label' => 'Vacant units', 'value' => Unit::where('availability_status', 'available')->count(), 'note' => round((Unit::where('availability_status', 'available')->count() / $unitCount) * 100, 1).'% vacancy rate', 'tone' => 'rose'],
+                ['label' => 'Vacant units', 'value' => $availableUnits, 'note' => round(($availableUnits / $unitCount) * 100, 1).'% vacancy rate', 'tone' => 'rose'],
                 ['label' => 'Average rent', 'value' => 'AED '.number_format((float) Unit::whereNotNull('rent_amount')->avg('rent_amount'), 0), 'note' => 'Per unit configured average', 'tone' => 'emerald'],
                 ['label' => 'Renewals', 'value' => OwnerUnitContract::whereDate('contract_end_date', '>=', today())->whereDate('contract_end_date', '<=', now()->addDays(30))->count(), 'note' => 'Due in next 30 days', 'tone' => 'amber'],
                 ['label' => 'Recent events', 'value' => NotificationLog::whereDate('created_at', '>=', now()->subDays(7))->count(), 'note' => 'Workspace updates this week', 'tone' => 'cyan'],
@@ -232,13 +240,66 @@ class DashboardController extends Controller
     private function ownerStats(Owner $owner): array
     {
         $unitIds = $owner->units()->pluck('units.id');
+        $occupancy = $this->unitOccupancyCounts($unitIds);
 
         return [
             ['label' => 'My units', 'value' => $unitIds->count(), 'note' => 'Units assigned to your owner account', 'tone' => 'blue'],
-            ['label' => 'Rented', 'value' => Unit::whereIn('id', $unitIds)->where('availability_status', 'occupied')->count(), 'note' => 'Currently marked occupied', 'tone' => 'emerald'],
-            ['label' => 'Vacant', 'value' => Unit::whereIn('id', $unitIds)->where('availability_status', 'available')->count(), 'note' => 'Available units', 'tone' => 'amber'],
+            ['label' => 'Booked / occupied', 'value' => $occupancy['occupied'], 'note' => 'Booked, occupied, or has an active booking', 'tone' => 'emerald'],
+            ['label' => 'Vacant', 'value' => $occupancy['available'], 'note' => 'Available with no active booking', 'tone' => 'amber'],
             ['label' => 'Owner expenses', 'value' => 'AED '.number_format((float) Expense::where('owner_id', $owner->id)->sum('amount'), 0), 'note' => 'Expenses linked to your account', 'tone' => 'cyan'],
         ];
+    }
+
+    private function unitOccupancyCounts($unitIds = null): array
+    {
+        $activeBookingFilter = $this->activeBookingFilter();
+        $base = Unit::query()
+            ->when($unitIds, fn ($query) => $query->whereIn('id', $unitIds));
+        $total = (clone $base)->count();
+        $unavailableStatuses = ['booked', 'occupied'];
+
+        $occupied = (clone $base)
+            ->where(fn ($query) => $query
+                ->whereIn('availability_status', $unavailableStatuses)
+                ->orWhereHas('bookings', $activeBookingFilter))
+            ->count();
+        $available = (clone $base)
+            ->where('availability_status', 'available')
+            ->whereDoesntHave('bookings', $activeBookingFilter)
+            ->count();
+
+        return [
+            'total' => $total,
+            'occupied' => $occupied,
+            'available' => $available,
+            'occupancy' => $total > 0 ? round(($occupied / $total) * 100, 1) : 0,
+        ];
+    }
+
+    private function activeBookingFilter(): \Closure
+    {
+        return fn ($query) => $query
+            ->whereIn('booking_status', Booking::ACTIVE_STATUSES)
+            ->whereDate('check_out_date', '>=', today());
+    }
+
+    private function occupiedNightsForPeriod($periodStart, $periodEnd): int
+    {
+        return Booking::query()
+            ->whereIn('booking_status', Booking::ACTIVE_STATUSES)
+            ->whereDate('check_in_date', '<=', $periodEnd->toDateString())
+            ->whereDate('check_out_date', '>=', $periodStart->toDateString())
+            ->get(['check_in_date', 'check_out_date'])
+            ->sum(function (Booking $booking) use ($periodStart, $periodEnd): int {
+                $periodStartDay = $periodStart->copy()->startOfDay();
+                $periodEndDay = $periodEnd->copy()->startOfDay();
+                $start = $booking->check_in_date->copy()->startOfDay();
+                $end = $booking->check_out_date->copy()->startOfDay();
+                $start = $start->greaterThan($periodStartDay) ? $start : $periodStartDay;
+                $end = $end->lessThan($periodEndDay) ? $end : $periodEndDay;
+
+                return (int) max($start->diffInDays($end), 0);
+            });
     }
 
     private function upcomingBookings(?Tenant $tenant)
@@ -365,5 +426,14 @@ class DashboardController extends Controller
             ->where('user_id', $request->user()->id)
             ->orWhere('email', $request->user()->email)
             ->first();
+    }
+
+    private function shouldUseMaintainerPortal(Request $request): bool
+    {
+        $user = $request->user();
+
+        return (bool) $user
+            && ! $user->can('booking-tasks.manage')
+            && $user->hasAnyPermission(['portal.cleaner', 'portal.technician']);
     }
 }

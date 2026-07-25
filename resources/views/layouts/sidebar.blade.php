@@ -59,7 +59,7 @@
             'active' => ['tasks.*', 'utilities.*', 'vehicles.*', 'inventory.*'],
             'permissions' => ['booking-tasks.view', 'booking-tasks.manage', 'utilities.view', 'utilities.manage', 'vehicles.view', 'vehicles.manage', 'inventory.view', 'inventory.manage'],
             'items' => [
-                ['label' => 'Task management', 'route' => 'tasks.index', 'active' => 'tasks.*', 'permissions' => ['booking-tasks.view', 'booking-tasks.manage']],
+                ['label' => 'Task management', 'route' => 'tasks.index', 'active' => 'tasks.*', 'permissions' => ['booking-tasks.manage']],
                 ['label' => 'Utilities', 'route' => 'utilities.index', 'active' => 'utilities.*', 'permissions' => ['utilities.view', 'utilities.manage']],
                 ['label' => 'Vehicles', 'route' => 'vehicles.index', 'active' => 'vehicles.*', 'permissions' => ['vehicles.view', 'vehicles.manage']],
                 ['label' => 'Inventory', 'route' => 'inventory.index', 'active' => 'inventory.*', 'permissions' => ['inventory.view', 'inventory.manage']],

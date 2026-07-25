@@ -26,6 +26,7 @@ class UnitController extends Controller
     {
         $owner = $this->currentOwner();
         $activeBookingStatuses = Booking::ACTIVE_STATUSES;
+        $unavailableStatuses = ['booked', 'occupied'];
         $activeBookingFilter = fn ($query) => $query
             ->whereIn('booking_status', $activeBookingStatuses)
             ->whereDate('check_out_date', '>=', today());
@@ -52,7 +53,7 @@ class UnitController extends Controller
 
                 if ($status === 'occupied') {
                     $query->where(fn ($query) => $query
-                        ->where('availability_status', 'occupied')
+                        ->whereIn('availability_status', $unavailableStatuses)
                         ->orWhereHas('bookings', $activeBookingFilter));
 
                     return;
@@ -73,7 +74,7 @@ class UnitController extends Controller
             'stats' => [
                 'total' => (clone $statsQuery)->count(),
                 'available' => (clone $statsQuery)->where('availability_status', 'available')->whereDoesntHave('bookings', $activeBookingFilter)->count(),
-                'occupied' => (clone $statsQuery)->where(fn ($query) => $query->where('availability_status', 'occupied')->orWhereHas('bookings', $activeBookingFilter))->count(),
+                'occupied' => (clone $statsQuery)->where(fn ($query) => $query->whereIn('availability_status', $unavailableStatuses)->orWhereHas('bookings', $activeBookingFilter))->count(),
                 'maintenance' => (clone $statsQuery)->where('availability_status', 'maintenance')->count(),
             ],
         ]);
