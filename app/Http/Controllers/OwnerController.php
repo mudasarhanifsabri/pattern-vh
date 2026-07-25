@@ -193,6 +193,19 @@ class OwnerController extends Controller
         return redirect()->route('owners.show', $owner)->with('status', 'Owner welcome email queued successfully.');
     }
 
+    public function confirmSendInvite(Owner $owner)
+    {
+        return view('people.confirm-invite', [
+            'record' => $owner,
+            'config' => [
+                'route' => 'owners',
+                'singularTitle' => 'Owner',
+                'pluralTitle' => 'Owners',
+                'description' => 'Send owner portal welcome email.',
+            ],
+        ]);
+    }
+
     private function validateOwner(Request $request): array
     {
         return $request->validate([

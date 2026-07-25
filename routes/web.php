@@ -130,6 +130,9 @@ Route::middleware('auth')->group(function () {
     Route::get('owners/{owner}/document', [OwnerController::class, 'document'])
         ->middleware('permission:owners.view|owners.manage')
         ->name('owners.document');
+    Route::get('owners/{owner}/send-invite', [OwnerController::class, 'confirmSendInvite'])
+        ->middleware('permission:owners.manage')
+        ->name('owners.send-invite.confirm');
     Route::post('owners/{owner}/send-invite', [OwnerController::class, 'sendInvite'])
         ->middleware('permission:owners.manage')
         ->name('owners.send-invite');
@@ -145,6 +148,9 @@ Route::middleware('auth')->group(function () {
         Route::get("{$prefix}/{record}/document", [$controller, 'document'])
             ->middleware("permission:{$prefix}.view|{$prefix}.manage")
             ->name("{$prefix}.document");
+        Route::get("{$prefix}/{record}/send-invite", [$controller, 'confirmSendInvite'])
+            ->middleware("permission:{$prefix}.manage")
+            ->name("{$prefix}.send-invite.confirm");
         Route::post("{$prefix}/{record}/send-invite", [$controller, 'sendInvite'])
             ->middleware("permission:{$prefix}.manage")
             ->name("{$prefix}.send-invite");

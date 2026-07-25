@@ -210,6 +210,14 @@ trait ManagesPeopleRecords
         return redirect()->route($config['route'].'.show', $record)->with('status', "{$config['singularTitle']} welcome email queued successfully.");
     }
 
+    public function confirmSendInvite($record)
+    {
+        $record = $this->resolveRecord($record);
+        $config = $this->moduleConfig();
+
+        return view('people.confirm-invite', compact('record', 'config'));
+    }
+
     public function storeNote(Request $request, $record)
     {
         $record = $this->resolveRecord($record);

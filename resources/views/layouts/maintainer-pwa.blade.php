@@ -8,7 +8,7 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
-    <link rel="manifest" href="{{ asset('manifest.webmanifest') }}">
+    <link rel="manifest" href="{{ asset('manifest-maintainer.webmanifest') }}">
     <title>{{ config('app.name', 'Pattern') }} Maintainer</title>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <style>
