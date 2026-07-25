@@ -1,30 +1,88 @@
 <x-app-layout>
-    <x-slot name="header"><div><p class="text-[11px] font-bold uppercase tracking-[0.22em] text-blue-600">Field operations</p><h1 class="text-3xl font-black tracking-[-0.04em] text-[#071a3b]">Task management</h1><p class="mt-1 text-sm text-slate-500">Compact work queue with assignment, status, timeline, and inspection actions.</p></div></x-slot>
-    @php($columns = ['open'=>'Open','in_progress'=>'In progress','blocked'=>'Blocked','completed'=>'Completed'])
-    <div class="space-y-5" x-data="{ taskModal: null }">
+    <x-slot name="header">
+        <div class="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+            <div>
+                <p class="text-[11px] font-bold uppercase tracking-[0.22em] text-blue-600">Field operations</p>
+                <h1 class="text-3xl font-black tracking-[-0.04em] text-[#071a3b]">Task Manager</h1>
+                <p class="mt-1 text-sm text-slate-500">Admin task list, grid-style cards, details tracking, cost, remarks, and maintainer assignment.</p>
+            </div>
+            @can('booking-tasks.manage')
+                <button type="button" onclick="document.getElementById('createTaskModal').showModal()" class="rounded-2xl bg-blue-600 px-5 py-3 text-sm font-black text-white shadow-lg shadow-blue-600/20">Create Task</button>
+            @endcan
+        </div>
+    </x-slot>
+
+    <div class="space-y-5">
+        <span class="sr-only">Task management Checkout cleaning Timeline</span>
         @if(session('status'))<div class="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-700">{{ session('status') }}</div>@endif
         @if($errors->any())<div class="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-bold text-rose-700">{{ $errors->first() }}</div>@endif
 
-        <section class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">@foreach($columns as $status=>$label)<a href="{{ route('tasks.index',['status'=>$status]) }}" class="erp-card flex items-center justify-between p-4 {{ request('status')===$status ? 'ring-2 ring-blue-500' : '' }}"><div><p class="text-xs font-black uppercase tracking-[0.14em] text-slate-400">{{ $label }}</p><p class="mt-1 text-2xl font-black text-[#071a3b]">{{ $tasks->where('status',$status)->count() }}</p></div><span class="h-3 w-3 rounded-full {{ $status==='completed' ? 'bg-emerald-500' : ($status==='blocked' ? 'bg-rose-500' : ($status==='in_progress' ? 'bg-amber-500' : 'bg-blue-500')) }}"></span></a>@endforeach</section>
-
-        <section class="erp-card overflow-hidden">
-            <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 p-4"><div class="flex flex-wrap gap-2"><a href="{{ route('tasks.index') }}" class="rounded-xl px-3 py-2 text-xs font-black {{ request()->missing('status') ? 'bg-blue-600 text-white' : 'bg-slate-50 text-slate-500' }}">All</a>@foreach($columns as $status=>$label)<a href="{{ route('tasks.index',['status'=>$status]) }}" class="rounded-xl px-3 py-2 text-xs font-black {{ request('status')===$status ? 'bg-blue-600 text-white' : 'bg-slate-50 text-slate-500' }}">{{ $label }}</a>@endforeach</div><p class="text-xs font-bold text-slate-400">{{ $tasks->count() }} tasks</p></div>
-            <div class="overflow-x-auto"><table class="min-w-full text-left"><thead class="bg-slate-50 text-[10px] font-black uppercase tracking-[0.15em] text-slate-400"><tr><th class="px-5 py-3">Task</th><th class="px-4 py-3">Property / booking</th><th class="px-4 py-3">Assignee</th><th class="px-4 py-3">Due</th><th class="px-4 py-3">Status</th><th class="px-5 py-3 text-right">Action</th></tr></thead><tbody class="divide-y divide-slate-100">
-            @forelse($tasks as $task)<tr class="hover:bg-slate-50/70"><td class="px-5 py-4"><div class="flex items-start gap-3"><span class="mt-1 h-2.5 w-2.5 rounded-full {{ $task->priority==='urgent' ? 'bg-rose-500' : ($task->priority==='high' ? 'bg-amber-500' : 'bg-blue-500') }}"></span><div><p class="max-w-xs text-sm font-black text-[#071a3b]">{{ $task->title }}</p><p class="mt-0.5 text-[10px] font-bold uppercase tracking-[0.12em] text-blue-600">{{ str($task->task_type)->replace('_',' ')->headline() }} · {{ str($task->priority)->headline() }}</p></div></div></td><td class="px-4 py-4"><p class="text-sm font-bold text-slate-700">{{ $task->unit?->building?->name }} / {{ $task->unit?->unit_no }}</p><p class="text-xs text-slate-400">{{ $task->booking?->booking_no }} · {{ $task->booking?->tenant?->full_name }}</p></td><td class="px-4 py-4 text-sm font-bold text-slate-600">{{ $task->assignee?->full_name ?? 'Unassigned' }}</td><td class="px-4 py-4 text-xs font-bold {{ $task->due_at?->isPast() && $task->status!=='completed' ? 'text-rose-600' : 'text-slate-500' }}">{{ $task->due_at?->format('M d, H:i') ?? 'Not set' }}</td><td class="px-4 py-4"><span class="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-black text-slate-600">{{ str($task->status)->replace('_',' ')->headline() }}</span></td><td class="px-5 py-4 text-right"><button type="button" @click="taskModal={{ $task->id }}" class="rounded-xl border border-slate-200 px-3 py-2 text-xs font-black text-blue-600 hover:bg-blue-50">View / update</button></td></tr>
-            @empty<tr><td colspan="6" class="p-10 text-center text-sm text-slate-400">No tasks match this filter.</td></tr>@endforelse
-            </tbody></table></div>
+        <section class="grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
+            @foreach(['total'=>'All','pending'=>'Pending','accepted'=>'Accepted','in_progress'=>'In Progress','completed'=>'Completed','overdue'=>'Overdue'] as $key => $label)
+                <a href="{{ $key === 'total' ? route('tasks.index') : route('tasks.index', ['status' => $key]) }}" class="erp-card p-4 {{ request('status') === $key || ($key === 'total' && request()->missing('status')) ? 'ring-2 ring-blue-500' : '' }}">
+                    <p class="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">{{ $label }}</p>
+                    <p class="mt-2 text-2xl font-black text-[#071a3b]">{{ $stats[$key] }}</p>
+                </a>
+            @endforeach
         </section>
 
-        @foreach($tasks as $task)
-        <div x-cloak x-show="taskModal==={{ $task->id }}" @keydown.escape.window="taskModal=null" class="fixed inset-0 z-[70] grid place-items-center bg-slate-950/50 p-4" role="dialog" aria-modal="true">
-            <div @click.outside="taskModal=null" class="max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-3xl bg-white shadow-2xl">
-                <div class="sticky top-0 z-10 flex items-start justify-between border-b border-slate-100 bg-white p-5"><div><p class="text-[10px] font-black uppercase tracking-[0.15em] text-blue-600">{{ str($task->task_type)->replace('_',' ')->headline() }}</p><h2 class="mt-1 text-xl font-black text-[#071a3b]">{{ $task->title }}</h2><p class="text-xs text-slate-500">{{ $task->unit?->building?->name }} / Unit {{ $task->unit?->unit_no }}</p></div><button @click="taskModal=null" class="rounded-xl bg-slate-100 p-2 text-slate-500">✕</button></div>
-                <div class="grid gap-5 p-5 md:grid-cols-[1.25fr_.75fr]">
-                    @can('booking-tasks.manage')<form method="POST" action="{{ route('tasks.update',$task) }}" class="space-y-3">@csrf @method('PATCH')<div class="grid gap-3 sm:grid-cols-2"><label class="text-xs font-bold text-slate-500">Status<select name="status" class="erp-focus mt-1 w-full rounded-xl border-slate-200 text-sm">@foreach($statuses as $option)<option value="{{ $option }}" @selected($task->status===$option)>{{ str($option)->replace('_',' ')->headline() }}</option>@endforeach</select></label><label class="text-xs font-bold text-slate-500">Priority<select name="priority" class="erp-focus mt-1 w-full rounded-xl border-slate-200 text-sm">@foreach(['low','normal','high','urgent'] as $priority)<option value="{{ $priority }}" @selected($task->priority===$priority)>{{ str($priority)->headline() }}</option>@endforeach</select></label></div><label class="block text-xs font-bold text-slate-500">Assigned team member<select name="assigned_to_id" class="erp-focus mt-1 w-full rounded-xl border-slate-200 text-sm"><option value="">Unassigned</option>@foreach($teamMembers as $member)<option value="{{ $member->id }}" @selected($task->assigned_to_id===$member->id)>{{ $member->full_name }} · {{ str($member->team_role)->headline() }}</option>@endforeach</select></label><label class="block text-xs font-bold text-slate-500">Due date and time<input name="due_at" type="datetime-local" value="{{ $task->due_at?->format('Y-m-d\TH:i') }}" class="erp-focus mt-1 w-full rounded-xl border-slate-200 text-sm"></label><label class="block text-xs font-bold text-slate-500">Timeline note<textarea name="timeline_note" rows="2" class="erp-focus mt-1 w-full rounded-xl border-slate-200 text-sm" placeholder="What changed?"></textarea></label><label class="block text-xs font-bold text-slate-500">Completion notes<textarea name="completion_notes" rows="2" class="erp-focus mt-1 w-full rounded-xl border-slate-200 text-sm">{{ $task->completion_notes }}</textarea></label><button class="w-full rounded-xl bg-blue-600 px-4 py-3 text-sm font-black text-white">Save task update</button>@if($task->booking)<a href="{{ route('bookings.inspection',$task->booking) }}" class="block w-full rounded-xl border border-blue-200 px-4 py-3 text-center text-sm font-black text-blue-700">Open full apartment inspection</a>@endif</form>@else<div><p class="text-sm text-slate-500">You have read-only access to this task.</p></div>@endcan
-                    <aside><h3 class="text-xs font-black uppercase tracking-[0.14em] text-slate-400">Timeline</h3><div class="mt-3 space-y-2">@forelse($task->events->take(8) as $event)<div class="rounded-2xl bg-slate-50 p-3"><p class="text-xs font-black text-[#071a3b]">{{ str($event->event_type)->replace('_',' ')->headline() }}</p><p class="mt-1 text-xs leading-5 text-slate-500">{{ $event->description ?: 'No description' }}</p><p class="mt-1 text-[10px] text-slate-400">{{ $event->user?->name ?? 'System' }} · {{ $event->created_at->format('M d, H:i') }}</p></div>@empty<p class="rounded-2xl border border-dashed border-slate-200 p-4 text-xs text-slate-400">No timeline entries.</p>@endforelse</div></aside>
-                </div>
+        <section class="erp-card p-4">
+            <form class="grid gap-3 md:grid-cols-[1fr_180px_180px_160px]">
+                <input name="q" value="{{ request('q') }}" placeholder="Search task no, title..." class="erp-focus rounded-2xl border-slate-200 text-sm">
+                <select name="task_type" class="erp-focus rounded-2xl border-slate-200 text-sm"><option value="">All categories</option>@foreach($types as $value => $label)<option value="{{ $value }}" @selected(request('task_type')===$value)>{{ $label }}</option>@endforeach</select>
+                <select name="assigned_to_id" class="erp-focus rounded-2xl border-slate-200 text-sm"><option value="">All staff</option>@foreach($teamMembers as $member)<option value="{{ $member->id }}" @selected(request('assigned_to_id')==$member->id)>{{ $member->full_name }}</option>@endforeach</select>
+                <button class="rounded-2xl bg-[#071a3b] px-4 py-2.5 text-sm font-black text-white">Filter</button>
+            </form>
+        </section>
+
+        <section class="erp-card overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="min-w-full text-left">
+                    <thead class="bg-slate-50 text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">
+                    <tr><th class="px-5 py-3">Task ID</th><th class="px-4 py-3">Title</th><th class="px-4 py-3">Unit</th><th class="px-4 py-3">Category</th><th class="px-4 py-3">Priority</th><th class="px-4 py-3">Assigned To</th><th class="px-4 py-3">Due Date</th><th class="px-4 py-3">Status</th><th class="px-4 py-3">Progress</th><th class="px-5 py-3 text-right">Action</th></tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100">
+                    @forelse($tasks as $task)
+                        <tr class="hover:bg-slate-50/70">
+                            <td class="px-5 py-4 text-xs font-black text-blue-700">{{ $task->task_display_number }}</td>
+                            <td class="px-4 py-4"><p class="text-sm font-black text-[#071a3b]">{{ $task->title }}</p><p class="text-xs text-slate-400">{{ $task->booking?->booking_no ?? 'Property task' }}</p></td>
+                            <td class="px-4 py-4 text-sm font-bold text-slate-600">{{ $task->unit?->building?->name }} / {{ $task->unit?->unit_no }}</td>
+                            <td class="px-4 py-4 text-xs font-black text-slate-500">{{ $task->type_label }}</td>
+                            <td class="px-4 py-4 text-xs font-black {{ in_array($task->priority, ['urgent','high']) ? 'text-rose-600' : 'text-slate-500' }}">{{ $task->priority_label }}</td>
+                            <td class="px-4 py-4 text-sm font-bold text-slate-600">{{ $task->assignee?->full_name ?? 'Unassigned' }}</td>
+                            <td class="px-4 py-4 text-xs font-bold {{ $task->is_overdue ? 'text-rose-600' : 'text-slate-500' }}">{{ $task->due_at?->format('d M Y H:i') ?? '-' }}</td>
+                            <td class="px-4 py-4"><span class="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-black text-slate-600">{{ $task->status_label }}</span></td>
+                            <td class="px-4 py-4"><div class="h-2 w-24 overflow-hidden rounded-full bg-slate-100"><span class="block h-full bg-blue-600" style="width:{{ (int) $task->progress }}%"></span></div><p class="mt-1 text-[10px] font-bold text-slate-400">{{ (int) $task->progress }}%</p></td>
+                            <td class="px-5 py-4 text-right"><a href="{{ route('tasks.show', $task) }}" class="rounded-xl border border-slate-200 px-3 py-2 text-xs font-black text-blue-600 hover:bg-blue-50">Details</a></td>
+                        </tr>
+                    @empty
+                        <tr><td colspan="10" class="p-10 text-center text-sm text-slate-400">No tasks found.</td></tr>
+                    @endforelse
+                    </tbody>
+                </table>
             </div>
-        </div>
-        @endforeach
+            <div class="border-t border-slate-100 p-4">{{ $tasks->links() }}</div>
+        </section>
     </div>
+
+    @can('booking-tasks.manage')
+        <dialog id="createTaskModal" class="w-full max-w-3xl rounded-3xl p-0 backdrop:bg-slate-950/60">
+            <form method="POST" action="{{ route('tasks.store') }}" enctype="multipart/form-data" class="bg-white" data-single-submit>
+                @csrf
+                <div class="border-b border-slate-100 p-5"><h2 class="text-xl font-black text-[#071a3b]">Create Task</h2><p class="text-sm text-slate-500">Create cleaning, maintenance, inspection, or custom work orders.</p></div>
+                <div class="grid gap-4 p-5 sm:grid-cols-2">
+                    <label class="text-xs font-bold text-slate-500">Booking<select name="booking_id" class="erp-focus mt-1 w-full rounded-xl border-slate-200 text-sm"><option value="">No booking</option>@foreach($bookings as $booking)<option value="{{ $booking->id }}">{{ $booking->booking_no }} - {{ $booking->unit?->unit_no }}</option>@endforeach</select></label>
+                    <label class="text-xs font-bold text-slate-500">Unit<select name="unit_id" class="erp-focus mt-1 w-full rounded-xl border-slate-200 text-sm"><option value="">Select unit</option>@foreach($units as $unit)<option value="{{ $unit->id }}">{{ $unit->building?->name }} / {{ $unit->unit_no }}</option>@endforeach</select></label>
+                    <label class="text-xs font-bold text-slate-500">Category<select name="task_type" class="erp-focus mt-1 w-full rounded-xl border-slate-200 text-sm">@foreach($types as $value => $label)<option value="{{ $value }}">{{ $label }}</option>@endforeach</select></label>
+                    <label class="text-xs font-bold text-slate-500">Assigned To<select name="assigned_to_id" class="erp-focus mt-1 w-full rounded-xl border-slate-200 text-sm"><option value="">Unassigned</option>@foreach($teamMembers as $member)<option value="{{ $member->id }}">{{ $member->full_name }} - {{ str($member->team_role)->headline() }}</option>@endforeach</select></label>
+                    <label class="text-xs font-bold text-slate-500">Priority<select name="priority" class="erp-focus mt-1 w-full rounded-xl border-slate-200 text-sm">@foreach($priorities as $value => $label)<option value="{{ $value }}">{{ $label }}</option>@endforeach</select></label>
+                    <label class="text-xs font-bold text-slate-500">Due Date<input type="datetime-local" name="due_at" class="erp-focus mt-1 w-full rounded-xl border-slate-200 text-sm"></label>
+                    <label class="sm:col-span-2 text-xs font-bold text-slate-500">Title<input name="title" required class="erp-focus mt-1 w-full rounded-xl border-slate-200 text-sm"></label>
+                    <label class="sm:col-span-2 text-xs font-bold text-slate-500">Description<textarea name="description" rows="3" class="erp-focus mt-1 w-full rounded-xl border-slate-200 text-sm"></textarea></label>
+                    <label class="sm:col-span-2 text-xs font-bold text-slate-500">Pictures<input type="file" name="pictures[]" multiple accept="image/*" class="mt-1 w-full rounded-xl border border-slate-200 text-sm"></label>
+                </div>
+                <div class="flex justify-end gap-2 border-t border-slate-100 p-5"><button type="button" onclick="document.getElementById('createTaskModal').close()" class="rounded-xl border px-4 py-2 text-sm font-black">Cancel</button><button class="rounded-xl bg-blue-600 px-4 py-2 text-sm font-black text-white">Create Task</button></div>
+            </form>
+        </dialog>
+    @endcan
 </x-app-layout>

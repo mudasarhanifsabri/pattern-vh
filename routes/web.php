@@ -19,6 +19,7 @@ use App\Http\Controllers\ExpenseController;
 use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\IdentityDocumentOcrController;
+use App\Http\Controllers\MaintainerPwaController;
 use App\Http\Controllers\NotificationCenterController;
 use App\Http\Controllers\OwnerController;
 use App\Http\Controllers\OwnerNoteController;
@@ -234,15 +235,44 @@ Route::middleware('auth')->group(function () {
     Route::get('tasks', [TaskManagementController::class, 'index'])
         ->middleware('permission:booking-tasks.view|booking-tasks.manage')
         ->name('tasks.index');
+    Route::post('tasks', [TaskManagementController::class, 'store'])
+        ->middleware('permission:booking-tasks.manage')
+        ->name('tasks.store');
+    Route::get('tasks/{bookingTask}', [TaskManagementController::class, 'show'])
+        ->middleware('permission:booking-tasks.view|booking-tasks.manage')
+        ->name('tasks.show');
     Route::patch('tasks/{bookingTask}', [TaskManagementController::class, 'update'])
         ->middleware('permission:booking-tasks.manage')
         ->name('tasks.update');
+    Route::post('tasks/{bookingTask}/remarks', [TaskManagementController::class, 'addRemark'])
+        ->middleware('permission:booking-tasks.manage')
+        ->name('tasks.remarks.store');
+    Route::post('tasks/{bookingTask}/costs', [TaskManagementController::class, 'addCost'])
+        ->middleware('permission:booking-tasks.manage')
+        ->name('tasks.costs.store');
+    Route::post('tasks/{bookingTask}/complete', [TaskManagementController::class, 'complete'])
+        ->middleware('permission:booking-tasks.manage')
+        ->name('tasks.complete');
     Route::post('tasks/{bookingTask}/checkout-inspection', [TaskManagementController::class, 'submitCheckoutInspection'])
         ->middleware('permission:booking-tasks.manage')
         ->name('tasks.checkout-inspection');
     Route::post('bookings/{booking}/tenant-check-in-report', [TaskManagementController::class, 'submitTenantCheckIn'])
         ->middleware('permission:portal.tenant')
         ->name('bookings.tenant-check-in-report');
+
+    Route::prefix('maintainer')->name('maintainer.')->group(function () {
+        Route::get('/', [MaintainerPwaController::class, 'dashboard'])->name('dashboard');
+        Route::get('tasks', [MaintainerPwaController::class, 'index'])->name('tasks.index');
+        Route::get('tasks/live', [MaintainerPwaController::class, 'liveTasks'])->name('tasks.live');
+        Route::get('tasks/{task}', [MaintainerPwaController::class, 'show'])->name('tasks.show');
+        Route::post('tasks/{task}/accept', [MaintainerPwaController::class, 'accept'])->name('tasks.accept');
+        Route::post('tasks/{task}/start', [MaintainerPwaController::class, 'start'])->name('tasks.start');
+        Route::post('tasks/{task}/remarks', [MaintainerPwaController::class, 'remark'])->name('tasks.remarks.store');
+        Route::post('tasks/{task}/costs', [MaintainerPwaController::class, 'cost'])->name('tasks.costs.store');
+        Route::post('tasks/{task}/complete', [MaintainerPwaController::class, 'complete'])->name('tasks.complete');
+        Route::get('notifications', [MaintainerPwaController::class, 'notifications'])->name('notifications');
+        Route::get('profile', [MaintainerPwaController::class, 'profile'])->name('profile');
+    });
 
     Route::get('utilities', [UtilityManagementController::class, 'index'])
         ->middleware('permission:utilities.view|utilities.manage')
