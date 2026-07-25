@@ -18,7 +18,9 @@ class MaintainerPwaController extends Controller
     public function index(Request $request)
     {
         $member = $this->member();
-        abort_unless($member, 403);
+        if (! $member) {
+            return $this->setupRequired();
+        }
 
         $tasks = $this->assignedTaskQuery($member, $request)->paginate(20)->withQueryString();
         $stats = [
@@ -42,7 +44,9 @@ class MaintainerPwaController extends Controller
     public function profile()
     {
         $member = $this->member();
-        abort_unless($member, 403);
+        if (! $member) {
+            return $this->setupRequired();
+        }
 
         return view('maintainer.profile', ['member' => $member, 'user' => Auth::user()]);
     }
@@ -50,7 +54,9 @@ class MaintainerPwaController extends Controller
     public function notifications()
     {
         $member = $this->member();
-        abort_unless($member, 403);
+        if (! $member) {
+            return $this->setupRequired();
+        }
         $tasks = $this->baseQuery($member)->whereIn('status', ['open', 'assigned'])->latest()->get();
 
         return view('maintainer.notifications', compact('member', 'tasks'));
@@ -59,7 +65,9 @@ class MaintainerPwaController extends Controller
     public function liveTasks()
     {
         $member = $this->member();
-        abort_unless($member, 403);
+        if (! $member) {
+            return response()->json(['tasks' => [], 'message' => 'No operations team member is linked to this login.']);
+        }
         $tasks = $this->baseQuery($member)
             ->whereIn('status', ['open', 'assigned'])
             ->latest()
@@ -200,6 +208,11 @@ class MaintainerPwaController extends Controller
     private function authorizeTask(BookingTask $task): void
     {
         abort_unless($this->member()?->id === $task->assigned_to_id, 403);
+    }
+
+    private function setupRequired()
+    {
+        return response()->view('maintainer.setup-required', ['user' => Auth::user()], 403);
     }
 
     private function progressForStatus(string $status): int

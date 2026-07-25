@@ -88,6 +88,8 @@ trait ManagesPeopleRecords
 
         if ($created && $request->boolean('send_portal_invite')) {
             $this->sendPortalInvite($record, $config);
+        } elseif ($created && $this->shouldAutoLinkPortalUser($record, $config)) {
+            $this->ensurePortalUser($record, $config);
         }
 
         return redirect()
@@ -178,6 +180,8 @@ trait ManagesPeopleRecords
 
         if ($sendPortalInvite) {
             $this->sendPortalInvite($record->fresh(), $config);
+        } elseif ($this->shouldAutoLinkPortalUser($record, $config)) {
+            $this->ensurePortalUser($record->fresh(), $config);
         }
 
         $this->storeNoteIfPresent($record, $note);
@@ -244,7 +248,7 @@ trait ManagesPeopleRecords
     private function storeDocument(Request $request, array $config): array
     {
         $file = $request->file('document');
-        $disk = config('filesystems.default');
+        $disk = ($config['extra'] ?? null) === 'operations' ? 'public' : config('filesystems.default');
         $documentName = $this->documentName($request, $file);
         $path = ErpStoragePath::documentPath($config['storage'], $request->string('full_name')->toString(), 'identity-documents', $file, $documentName);
 
@@ -284,6 +288,25 @@ trait ManagesPeopleRecords
             ]);
         }
 
+        $user = $this->ensurePortalUser($record, $config);
+
+        $token = Password::broker()->createToken($user);
+        try {
+            $user->notify(new WelcomePasswordSetupNotification($token, $config['portal']));
+        } catch (\Throwable $exception) {
+            report($exception);
+        }
+
+        $record->forceFill(['portal_invitation_sent_at' => now()])->save();
+    }
+
+    private function shouldAutoLinkPortalUser($record, array $config): bool
+    {
+        return ($config['extra'] ?? null) === 'operations' && filled($record->email);
+    }
+
+    private function ensurePortalUser($record, array $config): User
+    {
         $user = $record->user ?: User::firstOrCreate(
             ['email' => $record->email],
             [
@@ -294,13 +317,23 @@ trait ManagesPeopleRecords
         );
 
         $user->forceFill(['name' => $record->full_name, 'email' => $record->email])->save();
-        $user->assignRole(Role::findOrCreate($config['role'], 'web'));
+        $user->assignRole(Role::findOrCreate($this->portalRoleForRecord($record, $config), 'web'));
         $record->forceFill(['user_id' => $user->id])->save();
 
-        $token = Password::broker()->createToken($user);
-        $user->notify(new WelcomePasswordSetupNotification($token, $config['portal']));
+        return $user;
+    }
 
-        $record->forceFill(['portal_invitation_sent_at' => now()])->save();
+    private function portalRoleForRecord($record, array $config): string
+    {
+        if (($config['extra'] ?? null) !== 'operations') {
+            return $config['role'];
+        }
+
+        return match ($record->team_role) {
+            'cleaner' => 'Cleaner',
+            'technician' => 'Technician',
+            default => 'Operations Team',
+        };
     }
 
     private function storeNoteIfPresent($record, ?string $note): void
