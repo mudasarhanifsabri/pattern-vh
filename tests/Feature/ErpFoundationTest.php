@@ -2,6 +2,8 @@
 
 namespace Tests\Feature;
 
+use App\Models\Booking;
+use App\Models\Unit;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Gate;
@@ -44,6 +46,11 @@ class ErpFoundationTest extends TestCase
         $this->seed();
 
         $owner = User::where('email', 'demo.owner@example.com')->firstOrFail();
+        $booking = Booking::query()
+            ->whereHas('unit', fn ($query) => $query->where('unit_no', '1402'))
+            ->whereIn('booking_status', Booking::ACTIVE_STATUSES)
+            ->orderBy('check_in_date')
+            ->firstOrFail();
 
         $this->actingAs($owner)
             ->get(route('dashboard'))
@@ -52,7 +59,29 @@ class ErpFoundationTest extends TestCase
             ->assertSee('Unit 1402')
             ->assertSee('Rent AED 8,500.00')
             ->assertSee('Nora Al Mansoori')
-            ->assertSee('Jul 23, 2026 to Jul 28, 2026');
+            ->assertSee($booking->check_in_date->format('M d, Y').' to '.$booking->check_out_date->format('M d, Y'));
+    }
+
+    public function test_owner_can_open_portal_pages(): void
+    {
+        $this->seed();
+
+        $owner = User::where('email', 'demo.owner@example.com')->firstOrFail();
+        $unit = Unit::where('unit_no', '1402')->firstOrFail();
+
+        $this->actingAs($owner);
+
+        foreach ([
+            route('dashboard'),
+            route('units.index'),
+            route('units.show', $unit),
+            route('owner-statements.index'),
+            route('owner-payouts.index'),
+            route('owner-contracts.index'),
+            route('reports.index'),
+        ] as $url) {
+            $this->get($url)->assertOk();
+        }
     }
 
     public function test_manifest_and_service_worker_are_available(): void

@@ -250,7 +250,9 @@
                                     <h3 class="mt-1 text-lg font-black text-[#071a3b]">Unit {{ $unit->unit_no }}</h3>
                                     <p class="mt-1 text-sm font-semibold text-slate-500">{{ $unit->unit_type ?: 'Property' }}</p>
                                 </div>
-                                @php($ownerUnitStatus = $unit->bookings->isNotEmpty() ? 'booked' : $unit->availability_status)
+                                @php
+                                    $ownerUnitStatus = $unit->bookings->isNotEmpty() ? 'booked' : $unit->availability_status;
+                                @endphp
                                 <span class="shrink-0 rounded-full {{ in_array($ownerUnitStatus, ['occupied', 'booked'], true) ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700' }} px-2.5 py-1 text-[11px] font-black">{{ str($ownerUnitStatus)->headline() }}</span>
                             </div>
                             <div class="mt-4 grid grid-cols-2 gap-3 text-sm">
@@ -627,7 +629,9 @@
             <section class="erp-card p-5 sm:p-6">
                 <h2 class="text-lg font-black text-[#071a3b]">Payment status</h2>
                 <p class="mt-1 text-sm text-slate-500">Current month payment collection</p>
-                @php($paymentTotal = max($operationsDashboard['paymentStatus']['collected'] + $operationsDashboard['paymentStatus']['pending'] + $operationsDashboard['paymentStatus']['overdue'], 1))
+                @php
+                    $paymentTotal = max($operationsDashboard['paymentStatus']['collected'] + $operationsDashboard['paymentStatus']['pending'] + $operationsDashboard['paymentStatus']['overdue'], 1);
+                @endphp
                 <div class="mt-7">
                     <div class="flex justify-between text-sm font-black"><span class="text-slate-600">Collected</span><span class="text-emerald-600">AED {{ number_format($operationsDashboard['paymentStatus']['collected'], 0) }}</span></div>
                     <div class="mt-3 h-3 overflow-hidden rounded-full bg-slate-100">
@@ -674,95 +678,5 @@
                 </div>
             </section>
         </div>
-    @else
-        @if ($tenant)
-            <section class="mb-5 overflow-hidden rounded-[2rem] bg-gradient-to-br from-[#061a38] via-[#0d2b5c] to-[#2563eb] p-5 text-white shadow-2xl shadow-blue-950/20 sm:p-7">
-                <div class="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
-                    <div>
-                        <p class="text-xs font-bold uppercase tracking-[0.22em] text-blue-200">My stay</p>
-                        <h2 class="mt-3 text-3xl font-black tracking-[-0.04em]">Welcome, {{ $tenant->full_name }}</h2>
-                        <p class="mt-2 max-w-2xl text-sm text-blue-100">One active stay at a time. Manage extension, payment collection, check-out, and deposit refund from your mobile.</p>
-                    </div>
-                    <a href="{{ route('tenant.payment-requests.index') }}" class="inline-flex h-14 items-center justify-center rounded-2xl bg-white px-5 text-sm font-black text-[#061a38]">Request payment collection</a>
-                </div>
-            </section>
-
-            @unless(filled($tenant->bank_account_name) && filled($tenant->iban))
-                <section class="mb-5 rounded-[1.75rem] border border-amber-100 bg-amber-50 p-5 shadow-xl shadow-amber-900/5">
-                    <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                        <div>
-                            <p class="text-xs font-bold uppercase tracking-[0.18em] text-amber-700">Deposit refund</p>
-                            <h3 class="mt-2 text-xl font-black tracking-[-0.03em] text-amber-950">Add your refund bank details</h3>
-                            <p class="mt-1 max-w-3xl text-sm leading-6 text-amber-800">Security deposit refunds are processed within 7 working days after checkout inspection, subject to no damages, unpaid dues, or policy deductions.</p>
-                        </div>
-                        <a href="{{ route('profile.edit') }}#refund-bank-details" class="inline-flex items-center justify-center rounded-2xl bg-amber-900 px-5 py-3 text-sm font-black text-white">Add details</a>
-                    </div>
-                </section>
-            @endunless
-
-            @if ($currentBooking)
-                <section class="mb-5 rounded-[1.75rem] border border-blue-100 bg-white p-5 shadow-xl shadow-blue-950/5">
-                    <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                        <div>
-                            <p class="text-xs font-bold uppercase tracking-[0.18em] text-blue-600">Current stay</p>
-                            <h3 class="mt-2 text-2xl font-black tracking-[-0.04em] text-[#071a3b]">{{ $currentBooking->unit->building->name }} / Unit {{ $currentBooking->unit->unit_no }}</h3>
-                            <p class="mt-1 text-sm text-slate-500">{{ $currentBooking->check_in_date->format('M d') }} to {{ $currentBooking->check_out_date->format('M d, Y') }} - {{ $tenantBookingStatus }}</p>
-                            <div class="mt-3 inline-flex rounded-2xl bg-blue-50 px-4 py-2 text-sm font-black text-blue-700">{{ $stayCounterLabel }}: {{ $stayCounterValue }}</div>
-                        </div>
-                        <a href="{{ route('bookings.show', $currentBooking) }}" class="inline-flex items-center justify-center rounded-2xl bg-blue-600 px-5 py-3 text-sm font-black text-white">Open stay</a>
-                    </div>
-                </section>
-            @endif
-        @endif
-
-        @if ($owner)
-            <section class="mb-5 overflow-hidden rounded-[2rem] bg-gradient-to-br from-[#061a38] via-[#0d2b5c] to-[#2563eb] p-5 text-white shadow-2xl shadow-blue-950/20 sm:p-7">
-                <div class="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
-                    <div>
-                        <p class="text-xs font-bold uppercase tracking-[0.22em] text-blue-200">Pattern owner portal</p>
-                        <h2 class="mt-3 text-3xl font-black tracking-[-0.04em]">Welcome, {{ $owner->full_name }}</h2>
-                        <p class="mt-2 max-w-2xl text-sm text-blue-100">Track units, occupancy status, owner expenses, account statements, and payouts.</p>
-                    </div>
-                    <a href="{{ route('owner-statements.index') }}" class="inline-flex h-14 items-center justify-center rounded-2xl bg-white px-5 text-sm font-black text-[#061a38]">View statement</a>
-                </div>
-            </section>
-        @endif
-
-        <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            @foreach ($stats as $card)
-                <article class="erp-card p-5">
-                    <p class="text-xs font-medium text-slate-500">{{ $card['label'] }}</p>
-                    <p class="mt-2 truncate text-2xl font-black tracking-[-0.04em] text-[#071a3b]">{{ $card['value'] }}</p>
-                    <p class="mt-3 text-[11px] leading-5 text-slate-500">{{ $card['note'] }}</p>
-                </article>
-            @endforeach
-        </div>
-
-        <section class="mt-5 erp-card p-5">
-            <h2 class="text-lg font-black text-[#071a3b]">{{ $tenant ? 'Mobile app actions' : 'Owner actions' }}</h2>
-            <div class="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                @foreach ($quickActions as $action)
-                    <a href="{{ route($action['route']) }}" class="rounded-3xl bg-blue-600 p-4 text-white shadow-xl shadow-blue-600/20 transition active:scale-[0.98]">
-                        <span class="block text-base font-black">{{ $action['label'] }}</span>
-                        <span class="mt-2 block text-xs leading-5 opacity-80">{{ $action['note'] }}</span>
-                    </a>
-                @endforeach
-            </div>
-        </section>
-
-        @if ($owner)
-            <section class="mt-5 erp-card p-5">
-                <h2 class="text-lg font-black text-[#071a3b]">My units status</h2>
-                <div class="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-                    @if($ownerUnits->isEmpty())
-                        <p class="rounded-2xl border border-dashed border-slate-200 px-4 py-8 text-center text-sm text-slate-500">No units assigned yet.</p>
-                    @else
-                        @foreach($ownerUnits as $unit)
-                            @include('dashboard.partials.owner-unit-status-card', ['unit' => $unit])
-                        @endforeach
-                    @endif
-                </div>
-            </section>
-        @endif
     @endif
 </x-app-layout>
