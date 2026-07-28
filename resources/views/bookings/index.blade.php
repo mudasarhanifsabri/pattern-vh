@@ -51,9 +51,10 @@
                 <div><h2 class="text-lg font-bold text-[#071a3b]">Booking registry</h2><p class="mt-1 text-sm text-slate-500">Holiday home and long-term bookings with fees, tasks, and notification logs.</p></div>
                 @can('bookings.manage')<a href="{{ route('bookings.create') }}" class="inline-flex h-11 items-center justify-center rounded-xl bg-blue-600 px-4 text-sm font-bold text-white shadow-lg shadow-blue-600/20 hover:bg-blue-700">Add booking</a>@endcan
             </div>
-            <form method="GET" class="mt-5 grid gap-3 md:grid-cols-[1fr_190px_auto]">
+            <form method="GET" class="mt-5 grid gap-3 md:grid-cols-[1fr_190px_220px_auto]">
                 <input name="search" value="{{ request('search') }}" placeholder="Search booking, tenant, unit..." class="erp-focus h-11 rounded-xl border border-slate-200 bg-[#f8faff] px-4 text-sm">
                 <select name="status" class="erp-focus h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm"><option value="">All statuses</option>@foreach (\App\Models\Booking::STATUSES as $status)<option value="{{ $status }}" @selected(request('status') === $status)>{{ str($status)->headline() }}</option>@endforeach</select>
+                <select name="unit_id" class="erp-focus h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm"><option value="">All units</option>@foreach ($units as $unit)<option value="{{ $unit->id }}" @selected((int) request('unit_id') === $unit->id)>{{ $unit->building?->name }} / Unit {{ $unit->unit_no }}</option>@endforeach</select>
                 <button class="rounded-xl bg-slate-900 px-4 text-sm font-bold text-white">Filter</button>
             </form>
             <div class="mt-5 space-y-3 md:hidden">

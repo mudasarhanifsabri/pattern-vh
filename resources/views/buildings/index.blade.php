@@ -27,18 +27,19 @@
             <div class="mt-5 overflow-hidden rounded-2xl border border-slate-200">
                 <table class="min-w-full divide-y divide-slate-200 text-sm">
                     <thead class="bg-slate-50 text-left text-[11px] font-bold uppercase tracking-[0.16em] text-slate-500">
-                        <tr><th class="px-4 py-3">Building</th><th class="px-4 py-3">Security emails</th><th class="px-4 py-3">Units</th><th class="px-4 py-3 text-right">Actions</th></tr>
+                        <tr><th class="px-4 py-3">Sr No</th><th class="px-4 py-3">Building</th><th class="px-4 py-3">Security emails</th><th class="px-4 py-3">Units</th><th class="px-4 py-3 text-right">Actions</th></tr>
                     </thead>
                     <tbody class="divide-y divide-slate-100 bg-white">
                         @forelse ($buildings as $building)
                             <tr>
+                                <td class="px-4 py-4 text-xs font-bold text-slate-500">{{ $buildings->firstItem() + $loop->index }}</td>
                                 <td class="px-4 py-4"><div class="font-bold text-[#071a3b]">{{ $building->name }}</div><div class="text-xs text-slate-500">{{ $building->area ?: 'No area' }}</div></td>
                                 <td class="px-4 py-4 text-xs text-slate-600">{{ implode(', ', $building->security_emails ?? []) ?: 'Not added' }}</td>
                                 <td class="px-4 py-4 text-sm font-bold text-[#071a3b]">{{ $building->units_count }}</td>
                                 <td class="px-4 py-4"><div class="flex justify-end gap-2"><a href="{{ route('buildings.show', $building) }}" class="rounded-lg border border-slate-200 px-3 py-2 text-xs font-bold text-slate-600 hover:bg-slate-50">View</a>@can('buildings.manage')<a href="{{ route('buildings.edit', $building) }}" class="rounded-lg border border-slate-200 px-3 py-2 text-xs font-bold text-slate-600 hover:bg-slate-50">Edit</a>@endcan</div></td>
                             </tr>
                         @empty
-                            <tr><td colspan="4" class="px-4 py-10 text-center text-slate-500">No buildings found.</td></tr>
+                            <tr><td colspan="5" class="px-4 py-10 text-center text-slate-500">No buildings found.</td></tr>
                         @endforelse
                     </tbody>
                 </table>

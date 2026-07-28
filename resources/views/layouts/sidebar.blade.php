@@ -56,13 +56,14 @@
             'label' => 'Field Operations',
             'caption' => 'Tasks and assets',
             'icon' => 'M9 11l2 2 4-4M5 7h14M5 17h14',
-            'active' => ['tasks.*', 'utilities.*', 'vehicles.*', 'inventory.*'],
-            'permissions' => ['booking-tasks.view', 'booking-tasks.manage', 'utilities.view', 'utilities.manage', 'vehicles.view', 'vehicles.manage', 'inventory.view', 'inventory.manage'],
+            'active' => ['tasks.*', 'utilities.*', 'vehicles.*', 'inventory.*', 'vendors.*'],
+            'permissions' => ['booking-tasks.view', 'booking-tasks.manage', 'utilities.view', 'utilities.manage', 'vehicles.view', 'vehicles.manage', 'inventory.view', 'inventory.manage', 'vendors.view', 'vendors.manage'],
             'items' => [
                 ['label' => 'Task management', 'route' => 'tasks.index', 'active' => 'tasks.*', 'permissions' => ['booking-tasks.manage']],
                 ['label' => 'Utilities', 'route' => 'utilities.index', 'active' => 'utilities.*', 'permissions' => ['utilities.view', 'utilities.manage']],
                 ['label' => 'Vehicles', 'route' => 'vehicles.index', 'active' => 'vehicles.*', 'permissions' => ['vehicles.view', 'vehicles.manage']],
                 ['label' => 'Inventory', 'route' => 'inventory.index', 'active' => 'inventory.*', 'permissions' => ['inventory.view', 'inventory.manage']],
+                ['label' => 'Vendors & suppliers', 'route' => 'vendors.index', 'active' => 'vendors.*', 'permissions' => ['vendors.view', 'vendors.manage']],
             ],
         ],
         [

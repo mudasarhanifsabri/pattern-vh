@@ -49,6 +49,7 @@ use App\Http\Controllers\UnitController;
 use App\Http\Controllers\UnitDocumentOcrController;
 use App\Http\Controllers\UtilityManagementController;
 use App\Http\Controllers\VehicleController;
+use App\Http\Controllers\VendorController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -158,6 +159,14 @@ Route::middleware('auth')->group(function () {
             ->middleware("permission:{$prefix}.manage")
             ->name("{$prefix}.notes.store");
     }
+
+    Route::resource('vendors', VendorController::class)->except(['index', 'show', 'destroy'])
+        ->middleware('permission:vendors.manage');
+    Route::resource('vendors', VendorController::class)->only(['index', 'show'])
+        ->middleware('permission:vendors.view|vendors.manage');
+    Route::get('vendors/{vendor}/documents/{vendorDocument}', [VendorController::class, 'document'])
+        ->middleware('permission:vendors.view|vendors.manage')
+        ->name('vendors.documents.show');
 
     Route::resource('buildings', BuildingController::class)->except(['index', 'show'])->middleware('permission:buildings.manage');
     Route::resource('buildings', BuildingController::class)->only(['index', 'show'])->middleware('permission:buildings.view|buildings.manage');

@@ -93,6 +93,14 @@ class PaymentController extends Controller
             'verification_notes' => ['nullable', 'string', 'max:1000'],
         ]);
 
+        $payment->loadMissing(['invoice', 'booking']);
+
+        if ($payment->invoice && ! $payment->invoice->payout_due_date) {
+            $payment->invoice->forceFill([
+                'payout_due_date' => $payment->invoice->period_end ?: $payment->booking?->check_out_date,
+            ])->save();
+        }
+
         $payment->forceFill([
             'status' => 'approved',
             'approved_by' => auth()->id(),

@@ -28,6 +28,7 @@
                 <table class="min-w-full divide-y divide-slate-200 text-sm">
                     <thead class="bg-slate-50 text-left text-[11px] font-bold uppercase tracking-[0.16em] text-slate-500">
                         <tr>
+                            <th class="px-4 py-3">Sr No</th>
                             <th class="px-4 py-3">User</th>
                             <th class="px-4 py-3">Roles</th>
                             <th class="px-4 py-3">Created</th>
@@ -37,6 +38,7 @@
                     <tbody class="divide-y divide-slate-100 bg-white">
                         @forelse ($users as $user)
                             <tr>
+                                <td class="px-4 py-4 text-xs font-bold text-slate-500">{{ $users->firstItem() + $loop->index }}</td>
                                 <td class="px-4 py-4">
                                     <div class="font-bold text-[#071a3b]">{{ $user->name }}</div>
                                     <div class="text-xs text-slate-500">{{ $user->email }}</div>
@@ -65,7 +67,7 @@
                                 </td>
                             </tr>
                         @empty
-                            <tr><td colspan="4" class="px-4 py-10 text-center text-sm text-slate-500">No users found.</td></tr>
+                            <tr><td colspan="5" class="px-4 py-10 text-center text-sm text-slate-500">No users found.</td></tr>
                         @endforelse
                     </tbody>
                 </table>

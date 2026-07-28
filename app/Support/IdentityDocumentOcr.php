@@ -7,6 +7,7 @@ use Aws\Exception\AwsException;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
+use Smalot\PdfParser\Parser as PdfParser;
 
 class IdentityDocumentOcr
 {
@@ -110,7 +111,12 @@ class IdentityDocumentOcr
 
         if ($mode === 'detect_text' || $isPdf) {
             try {
-                $rawText = $this->detectDocumentText($textract, $bytes);
+                $rawText = $isPdf ? $this->extractPdfText($file) : '';
+
+                if (! $rawText) {
+                    $rawText = $this->detectDocumentText($textract, $bytes);
+                }
+
                 $usedTextFallback = (bool) $rawText;
             } catch (\Throwable $exception) {
                 report($exception);
@@ -162,8 +168,8 @@ class IdentityDocumentOcr
         return [
             'ok' => (bool) array_filter($fields),
             'message' => array_filter($fields) ? 'Document scanned. Please review before saving.' : 'No reliable identity data found. Please fill manually.',
-            'fields' => $fields,
-            'raw_text' => $rawText,
+            'fields' => $this->sanitizeArray($fields),
+            'raw_text' => '',
             'provider_fields' => $identityFields,
             'meta' => [
                 'duration_ms' => $durationMs,
@@ -720,6 +726,19 @@ class IdentityDocumentOcr
             ->implode("\n");
     }
 
+    private function extractPdfText(UploadedFile $file): string
+    {
+        if (! class_exists(PdfParser::class)) {
+            return '';
+        }
+
+        return Str::of($this->sanitizeUtf8((new PdfParser())->parseFile($file->getRealPath())->getText()))
+            ->replace("\r", "\n")
+            ->replaceMatches("/\n{3,}/", "\n\n")
+            ->trim()
+            ->toString();
+    }
+
     private function textract(): TextractClient
     {
         return new TextractClient([
@@ -730,5 +749,23 @@ class IdentityDocumentOcr
                 'secret' => config('ocr.aws.secret'),
             ],
         ]);
+    }
+
+    private function sanitizeArray(array $fields): array
+    {
+        return collect($fields)
+            ->map(fn ($value) => is_string($value) ? $this->sanitizeUtf8($value) : $value)
+            ->all();
+    }
+
+    private function sanitizeUtf8(string $value): string
+    {
+        if (function_exists('mb_scrub')) {
+            $value = mb_scrub($value, 'UTF-8');
+        } else {
+            $value = @iconv('UTF-8', 'UTF-8//IGNORE', $value) ?: $value;
+        }
+
+        return preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/', '', $value) ?: '';
     }
 }

@@ -10,7 +10,7 @@
         <div>
             <p class="text-[11px] font-bold uppercase tracking-[0.22em] text-blue-600">Accounting</p>
             <h1 class="text-3xl font-black tracking-[-0.04em] text-[#071a3b]">Owner Account Manager</h1>
-            <p class="mt-2 text-sm text-slate-500">Owner payouts are calculated from approved rent collections only. Security deposits stay with the company until tenant refund workflow is completed.</p>
+            <p class="mt-2 text-sm text-slate-500">Owner payouts are calculated from approved rent collections only. Each payment keeps its own invoice-period payout date, even if the booking is later extended.</p>
         </div>
     </x-slot>
 
@@ -75,7 +75,7 @@
         <section class="{{ $ownerOnly ? 'overflow-hidden rounded-[1.6rem] bg-white shadow-[0_18px_45px_rgba(15,23,42,0.08)]' : 'erp-card overflow-hidden' }}">
             <div class="border-b border-slate-100 p-5">
                 <h2 class="text-lg font-bold text-[#071a3b]">Payout and transfer schedule</h2>
-                <p class="mt-1 text-sm text-slate-500">Balance Amount = Rent Collected - Management Fee - All Owner Expenses. Collection date comes from booking check-in and payable date comes from booking checkout.</p>
+                <p class="mt-1 text-sm text-slate-500">Balance amount = rent collected - management fee - owner expenses for that invoice period. Payout dates are fixed from each invoice period and do not move when a booking is extended.</p>
             </div>
 
             <div class="hidden overflow-x-auto {{ $ownerOnly ? 'lg:block' : 'md:block' }}">
@@ -84,7 +84,7 @@
                         <tr>
                             <th class="px-4 py-3">Owner</th>
                             <th class="px-4 py-3">Booking / Unit</th>
-                            <th class="px-4 py-3">Collection</th>
+                            <th class="px-4 py-3">Invoice period</th>
                             <th class="px-4 py-3">Payable date</th>
                             <th class="px-4 py-3">Rent collected</th>
                             <th class="px-4 py-3">Mgmt fee</th>
@@ -98,7 +98,7 @@
                             <tr>
                                 <td class="px-4 py-4 font-bold text-[#071a3b]">{{ $row['owner']->full_name }}</td>
                                 <td class="px-4 py-4"><div class="font-bold text-[#071a3b]">{{ $row['booking']?->booking_no }}</div><div class="text-xs text-slate-500">{{ $row['unit']->building?->name }} / Unit {{ $row['unit']->unit_no }}</div></td>
-                                <td class="px-4 py-4">{{ $row['collection_date']?->format('M d, Y') ?? '-' }}</td>
+                                <td class="px-4 py-4"><span class="font-bold text-[#071a3b]">{{ $row['period_start']?->format('M d, Y') ?? '-' }}</span><span class="block text-xs text-slate-500">to {{ $row['period_end']?->format('M d, Y') ?? '-' }}</span></td>
                                 <td class="px-4 py-4"><span class="font-bold text-[#071a3b]">{{ $row['payable_on']?->format('M d, Y') ?? '-' }}</span></td>
                                 <td class="px-4 py-4">AED {{ number_format($row['gross_share'], 2) }}<span class="block text-xs text-slate-400">{{ number_format($row['share_percent'], 2) }}% share</span></td>
                                 <td class="px-4 py-4">AED {{ number_format($row['management_fee'], 2) }}</td>
@@ -136,13 +136,13 @@
                             <div>
                                 <p class="text-xs font-bold uppercase tracking-[0.16em] text-blue-600">{{ $row['booking']?->booking_no }}</p>
                                 <h3 class="mt-1 text-lg font-black text-[#071a3b]">AED {{ number_format($row['net_payout'], 2) }}</h3>
-                                <p class="mt-1 text-sm text-slate-500">Will land on {{ $row['payable_on']?->format('M d, Y') ?? '-' }}</p>
+                                <p class="mt-1 text-sm text-slate-500">Payout date {{ $row['payable_on']?->format('M d, Y') ?? '-' }}</p>
                             </div>
                             <span class="rounded-full {{ $row['status'] === 'transferred' ? 'bg-violet-50 text-violet-700' : ($row['status'] === 'ready' ? 'bg-emerald-50 text-emerald-700' : 'bg-blue-50 text-blue-700') }} px-2.5 py-1 text-xs font-bold">{{ str($row['status'])->headline() }}</span>
                         </div>
                         <div class="mt-4 grid grid-cols-2 gap-3 text-xs">
                             <div class="rounded-2xl bg-slate-50 p-3"><p class="font-bold text-slate-400">Unit</p><p class="mt-1 font-bold text-[#071a3b]">{{ $row['unit']->unit_no }}</p></div>
-                            <div class="rounded-2xl bg-slate-50 p-3"><p class="font-bold text-slate-400">Collected</p><p class="mt-1 font-bold text-[#071a3b]">{{ $row['collection_date']?->format('M d') }}</p></div>
+                            <div class="rounded-2xl bg-slate-50 p-3"><p class="font-bold text-slate-400">Period</p><p class="mt-1 font-bold text-[#071a3b]">{{ $row['period_start']?->format('M d') }} - {{ $row['period_end']?->format('M d') }}</p></div>
                             <div class="rounded-2xl bg-slate-50 p-3"><p class="font-bold text-slate-400">Rent collected</p><p class="mt-1 font-bold text-[#071a3b]">AED {{ number_format($row['gross_share'], 2) }}</p></div>
                             <div class="rounded-2xl bg-slate-50 p-3"><p class="font-bold text-slate-400">Expenses</p><p class="mt-1 font-bold text-[#071a3b]">AED {{ number_format($row['owner_expenses'], 2) }}</p></div>
                         </div>

@@ -61,6 +61,7 @@ class InvoiceController extends Controller
             'invoice_no' => $this->nextInvoiceNo(),
             'tenant_id' => $booking->tenant_id,
             'unit_id' => $booking->unit_id,
+            'payout_due_date' => $booking->check_out_date?->toDateString(),
             'vat_amount' => TaxCalculator::rentVat($validated['rent_amount'] ?? 0),
             'total_amount' => $total,
             'paid_amount' => 0,

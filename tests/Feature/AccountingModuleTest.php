@@ -64,27 +64,36 @@ class AccountingModuleTest extends TestCase
         $this->assertNotNull($expense->receipt_path);
 
         $this->actingAs($admin)->get(route('expenses.show', $expense))->assertOk()->assertSee('Owner AC service');
+        $payoutPayment = Payment::query()
+            ->with('invoice')
+            ->where('status', 'approved')
+            ->whereHas('invoice', fn ($query) => $query->where('status', 'paid')->where('balance_amount', '<=', 0))
+            ->firstOrFail();
         $bookingDuration = now()->addDays(3)->format('M d, Y').' to '.now()->addDays(8)->format('M d, Y');
-        $bookingCheckIn = now()->addDays(3)->format('M d, Y');
-        $bookingCheckOut = now()->addDays(8)->format('M d, Y');
+        $payoutPeriodStart = $payoutPayment->invoice->period_start->format('M d, Y');
+        $payoutPeriodEnd = $payoutPayment->invoice->period_end->format('M d, Y');
+        $statementDates = [
+            'from' => now()->startOfMonth()->toDateString(),
+            'to' => now()->addMonth()->endOfMonth()->toDateString(),
+        ];
 
-        $this->actingAs($admin)->get(route('owner-statements.index', ['owner_id' => $owner->id]))
+        $this->actingAs($admin)->get(route('owner-statements.index', ['owner_id' => $owner->id, ...$statementDates]))
             ->assertOk()
             ->assertSee('Owner Account Statement')
             ->assertSee('Booking rent')
             ->assertSee('AED 8,500.00')
             ->assertSee($bookingDuration)
             ->assertSee('PDF');
-        $this->actingAs($admin)->get(route('owner-statements.pdf', ['owner_id' => $owner->id]))->assertOk()->assertHeader('content-type', 'application/pdf');
+        $this->actingAs($admin)->get(route('owner-statements.pdf', ['owner_id' => $owner->id, ...$statementDates]))->assertOk()->assertHeader('content-type', 'application/pdf');
         $this->actingAs($admin)->get(route('owner-payouts.index', ['owner_id' => $owner->id]))
             ->assertOk()
             ->assertSee('Owner Account Manager')
             ->assertSee('Payout and transfer schedule')
-            ->assertSee('Balance Amount = Rent Collected - Management Fee - All Owner Expenses')
+            ->assertSee('Payout dates are fixed from each invoice period')
             ->assertSee('AED 770.00')
             ->assertSee('AED 4,109.00')
-            ->assertSee($bookingCheckIn)
-            ->assertSee($bookingCheckOut)
+            ->assertSee($payoutPeriodStart)
+            ->assertSee($payoutPeriodEnd)
             ->assertDontSee('Save date');
         $this->actingAs($admin)->get(route('reports.index'))->assertOk()->assertSeeText('Reports & Profit/Loss');
         $this->actingAs($admin)->get(route('reports.export', ['type' => 'expenses']))->assertOk()->assertHeader('content-type', 'text/csv; charset=UTF-8');
@@ -138,6 +147,34 @@ class AccountingModuleTest extends TestCase
             'owner_id' => null,
             'unit_id' => null,
         ]);
+    }
+
+    public function test_owner_payout_date_stays_with_the_paid_invoice_period_after_extension(): void
+    {
+        $this->seed();
+
+        $admin = User::where('email', 'admin@example.com')->firstOrFail();
+        $payment = Payment::query()
+            ->with(['invoice.booking.unit.owners'])
+            ->where('status', 'approved')
+            ->whereHas('invoice', fn ($query) => $query
+                ->where('status', 'paid')
+                ->where('balance_amount', '<=', 0)
+                ->whereNotNull('payout_due_date'))
+            ->firstOrFail();
+        $invoice = $payment->invoice;
+        $booking = $invoice->booking;
+        $owner = $booking->unit->owners->firstOrFail();
+        $originalPayoutDate = $invoice->payout_due_date->format('M d, Y');
+        $extendedCheckout = $invoice->payout_due_date->copy()->addDays(14);
+
+        $booking->update(['check_out_date' => $extendedCheckout]);
+
+        $this->actingAs($admin)
+            ->get(route('owner-payouts.index', ['owner_id' => $owner->id]))
+            ->assertOk()
+            ->assertSee($originalPayoutDate)
+            ->assertDontSee($extendedCheckout->format('M d, Y'));
     }
 
     public function test_accounting_manager_can_open_reports_without_report_specific_permission(): void

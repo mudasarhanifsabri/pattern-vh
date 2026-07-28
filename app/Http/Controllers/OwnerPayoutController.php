@@ -141,12 +141,14 @@ class OwnerPayoutController extends Controller
                     $grossShare = $rentCollected * ($sharePercent / 100);
                     $managementFee = $grossShare * ($managementPercent / 100);
                     $transfer = $transfers->get($owner->id.'-'.$payment->id);
-                    $collectionDate = $booking?->check_in_date;
-                    $payableOn = $booking?->check_out_date;
+                    $periodStart = $payment->invoice?->period_start ?: $booking?->check_in_date;
+                    $periodEnd = $payment->invoice?->period_end ?: $booking?->check_out_date;
+                    $collectionDate = $transfer?->collection_date ?: $periodStart;
+                    $payableOn = $transfer?->payable_on ?: ($payment->invoice?->payout_due_date ?: $periodEnd);
                     $ownerExpenses = (float) Expense::query()
                         ->where('owner_id', $owner->id)
                         ->where('unit_id', $unit->id)
-                        ->when($booking?->check_out_date, fn ($query) => $query->whereDate('incurred_on', '<=', $booking->check_out_date->toDateString()))
+                        ->when($periodEnd, fn ($query) => $query->whereDate('incurred_on', '<=', $periodEnd->toDateString()))
                         ->sum('amount');
                     $netPayout = max($grossShare - $managementFee - $ownerExpenses, 0);
 
@@ -155,6 +157,8 @@ class OwnerPayoutController extends Controller
                         'payment' => $payment,
                         'booking' => $booking,
                         'unit' => $unit,
+                        'period_start' => $periodStart,
+                        'period_end' => $periodEnd,
                         'collection_date' => $collectionDate,
                         'payable_on' => $payableOn,
                         'share_percent' => $sharePercent,

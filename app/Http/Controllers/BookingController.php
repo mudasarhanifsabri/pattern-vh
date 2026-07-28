@@ -27,20 +27,27 @@ class BookingController extends Controller
     public function index()
     {
         $tenant = $this->tenantForAuth();
+        $canManageBookings = auth()->user()->can('bookings.manage');
         $bookings = Booking::query()
             ->with(['unit.building', 'tenant', 'agent'])
-            ->when($tenant && ! auth()->user()->can('bookings.manage'), fn ($query) => $query->where('tenant_id', $tenant->id))
+            ->when($tenant && ! $canManageBookings, fn ($query) => $query->where('tenant_id', $tenant->id))
             ->when(request('search'), function ($query, string $search): void {
                 $query->where('booking_no', 'like', "%{$search}%")
                     ->orWhereHas('tenant', fn ($query) => $query->where('full_name', 'like', "%{$search}%"))
                     ->orWhereHas('unit', fn ($query) => $query->where('unit_no', 'like', "%{$search}%"));
             })
             ->when(request('status'), fn ($query, string $status) => $query->where('booking_status', $status))
+            ->when($canManageBookings && request('unit_id'), fn ($query, int $unitId) => $query->where('unit_id', $unitId))
             ->latest()
             ->paginate(10)
             ->withQueryString();
 
-        return view('bookings.index', compact('bookings'));
+        return view('bookings.index', [
+            'bookings' => $bookings,
+            'units' => $canManageBookings
+                ? Unit::query()->with('building')->orderBy('unit_no')->get()
+                : collect(),
+        ]);
     }
 
     public function create()

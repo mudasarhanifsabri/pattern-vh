@@ -408,6 +408,7 @@ class BookingLifecycleController extends Controller
             'due_date' => now()->addDay()->toDateString(),
             'period_start' => $booking->check_out_date->toDateString(),
             'period_end' => $extensionRequest->requested_check_out_date->toDateString(),
+            'payout_due_date' => $extensionRequest->requested_check_out_date->toDateString(),
             'rent_amount' => $rent,
             'vat_amount' => $vat,
             'total_amount' => $total,

@@ -17,7 +17,7 @@ class CeoUserSeeder extends Seeder
             'ceo.dashboard', 'dashboard.view', 'profile.manage', 'accounting.view', 'bank-reconciliation.view', 'expenses.view',
             'owner-statements.view', 'owner-payouts.view', 'reports.view', 'reports.export',
             'invoices.view', 'payments.view', 'bookings.view', 'availability-calendar.view',
-            'booking-tasks.view', 'units.view', 'owners.view',
+            'booking-tasks.view', 'units.view', 'owners.view', 'vendors.view',
         ];
 
         foreach ($permissions as $permission) {

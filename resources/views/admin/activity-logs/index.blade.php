@@ -27,6 +27,7 @@
             <table class="min-w-full divide-y divide-slate-200 text-sm">
                 <thead class="bg-slate-50 text-left text-[11px] font-bold uppercase tracking-[0.16em] text-slate-500">
                     <tr>
+                        <th class="px-4 py-3">Sr No</th>
                         <th class="px-4 py-3">Action</th>
                         <th class="px-4 py-3">Description</th>
                         <th class="px-4 py-3">User</th>
@@ -36,6 +37,7 @@
                 <tbody class="divide-y divide-slate-100 bg-white">
                     @forelse ($logs as $log)
                         <tr>
+                            <td class="px-4 py-4 text-xs font-bold text-slate-500">{{ $logs->firstItem() + $loop->index }}</td>
                             <td class="px-4 py-4"><span class="rounded-full bg-blue-50 px-2.5 py-1 text-xs font-bold text-blue-700">{{ $log->action }}</span></td>
                             <td class="px-4 py-4">
                                 <div class="font-medium text-[#071a3b]">{{ $log->description }}</div>
@@ -45,7 +47,7 @@
                             <td class="px-4 py-4 text-xs text-slate-500">{{ $log->created_at->format('M d, Y H:i') }}</td>
                         </tr>
                     @empty
-                        <tr><td colspan="4" class="px-4 py-10 text-center text-sm text-slate-500">No activity has been recorded yet.</td></tr>
+                        <tr><td colspan="5" class="px-4 py-10 text-center text-sm text-slate-500">No activity has been recorded yet.</td></tr>
                     @endforelse
                 </tbody>
             </table>

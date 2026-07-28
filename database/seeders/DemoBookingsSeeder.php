@@ -245,6 +245,7 @@ class DemoBookingsSeeder extends Seeder
             'due_date' => $periodStart->copy()->addDays(2)->toDateString(),
             'period_start' => $periodStart->toDateString(),
             'period_end' => $periodEnd->toDateString(),
+            'payout_due_date' => $periodEnd->toDateString(),
             'rent_amount' => $rent,
             'deposit_amount' => $deposit,
             'dtcm_fee' => $dtcm,

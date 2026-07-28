@@ -148,6 +148,20 @@ class BookingModuleTest extends TestCase
         $this->assertDatabaseHas('notification_logs', ['booking_id' => $booking->id, 'subject' => 'Booking confirmation', 'status' => 'sent']);
     }
 
+    public function test_booking_registry_has_a_unit_filter(): void
+    {
+        $this->seed();
+
+        $admin = User::where('email', 'admin@example.com')->firstOrFail();
+        $booking = Booking::where('booking_no', 'BK-DEMO-0001')->firstOrFail();
+
+        $this->actingAs($admin)
+            ->get(route('bookings.index', ['unit_id' => $booking->unit_id]))
+            ->assertOk()
+            ->assertSee('All units')
+            ->assertSee($booking->booking_no);
+    }
+
     public function test_booking_confirmation_link_can_be_sent_opened_and_signed(): void
     {
         $this->seed();

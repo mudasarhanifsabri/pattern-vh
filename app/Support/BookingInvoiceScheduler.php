@@ -32,6 +32,12 @@ class BookingInvoiceScheduler
             $agency = $isInitial ? (float) $booking->agency_fee : 0;
             $vat = TaxCalculator::rentVat($rent);
             $total = $rent + $vat + $deposit + $dtcm + $cleaning + $agency;
+            $periodEnd = Carbon::parse($period['end'])->startOfDay();
+            $lastStayDate = $booking->check_out_date?->copy()->subDay()->startOfDay();
+            // The final period is payable on checkout; earlier periods retain their own end date.
+            $payoutDueDate = $lastStayDate && $periodEnd->equalTo($lastStayDate)
+                ? $booking->check_out_date->toDateString()
+                : $periodEnd->toDateString();
 
             $invoice = Invoice::firstOrNew([
                 'booking_id' => $booking->id,
@@ -50,6 +56,7 @@ class BookingInvoiceScheduler
                 'due_date' => $period['start'],
                 'period_start' => $period['start'],
                 'period_end' => $period['end'],
+                'payout_due_date' => $invoice->payout_due_date ?: $payoutDueDate,
                 'is_initial_invoice' => $isInitial,
                 'rent_amount' => $rent,
                 'deposit_amount' => $deposit,
