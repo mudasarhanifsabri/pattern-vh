@@ -95,6 +95,12 @@ class AccountingModuleTest extends TestCase
             ->assertSee($payoutPeriodStart)
             ->assertSee($payoutPeriodEnd)
             ->assertDontSee('Save date');
+        $this->actingAs($admin)->get(route('owner-payouts.pdf', ['owner_id' => $owner->id]))
+            ->assertOk()
+            ->assertHeader('content-type', 'application/pdf');
+        $this->actingAs($admin)->get(route('owner-payouts.excel', ['owner_id' => $owner->id]))
+            ->assertOk()
+            ->assertHeader('content-type', 'text/csv; charset=UTF-8');
         $this->actingAs($admin)->get(route('reports.index'))->assertOk()->assertSeeText('Reports & Profit/Loss');
         $this->actingAs($admin)->get(route('reports.export', ['type' => 'expenses']))->assertOk()->assertHeader('content-type', 'text/csv; charset=UTF-8');
     }

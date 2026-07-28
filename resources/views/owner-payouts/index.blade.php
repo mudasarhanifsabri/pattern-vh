@@ -30,8 +30,8 @@
             </section>
         @endif
 
-        <section class="{{ $ownerOnly ? 'hidden' : 'erp-card p-5' }}">
-            <form method="GET" class="grid gap-3 lg:grid-cols-[1fr_auto] lg:items-end">
+        <section class="erp-card p-5">
+            <form method="GET" class="grid gap-3 lg:grid-cols-[1fr_auto_auto_auto] lg:items-end">
                 @can('owner-payouts.manage')
                     <div>
                         <x-input-label for="owner_id" value="Owner" />
@@ -46,6 +46,8 @@
                 @else
                     <div class="rounded-2xl bg-blue-50 p-4 text-sm font-bold text-blue-700">Showing payouts for {{ $owner?->full_name ?? 'your owner account' }}.</div>
                 @endcan
+                <a href="{{ route('owner-payouts.pdf', request()->query()) }}" target="_blank" class="inline-flex h-11 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-700">Export PDF</a>
+                <a href="{{ route('owner-payouts.excel', request()->query()) }}" class="inline-flex h-11 items-center justify-center rounded-xl bg-emerald-600 px-4 text-sm font-bold text-white">Export Excel</a>
             </form>
         </section>
 

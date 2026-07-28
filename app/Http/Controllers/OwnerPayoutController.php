@@ -9,6 +9,8 @@ use App\Models\Expense;
 use App\Support\PushEventLogger;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
+use Mpdf\Mpdf;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class OwnerPayoutController extends Controller
 {
@@ -21,13 +23,7 @@ class OwnerPayoutController extends Controller
             'owners' => Owner::orderBy('full_name')->get(),
             'owner' => $owner,
             'rows' => $rows,
-            'stats' => [
-                'upcoming' => $rows->where('status', 'upcoming')->sum('net_payout'),
-                'ready' => $rows->where('status', 'ready')->sum('net_payout'),
-                'transferred' => $rows->where('status', 'transferred')->sum('net_payout'),
-                'total' => $rows->sum('net_payout'),
-                'count' => $rows->count(),
-            ],
+            'stats' => $this->stats($rows),
         ]);
     }
 
@@ -79,6 +75,71 @@ class OwnerPayoutController extends Controller
         );
 
         return back()->with('status', 'Owner payout transfer recorded.');
+    }
+
+    public function pdf(Request $request)
+    {
+        $owner = $this->ownerFor($request);
+        $rows = $this->payoutRows($owner);
+        $tempDir = storage_path('app/mpdf');
+
+        if (! is_dir($tempDir)) {
+            mkdir($tempDir, 0775, true);
+        }
+
+        $pdf = new Mpdf([
+            'mode' => 'utf-8',
+            'format' => 'A4-L',
+            'default_font' => 'dejavusans',
+            'tempDir' => $tempDir,
+            'margin_left' => 10,
+            'margin_right' => 10,
+            'margin_top' => 10,
+            'margin_bottom' => 10,
+        ]);
+        $pdf->SetTitle(($owner?->full_name ?: 'All owners').' Payout Schedule');
+        $pdf->WriteHTML(view('pdfs.owner-payouts', [
+            'owner' => $owner,
+            'rows' => $rows,
+            'stats' => $this->stats($rows),
+        ])->render());
+
+        return response($pdf->Output('', 'S'), 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="owner-payouts-'.now()->format('Ymd').'.pdf"',
+        ]);
+    }
+
+    public function excel(Request $request): StreamedResponse
+    {
+        $owner = $this->ownerFor($request);
+        $rows = $this->payoutRows($owner);
+
+        return response()->streamDownload(function () use ($rows): void {
+            $handle = fopen('php://output', 'w');
+            fputcsv($handle, ['Owner', 'Booking', 'Building', 'Unit', 'Period Start', 'Period End', 'Payable Date', 'Rent Collected', 'Management Fee', 'Owner Expenses', 'Balance Amount', 'Status', 'Transfer Date', 'Reference']);
+
+            foreach ($rows as $row) {
+                fputcsv($handle, [
+                    $row['owner']->full_name,
+                    $row['booking']?->booking_no,
+                    $row['unit']?->building?->name,
+                    $row['unit']?->unit_no,
+                    $row['period_start']?->format('Y-m-d'),
+                    $row['period_end']?->format('Y-m-d'),
+                    $row['payable_on']?->format('Y-m-d'),
+                    $row['gross_share'],
+                    $row['management_fee'],
+                    $row['owner_expenses'],
+                    $row['net_payout'],
+                    $row['status'],
+                    $row['transfer']?->transferred_at?->format('Y-m-d'),
+                    $row['transfer']?->reference_no,
+                ]);
+            }
+
+            fclose($handle);
+        }, 'owner-payouts-'.now()->format('Ymd').'.csv', ['Content-Type' => 'text/csv; charset=UTF-8']);
     }
 
     private function ownerFor(Request $request): ?Owner
@@ -172,5 +233,16 @@ class OwnerPayoutController extends Controller
                 });
             })
             ->values();
+    }
+
+    private function stats(Collection $rows): array
+    {
+        return [
+            'upcoming' => $rows->where('status', 'upcoming')->sum('net_payout'),
+            'ready' => $rows->where('status', 'ready')->sum('net_payout'),
+            'transferred' => $rows->where('status', 'transferred')->sum('net_payout'),
+            'total' => $rows->sum('net_payout'),
+            'count' => $rows->count(),
+        ];
     }
 }

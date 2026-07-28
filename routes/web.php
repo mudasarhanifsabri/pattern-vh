@@ -368,6 +368,12 @@ Route::middleware('auth')->group(function () {
     Route::get('owner-payouts', [OwnerPayoutController::class, 'index'])
         ->middleware('permission:owner-payouts.view|owner-payouts.manage|portal.owner')
         ->name('owner-payouts.index');
+    Route::get('owner-payouts/pdf', [OwnerPayoutController::class, 'pdf'])
+        ->middleware('permission:owner-payouts.view|owner-payouts.manage|portal.owner')
+        ->name('owner-payouts.pdf');
+    Route::get('owner-payouts/excel', [OwnerPayoutController::class, 'excel'])
+        ->middleware('permission:owner-payouts.view|owner-payouts.manage|portal.owner')
+        ->name('owner-payouts.excel');
     Route::post('owner-payouts/transfers', [OwnerPayoutController::class, 'storeTransfer'])
         ->middleware('permission:owner-payouts.manage')
         ->name('owner-payouts.transfers.store');

@@ -26,7 +26,7 @@
                             <span class="absolute right-4 top-4 rounded-xl {{ $booking->booking_status === 'confirmed' ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700' }} px-3 py-1 text-xs font-black">{{ str($booking->booking_status)->replace('_', ' ')->headline() }}</span>
                         </div>
                         <div class="p-5">
-                            <h2 class="text-xl font-black text-[#071a3b]">{{ $booking->unit->building->name }}</h2>
+                            <h2 class="text-xl font-black text-[#071a3b]">{{ $booking->unit?->building?->name ?? 'Property unavailable' }}</h2>
                             <p class="mt-1 text-sm font-semibold text-slate-500">Dubai, UAE</p>
                             <div class="mt-5 grid grid-cols-2 gap-4 border-b border-slate-100 pb-4">
                                 <div><p class="text-sm font-semibold text-slate-500">Check-in</p><p class="font-black text-blue-600">{{ $booking->check_in_date->format('d M Y') }}</p><p class="text-sm text-slate-500">{{ $booking->check_in_time ? \Illuminate\Support\Carbon::parse($booking->check_in_time)->format('h:i A') : '03:00 PM' }}</p></div>
@@ -63,8 +63,8 @@
                         <div class="flex items-start justify-between gap-3">
                             <div class="min-w-0">
                                 <p class="text-xs font-bold uppercase tracking-[0.16em] text-blue-600">{{ $booking->booking_no }}</p>
-                                <h3 class="mt-1 truncate text-lg font-black text-[#071a3b]">{{ $booking->unit->building->name }}</h3>
-                                <p class="mt-1 text-sm text-slate-500">Unit {{ $booking->unit->unit_no }} - {{ $booking->tenant->full_name }}</p>
+                                <h3 class="mt-1 truncate text-lg font-black text-[#071a3b]">{{ $booking->unit?->building?->name ?? 'Property unavailable' }}</h3>
+                                <p class="mt-1 text-sm text-slate-500">Unit {{ $booking->unit?->unit_no ?? '-' }} - {{ $booking->tenant?->full_name ?? 'Tenant unavailable' }}</p>
                             </div>
                             <span class="shrink-0 rounded-full bg-blue-50 px-2.5 py-1 text-[11px] font-bold text-blue-700">{{ str($booking->booking_status)->replace('_', ' ')->headline() }}</span>
                         </div>
@@ -93,8 +93,8 @@
                     <tbody class="divide-y divide-slate-100 bg-white">
                         @forelse ($bookings as $booking)
                             <tr>
-                                <td class="px-4 py-4"><div class="font-bold text-[#071a3b]">{{ $booking->booking_no }}</div><div class="text-xs text-slate-500">{{ str($booking->booking_type)->replace('_', ' ')->headline() }}</div><div class="text-xs text-slate-400">{{ $booking->tenant->full_name }}</div></td>
-                                <td class="px-4 py-4 text-xs text-slate-600"><div class="font-bold text-slate-700">{{ $booking->unit->building->name }} / {{ $booking->unit->unit_no }}</div><div>{{ $booking->check_in_date->format('M d, Y') }} to {{ $booking->check_out_date->format('M d, Y') }}</div></td>
+                                <td class="px-4 py-4"><div class="font-bold text-[#071a3b]">{{ $booking->booking_no }}</div><div class="text-xs text-slate-500">{{ str($booking->booking_type)->replace('_', ' ')->headline() }}</div><div class="text-xs text-slate-400">{{ $booking->tenant?->full_name ?? 'Tenant unavailable' }}</div></td>
+                                <td class="px-4 py-4 text-xs text-slate-600"><div class="font-bold text-slate-700">{{ $booking->unit?->building?->name ?? 'Property unavailable' }} / {{ $booking->unit?->unit_no ?? '-' }}</div><div>{{ $booking->check_in_date?->format('M d, Y') ?? '-' }} to {{ $booking->check_out_date?->format('M d, Y') ?? '-' }}</div></td>
                                 <td class="px-4 py-4"><div class="font-bold text-[#071a3b]">AED {{ number_format((float) $booking->total_amount, 2) }}</div><div class="text-xs text-slate-500">Rent AED {{ number_format((float) $booking->rent_amount, 2) }}</div></td>
                                 <td class="px-4 py-4"><span class="rounded-full bg-blue-50 px-2.5 py-1 text-xs font-bold text-blue-700">{{ str($booking->booking_status)->headline() }}</span></td>
                                 <td class="px-4 py-4">
