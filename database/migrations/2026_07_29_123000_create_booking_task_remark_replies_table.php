@@ -8,6 +8,11 @@ return new class extends Migration
 {
     public function up(): void
     {
+        // The failed server migration may have created the table before MySQL rejected the index name.
+        if (Schema::hasTable('booking_task_remark_replies')) {
+            return;
+        }
+
         // Replies are deliberately separate from remarks so each maintainer update keeps its own conversation thread.
         Schema::create('booking_task_remark_replies', function (Blueprint $table): void {
             $table->id();
@@ -15,7 +20,8 @@ return new class extends Migration
             $table->foreignId('user_id')->nullable()->constrained()->nullOnDelete();
             $table->text('reply');
             $table->timestamps();
-            $table->index(['booking_task_remark_id', 'created_at']);
+            // MySQL index identifiers are limited to 64 characters.
+            $table->index(['booking_task_remark_id', 'created_at'], 'task_remark_replies_remark_created_idx');
         });
     }
 
