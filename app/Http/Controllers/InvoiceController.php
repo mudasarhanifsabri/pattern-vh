@@ -4,11 +4,14 @@ namespace App\Http\Controllers;
 
 use App\Models\Booking;
 use App\Models\Invoice;
+use App\Models\Tenant;
 use App\Support\ActivityLogger;
-use App\Support\SimpleFinancePdf;
+use App\Support\ReferenceNumber;
 use App\Support\TaxCalculator;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
+use Mpdf\Mpdf;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class InvoiceController extends Controller
 {
@@ -109,13 +112,93 @@ class InvoiceController extends Controller
         return redirect()->route('invoices.show', $invoice)->with('status', 'Invoice updated successfully.');
     }
 
-    public function pdf(Invoice $invoice, SimpleFinancePdf $pdf)
+    public function pdf(Invoice $invoice)
     {
         $this->authorizeTenantInvoice($invoice);
 
+        // Load the complete booking and payment ledger once for the detailed export template.
+        $invoice = $this->invoiceForExport($invoice);
         $disposition = request()->boolean('download') ? 'attachment' : 'inline';
+        $tempDir = storage_path('app/mpdf');
 
-        return response($pdf->invoice($invoice), 200, ['Content-Type' => 'application/pdf', 'Content-Disposition' => $disposition.'; filename="'.$invoice->invoice_no.'.pdf"']);
+        if (! is_dir($tempDir)) {
+            mkdir($tempDir, 0775, true);
+        }
+
+        // mPDF supports multiple pages, so every payment remains visible on longer invoice histories.
+        $pdf = new Mpdf([
+            'mode' => 'utf-8',
+            'format' => 'A4',
+            'default_font' => 'dejavusans',
+            'tempDir' => $tempDir,
+            'margin_left' => 12,
+            'margin_right' => 12,
+            'margin_top' => 12,
+            'margin_bottom' => 12,
+        ]);
+        $pdf->SetTitle($invoice->invoice_no.' Booking Invoice');
+        $pdf->WriteHTML(view('pdfs.invoice-export', compact('invoice'))->render());
+
+        return response($pdf->Output('', 'S'), 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => $disposition.'; filename="'.$invoice->invoice_no.'-booking-invoice.pdf"',
+        ]);
+    }
+
+    public function excel(Invoice $invoice): StreamedResponse
+    {
+        $this->authorizeTenantInvoice($invoice);
+        $invoice = $this->invoiceForExport($invoice);
+
+        return response()->streamDownload(function () use ($invoice): void {
+            $booking = $invoice->booking;
+            $handle = fopen('php://output', 'w');
+
+            // Excel opens CSV natively; metadata, charges, and payments are grouped into readable sections.
+            fputcsv($handle, ['Booking Invoice Export']);
+            fputcsv($handle, ['Invoice no', $invoice->invoice_no]);
+            fputcsv($handle, ['Invoice status', str($invoice->status)->replace('_', ' ')->headline()->toString()]);
+            fputcsv($handle, ['Tenant', $invoice->tenant?->full_name]);
+            fputcsv($handle, ['Booking no', $booking?->booking_no]);
+            fputcsv($handle, ['Property', $booking?->unit?->building?->name]);
+            fputcsv($handle, ['Unit', $booking?->unit?->unit_no]);
+            fputcsv($handle, ['Check-in date', $booking?->check_in_date?->format('Y-m-d')]);
+            fputcsv($handle, ['Check-in time', $booking?->check_in_time]);
+            fputcsv($handle, ['Check-out date', $booking?->check_out_date?->format('Y-m-d')]);
+            fputcsv($handle, ['Check-out time', $booking?->check_out_time]);
+            fputcsv($handle, ['Guests', $booking?->guest_count]);
+            fputcsv($handle, []);
+
+            fputcsv($handle, ['Invoice Charges']);
+            fputcsv($handle, ['Description', 'Amount (AED)']);
+            foreach ($this->chargeRows($invoice) as [$description, $amount]) {
+                fputcsv($handle, [$description, number_format($amount, 2, '.', '')]);
+            }
+            fputcsv($handle, ['Invoice total', number_format((float) $invoice->total_amount, 2, '.', '')]);
+            fputcsv($handle, ['Approved paid', number_format((float) $invoice->paid_amount, 2, '.', '')]);
+            fputcsv($handle, ['Balance due', number_format((float) $invoice->balance_amount, 2, '.', '')]);
+            fputcsv($handle, []);
+
+            fputcsv($handle, ['All Payments']);
+            fputcsv($handle, ['Payment no', 'Status', 'Method', 'Amount (AED)', 'Paid at', 'Approved at', 'Reference', 'Receipt no', 'Check-in code', 'Notes', 'Verification notes']);
+            foreach ($invoice->payments as $payment) {
+                fputcsv($handle, [
+                    $payment->payment_no,
+                    str($payment->status)->replace('_', ' ')->headline()->toString(),
+                    str($payment->method)->replace('_', ' ')->headline()->toString(),
+                    number_format((float) $payment->amount, 2, '.', ''),
+                    $payment->paid_at?->format('Y-m-d H:i'),
+                    $payment->approved_at?->format('Y-m-d H:i'),
+                    $payment->reference_no,
+                    $payment->receipt?->receipt_no,
+                    $payment->receipt?->check_in_code,
+                    $payment->notes,
+                    $payment->verification_notes,
+                ]);
+            }
+
+            fclose($handle);
+        }, $invoice->invoice_no.'-booking-invoice.csv', ['Content-Type' => 'text/csv; charset=UTF-8']);
     }
 
     private function validated(Request $request): array
@@ -136,16 +219,37 @@ class InvoiceController extends Controller
 
     private function nextInvoiceNo(): string
     {
-        return \App\Support\ReferenceNumber::next(Invoice::class, 'invoice_no', 'INV', 'Ymd', 4, true);
+        return ReferenceNumber::next(Invoice::class, 'invoice_no', 'INV', 'Ymd', 4, true);
     }
 
-    private function tenantFor(Request $request): ?\App\Models\Tenant
+    private function invoiceForExport(Invoice $invoice): Invoice
+    {
+        return $invoice->load([
+            'booking.unit.building',
+            'tenant',
+            'payments' => fn ($query) => $query->with('receipt')->orderBy('paid_at')->orderBy('id'),
+        ]);
+    }
+
+    private function chargeRows(Invoice $invoice): array
+    {
+        return [
+            ['Rent', (float) $invoice->rent_amount],
+            ['VAT 5% on rent only', (float) $invoice->vat_amount],
+            ['Security deposit', (float) $invoice->deposit_amount],
+            ['DTCM fee', (float) $invoice->dtcm_fee],
+            ['Cleaning fee', (float) $invoice->cleaning_fee],
+            ['Agency fee', (float) $invoice->agency_fee],
+        ];
+    }
+
+    private function tenantFor(Request $request): ?Tenant
     {
         if (! $request->user()?->can('portal.tenant') || $request->user()?->can('invoices.manage')) {
             return null;
         }
 
-        return \App\Models\Tenant::query()
+        return Tenant::query()
             ->where('user_id', $request->user()->id)
             ->orWhere('email', $request->user()->email)
             ->first();

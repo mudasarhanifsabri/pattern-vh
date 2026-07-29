@@ -430,10 +430,6 @@ class DashboardController extends Controller
 
     private function shouldUseMaintainerPortal(Request $request): bool
     {
-        $user = $request->user();
-
-        return (bool) $user
-            && ! $user->can('booking-tasks.manage')
-            && $user->hasAnyPermission(['portal.cleaner', 'portal.technician']);
+        return $request->user()?->isMaintainerAppUser() ?? false;
     }
 }

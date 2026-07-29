@@ -12,9 +12,9 @@ use App\Models\Receipt;
 use App\Models\Tenant;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Http\UploadedFile;
 use Spatie\Permission\Models\Role;
 use Spatie\Permission\PermissionRegistrar;
 use Tests\TestCase;
@@ -221,11 +221,39 @@ class InvoiceReceiptModuleTest extends TestCase
         $invoice = Invoice::where('invoice_no', 'INV-DEMO-0001')->firstOrFail();
         $receipt = Receipt::firstOrFail();
 
+        // The export must keep pending and rejected entries alongside approved payments.
+        Payment::create([
+            'invoice_id' => $invoice->id,
+            'booking_id' => $invoice->booking_id,
+            'payment_no' => 'PAY-EXPORT-PENDING',
+            'method' => 'bank_transfer',
+            'status' => 'pending',
+            'amount' => 125,
+            'paid_at' => now(),
+            'reference_no' => 'PENDING-EXPORT',
+        ]);
+        Payment::create([
+            'invoice_id' => $invoice->id,
+            'booking_id' => $invoice->booking_id,
+            'payment_no' => 'PAY-EXPORT-REJECTED',
+            'method' => 'cash',
+            'status' => 'rejected',
+            'amount' => 75,
+            'paid_at' => now(),
+            'reference_no' => 'REJECTED-EXPORT',
+        ]);
+
         $this->actingAs($admin)->get(route('invoices.index'))->assertOk()->assertSee('Invoice registry');
-        $this->actingAs($admin)->get(route('invoices.show', $invoice))->assertOk()->assertSee('Record payment');
+        $this->actingAs($admin)->get(route('invoices.show', $invoice))->assertOk()->assertSee('Record payment')->assertSee('Export Excel');
         $this->actingAs($admin)->get(route('payments.index'))->assertOk()->assertSee('Payment registry')->assertSee('Stripe placeholder');
         $this->actingAs($admin)->get(route('security-deposits.index'))->assertOk()->assertSee('Security Deposits')->assertSee('Active deposit ledger');
         $this->actingAs($admin)->get(route('invoices.pdf', $invoice))->assertOk()->assertHeader('content-type', 'application/pdf');
+        $excel = $this->actingAs($admin)->get(route('invoices.excel', $invoice));
+        $excel->assertOk()->assertDownload($invoice->invoice_no.'-booking-invoice.csv')->assertHeader('content-type', 'text/csv; charset=UTF-8');
+        $this->assertStringContainsString('Check-in date', $excel->streamedContent());
+        $this->assertStringContainsString('All Payments', $excel->streamedContent());
+        $this->assertStringContainsString('PAY-EXPORT-PENDING', $excel->streamedContent());
+        $this->assertStringContainsString('PAY-EXPORT-REJECTED', $excel->streamedContent());
         $this->actingAs($admin)->get(route('receipts.pdf', $receipt))->assertOk()->assertHeader('content-type', 'application/pdf');
     }
 }

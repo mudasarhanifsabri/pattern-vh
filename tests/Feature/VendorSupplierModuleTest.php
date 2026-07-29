@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\OperationsTeamMember;
 use App\Models\User;
 use App\Models\Vendor;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -70,5 +71,58 @@ class VendorSupplierModuleTest extends TestCase
         $this->actingAs($admin)
             ->get(route('vendors.documents.show', [$vendor, $vendor->documents->first()]))
             ->assertRedirect();
+    }
+
+    public function test_deleting_vendor_removes_its_documents(): void
+    {
+        $this->seed();
+        Storage::fake(config('filesystems.default'));
+
+        $admin = User::where('email', 'admin@example.com')->firstOrFail();
+        $vendor = Vendor::create([
+            'supplier_no' => 'VEN-DELETE-1',
+            'company_name' => 'Delete Me Supplier',
+            'category' => 'other',
+            'status' => 'active',
+            'created_by' => $admin->id,
+            'updated_by' => $admin->id,
+        ]);
+        $path = 'Vendors/VEN-DELETE-1/documents/trade-licence.pdf';
+        Storage::disk(config('filesystems.default'))->put($path, 'document');
+        $document = $vendor->documents()->create([
+            'document_type' => 'trade_license',
+            'title' => 'Trade licence',
+            'disk' => config('filesystems.default'),
+            'path' => $path,
+            'original_name' => 'trade-licence.pdf',
+            'created_by' => $admin->id,
+        ]);
+
+        $this->actingAs($admin)
+            ->delete(route('vendors.destroy', $vendor))
+            ->assertRedirect(route('vendors.index'));
+
+        $this->assertSoftDeleted('vendors', ['id' => $vendor->id]);
+        $this->assertDatabaseMissing('vendor_documents', ['id' => $document->id]);
+        Storage::disk(config('filesystems.default'))->assertMissing($path);
+    }
+
+    public function test_operations_users_cannot_access_the_admin_supplier_registry(): void
+    {
+        $this->seed();
+
+        $operationsUser = User::factory()->create();
+        $operationsUser->assignRole('Operations Team');
+        OperationsTeamMember::create([
+            'full_name' => 'Nora Operations',
+            'user_id' => $operationsUser->id,
+            'email' => $operationsUser->email,
+            'mobile_no' => '+971501234567',
+            'team_role' => 'operations',
+        ]);
+
+        $this->actingAs($operationsUser)
+            ->get(route('vendors.index'))
+            ->assertForbidden();
     }
 }

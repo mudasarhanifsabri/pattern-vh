@@ -7,19 +7,14 @@
 
     <main class="app-scroll px-5 pt-5">
         @if($errors->any())<div class="mb-3 rounded-2xl bg-red-50 p-3 text-sm font-bold text-red-700">{{ $errors->first() }}</div>@endif
-        <form method="POST" action="{{ route('maintainer.tasks.complete', $task) }}" enctype="multipart/form-data" class="space-y-5">
+        {{-- data-mobile-photo-upload enables progress reporting for the shared mobile image component. --}}
+        <form method="POST" action="{{ route('maintainer.tasks.complete', $task) }}" enctype="multipart/form-data" data-mobile-photo-upload class="space-y-5">
             @csrf
             <label class="block text-sm font-semibold text-slate-700">Completion Notes <span class="text-red-500">*</span>
                 <textarea name="completion_notes" required rows="4" class="app-input mt-2 p-3" placeholder="AC is working fine now. Gas refilled and tested.">{{ old('completion_notes') }}</textarea>
             </label>
-            <div>
-                <p class="text-sm font-semibold text-slate-700">Completion Photos</p>
-                <label class="mt-3 grid h-20 w-20 place-items-center rounded-xl border border-slate-200 bg-white text-slate-700">
-                    <svg class="h-7 w-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 8h4l2-3h4l2 3h4v12H4zM12 17a4 4 0 1 0 0-8 4 4 0 0 0 0 8"/></svg>
-                    <input type="file" name="final_images[]" multiple accept="image/*" capture="environment" class="hidden">
-                </label>
-                <p class="mt-2 text-xs text-slate-500">Max 5 photos</p>
-            </div>
+            {{-- Reusable camera/library photo field with previews and upload progress. --}}
+            @include('maintainer.partials.mobile-image-upload', ['field' => 'final_images', 'label' => 'Completion Photos'])
             <div class="space-y-3">
                 <p class="text-sm font-semibold text-slate-700">Attachments</p>
                 <label class="block rounded-xl bg-slate-50 p-3 text-sm font-semibold text-slate-700">Invoice attachment<input type="file" name="invoice_attachment" class="mt-2 block w-full text-xs"></label>

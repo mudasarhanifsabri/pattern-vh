@@ -103,6 +103,16 @@ class VendorController extends Controller
         return redirect()->route('vendors.show', $vendor)->with('status', 'Vendor/supplier updated successfully.');
     }
 
+    public function destroy(Vendor $vendor)
+    {
+        $this->removeDocuments($vendor, $vendor->documents()->pluck('id')->all());
+        $vendor->delete();
+
+        ActivityLogger::log('vendors.deleted', "Deleted vendor {$vendor->company_name}.", $vendor);
+
+        return redirect()->route('vendors.index')->with('status', 'Vendor/supplier deleted successfully.');
+    }
+
     public function document(Vendor $vendor, VendorDocument $vendorDocument)
     {
         abort_unless((int) $vendorDocument->vendor_id === (int) $vendor->id, 404);

@@ -1,35 +1,35 @@
 <?php
 
+use App\Http\Controllers\AccountingController;
 use App\Http\Controllers\Admin\ActivityLogController;
 use App\Http\Controllers\Admin\PermissionController;
 use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\UserController;
-use App\Http\Controllers\AccountingController;
 use App\Http\Controllers\AgentController;
 use App\Http\Controllers\AvailabilityCalendarController;
 use App\Http\Controllers\BankReconciliationController;
-use App\Http\Controllers\BookingController;
 use App\Http\Controllers\BookingConfirmationSigningController;
+use App\Http\Controllers\BookingController;
 use App\Http\Controllers\BookingLifecycleController;
 use App\Http\Controllers\BuildingController;
-use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\CeoDashboardController;
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DtcmCheckinController;
 use App\Http\Controllers\ExpenseController;
+use App\Http\Controllers\IdentityDocumentOcrController;
 use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\InvoiceController;
-use App\Http\Controllers\IdentityDocumentOcrController;
 use App\Http\Controllers\MaintainerPwaController;
 use App\Http\Controllers\NotificationCenterController;
+use App\Http\Controllers\OperationsPlannerController;
+use App\Http\Controllers\OperationsTeamMemberController;
 use App\Http\Controllers\OwnerController;
 use App\Http\Controllers\OwnerNoteController;
 use App\Http\Controllers\OwnerPayoutController;
-use App\Http\Controllers\OwnerUnitContractController;
 use App\Http\Controllers\OwnerStatementController;
-use App\Http\Controllers\OperationsPlannerController;
-use App\Http\Controllers\PaymentController;
+use App\Http\Controllers\OwnerUnitContractController;
 use App\Http\Controllers\PaymentCollectionRequestController;
-use App\Http\Controllers\OperationsTeamMemberController;
+use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\PortalPreviewController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\PublicSupportController;
@@ -37,12 +37,12 @@ use App\Http\Controllers\PushSubscriptionController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\SecurityDepositController;
 use App\Http\Controllers\SoftwareUpdateController;
-use App\Http\Controllers\SystemSettingsController;
 use App\Http\Controllers\SupportCenterController;
+use App\Http\Controllers\SystemSettingsController;
+use App\Http\Controllers\TaskManagementController;
 use App\Http\Controllers\TenantController;
 use App\Http\Controllers\TenantInvoiceController;
 use App\Http\Controllers\TenantPaymentRequestController;
-use App\Http\Controllers\TaskManagementController;
 use App\Http\Controllers\TtLockCallbackController;
 use App\Http\Controllers\TtLockSettingsController;
 use App\Http\Controllers\UnitController;
@@ -160,12 +160,12 @@ Route::middleware('auth')->group(function () {
             ->name("{$prefix}.notes.store");
     }
 
-    Route::resource('vendors', VendorController::class)->except(['index', 'show', 'destroy'])
-        ->middleware('permission:vendors.manage');
+    Route::resource('vendors', VendorController::class)->except(['index', 'show'])
+        ->middleware(['permission:users.manage', 'permission:vendors.manage']);
     Route::resource('vendors', VendorController::class)->only(['index', 'show'])
-        ->middleware('permission:vendors.view|vendors.manage');
+        ->middleware(['permission:users.manage', 'permission:vendors.view|vendors.manage']);
     Route::get('vendors/{vendor}/documents/{vendorDocument}', [VendorController::class, 'document'])
-        ->middleware('permission:vendors.view|vendors.manage')
+        ->middleware(['permission:users.manage', 'permission:vendors.view|vendors.manage'])
         ->name('vendors.documents.show');
 
     Route::resource('buildings', BuildingController::class)->except(['index', 'show'])->middleware('permission:buildings.manage');
@@ -474,6 +474,9 @@ Route::middleware('auth')->group(function () {
     Route::get('invoices/{invoice}/pdf', [InvoiceController::class, 'pdf'])
         ->middleware('permission:invoices.view|invoices.manage')
         ->name('invoices.pdf');
+    Route::get('invoices/{invoice}/excel', [InvoiceController::class, 'excel'])
+        ->middleware('permission:invoices.view|invoices.manage')
+        ->name('invoices.excel');
     Route::get('payments', [PaymentController::class, 'index'])
         ->middleware('permission:payments.view|payments.manage')
         ->name('payments.index');

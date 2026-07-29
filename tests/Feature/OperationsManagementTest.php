@@ -2,14 +2,15 @@
 
 namespace Tests\Feature;
 
-use App\Models\InventoryItem;
 use App\Models\BookingTask;
+use App\Models\InventoryItem;
 use App\Models\OperationsTeamMember;
 use App\Models\Unit;
 use App\Models\User;
 use App\Models\UtilityAccount;
 use App\Models\Vehicle;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Spatie\Permission\Models\Role;
 use Spatie\Permission\PermissionRegistrar;
 use Tests\TestCase;
@@ -147,5 +148,29 @@ class OperationsManagementTest extends TestCase
         ] as $url => $text) {
             $this->actingAs($cleaner)->get($url)->assertOk()->assertSee($text);
         }
+    }
+
+    public function test_maintainer_photo_forms_show_mobile_controls_and_limit_photo_count(): void
+    {
+        $this->seed();
+
+        $cleaner = User::where('email', 'demo.cleaner@example.com')->firstOrFail();
+        $task = BookingTask::whereHas('assignee', fn ($query) => $query->where('user_id', $cleaner->id))->firstOrFail();
+
+        // The shared component must expose both capture methods and the progress-enabled form hook.
+        $this->actingAs($cleaner)
+            ->get(route('maintainer.tasks.accept.form', $task))
+            ->assertOk()
+            ->assertSee('Camera')
+            ->assertSee('Photo Library')
+            ->assertSee('data-mobile-photo-upload', false);
+
+        // Server validation mirrors the visible five-photo maximum even if a client bypasses the UI.
+        $this->actingAs($cleaner)
+            ->post(route('maintainer.tasks.accept', $task), [
+                'expected_completion_date' => now()->toDateString(),
+                'pictures' => array_map(fn (int $number) => UploadedFile::fake()->create("photo-{$number}.jpg", 100, 'image/jpeg'), range(1, 6)),
+            ])
+            ->assertSessionHasErrors('pictures');
     }
 }

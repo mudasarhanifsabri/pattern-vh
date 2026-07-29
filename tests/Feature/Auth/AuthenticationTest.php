@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Auth;
 
+use App\Models\OperationsTeamMember;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -28,6 +29,29 @@ class AuthenticationTest extends TestCase
 
         $this->assertAuthenticated();
         $response->assertRedirect(route('dashboard', absolute: false));
+    }
+
+    public function test_operations_users_are_sent_directly_to_the_maintainer_task_board(): void
+    {
+        $this->seed();
+
+        $user = User::factory()->create();
+        $user->assignRole('Operations Team');
+        OperationsTeamMember::create([
+            'full_name' => 'Nora Operations',
+            'user_id' => $user->id,
+            'email' => $user->email,
+            'mobile_no' => '+971501234567',
+            'team_role' => 'operations',
+        ]);
+
+        $response = $this->post('/login', [
+            'email' => $user->email,
+            'password' => 'password',
+        ]);
+
+        $this->assertAuthenticated();
+        $response->assertRedirect(route('maintainer.tasks.index', absolute: false));
     }
 
     public function test_users_can_not_authenticate_with_invalid_password(): void

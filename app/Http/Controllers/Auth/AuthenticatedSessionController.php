@@ -28,6 +28,10 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerate();
 
+        if ($request->user()->isMaintainerAppUser()) {
+            return redirect()->route('maintainer.tasks.index');
+        }
+
         return redirect()->intended(route('dashboard', absolute: false));
     }
 

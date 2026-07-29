@@ -7,9 +7,9 @@ use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Spatie\Permission\Traits\HasRoles;
 
@@ -46,5 +46,17 @@ class User extends Authenticatable
     public function onlineStatus(): HasOne
     {
         return $this->hasOne(UserOnlineStatus::class);
+    }
+
+    public function isMaintainerAppUser(): bool
+    {
+        if (! $this->hasAnyPermission(['portal.operations', 'portal.cleaner', 'portal.technician'])) {
+            return false;
+        }
+
+        return OperationsTeamMember::query()
+            ->where('user_id', $this->id)
+            ->orWhere('email', $this->email)
+            ->exists();
     }
 }

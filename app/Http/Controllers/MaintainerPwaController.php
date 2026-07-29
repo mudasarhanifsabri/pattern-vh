@@ -10,6 +10,12 @@ use Illuminate\Validation\Rule;
 
 class MaintainerPwaController extends Controller
 {
+    // Keep the mobile photo limit in one place so the UI and every task workflow stay aligned.
+    private const MAX_TASK_PHOTOS = 5;
+
+    // Camera photos from modern iOS and Android devices can be JPEG, WebP, HEIC, or HEIF.
+    private const TASK_PHOTO_FILE_RULES = ['nullable', 'file', 'mimes:jpg,jpeg,png,webp,heic,heif', 'max:5120'];
+
     public function dashboard()
     {
         return redirect()->route('maintainer.tasks.index');
@@ -112,7 +118,7 @@ class MaintainerPwaController extends Controller
                 'id' => $task->id,
                 'number' => $task->task_display_number,
                 'title' => $task->title,
-                'unit' => trim(($task->unit?->building?->name ? $task->unit->building->name . ' - ' : '') . ($task->unit?->unit_no ?? 'Unit')),
+                'unit' => trim(($task->unit?->building?->name ? $task->unit->building->name.' - ' : '').($task->unit?->unit_no ?? 'Unit')),
                 'priority' => $task->priority_label,
                 'status' => $task->status_label,
                 'url' => route('maintainer.tasks.show', $task),
@@ -128,7 +134,8 @@ class MaintainerPwaController extends Controller
         $validated = $request->validate([
             'expected_completion_date' => ['required', 'date', 'after_or_equal:today'],
             'initial_remark' => ['nullable', 'string', 'max:2000'],
-            'pictures.*' => ['nullable', 'file', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
+            'pictures' => ['nullable', 'array', 'max:'.self::MAX_TASK_PHOTOS],
+            'pictures.*' => self::TASK_PHOTO_FILE_RULES,
         ]);
 
         $task->update(['status' => 'accepted', 'progress' => 25, 'accepted_at' => now(), 'expected_completion_date' => $validated['expected_completion_date']]);
@@ -155,7 +162,8 @@ class MaintainerPwaController extends Controller
         $validated = $request->validate([
             'remark' => ['required', 'string', 'max:2000'],
             'status_update' => ['nullable', Rule::in(['accepted', 'in_progress', 'waiting_approval', 'completed'])],
-            'pictures.*' => ['nullable', 'file', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
+            'pictures' => ['nullable', 'array', 'max:'.self::MAX_TASK_PHOTOS],
+            'pictures.*' => self::TASK_PHOTO_FILE_RULES,
         ]);
 
         $task->remarks()->create(['user_id' => Auth::id(), 'remark' => $validated['remark'], 'status_update' => $validated['status_update'] ?? null, 'pictures' => $this->uploadOptimizedFiles($request, 'pictures', 'booking_task_remark_pictures')]);
@@ -188,7 +196,7 @@ class MaintainerPwaController extends Controller
         };
         $task->costItems()->create([...$validated, 'amount' => $amount]);
         $task->recalculateCosts();
-        $this->event($task, 'cost_added', 'Cost added: AED ' . number_format($amount, 2));
+        $this->event($task, 'cost_added', 'Cost added: AED '.number_format($amount, 2));
 
         return redirect()->route('maintainer.tasks.show', $task)->with('status', 'Cost added.');
     }
@@ -198,7 +206,8 @@ class MaintainerPwaController extends Controller
         $this->authorizeTask($task);
         $validated = $request->validate([
             'completion_notes' => ['required', 'string', 'max:3000'],
-            'final_images.*' => ['nullable', 'file', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
+            'final_images' => ['nullable', 'array', 'max:'.self::MAX_TASK_PHOTOS],
+            'final_images.*' => self::TASK_PHOTO_FILE_RULES,
             'invoice_attachment' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png,webp', 'max:10240'],
             'receipt_attachment' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png,webp', 'max:10240'],
         ]);
@@ -218,7 +227,7 @@ class MaintainerPwaController extends Controller
     private function assignedTaskQuery(OperationsTeamMember $member, Request $request)
     {
         return $this->baseQuery($member)
-            ->when($request->filled('q'), fn ($query) => $query->where(fn ($inner) => $inner->where('title', 'like', '%' . $request->q . '%')->orWhere('task_number', 'like', '%' . $request->q . '%')))
+            ->when($request->filled('q'), fn ($query) => $query->where(fn ($inner) => $inner->where('title', 'like', '%'.$request->q.'%')->orWhere('task_number', 'like', '%'.$request->q.'%')))
             ->when($request->filled('status'), fn ($query) => match ($request->status) {
                 'assigned' => $query->whereIn('status', ['open', 'assigned']),
                 'completed' => $query->whereIn('status', ['completed', 'closed']),
@@ -304,16 +313,17 @@ class MaintainerPwaController extends Controller
                     imagedestroy($image);
                     $image = $resized;
                 }
-                $filename = uniqid() . '.webp';
-                imagewebp($image, $destination . DIRECTORY_SEPARATOR . $filename, 78);
+                $filename = uniqid().'.webp';
+                imagewebp($image, $destination.DIRECTORY_SEPARATOR.$filename, 78);
                 imagedestroy($image);
-                return $folder . '/' . $filename;
+
+                return $folder.'/'.$filename;
             }
         }
 
-        $filename = uniqid() . '.' . $extension;
+        $filename = uniqid().'.'.$extension;
         $file->move($destination, $filename);
 
-        return $folder . '/' . $filename;
+        return $folder.'/'.$filename;
     }
 }

@@ -33,7 +33,9 @@
                         <p class="mt-1 text-sm text-slate-500">{{ $invoice->tenant->full_name }} / {{ $invoice->booking->booking_no }}</p>
                     </div>
                     <div class="flex flex-wrap gap-2">
-                        <a href="{{ route('invoices.pdf', $invoice) }}" target="_blank" class="rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-bold text-white">Invoice PDF</a>
+                        {{-- Detailed exports include the stay dates, times, charges, and every recorded payment. --}}
+                        <a href="{{ route('invoices.pdf', $invoice) }}" target="_blank" class="rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-bold text-white">Export PDF</a>
+                        <a href="{{ route('invoices.excel', $invoice) }}" class="rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white">Export Excel</a>
                         @can('payments.manage')
                             <button type="button" x-on:click="paymentModal = true" class="rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white">Record payment</button>
                         @endcan

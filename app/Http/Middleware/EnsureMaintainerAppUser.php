@@ -2,7 +2,6 @@
 
 namespace App\Http\Middleware;
 
-use App\Models\OperationsTeamMember;
 use Closure;
 use Illuminate\Http\Request;
 
@@ -16,12 +15,7 @@ class EnsureMaintainerAppUser
             return redirect()->route('login');
         }
 
-        $member = OperationsTeamMember::query()
-            ->where('user_id', $user->id)
-            ->orWhere('email', $user->email)
-            ->first();
-
-        if (! $member) {
+        if (! $user->isMaintainerAppUser()) {
             return response()->view('maintainer.setup-required', ['user' => $user], 403);
         }
 
