@@ -1,23 +1,33 @@
 # Email Queue and Recurring Jobs
 
-This app uses Laravel's database queue:
+This app sends email immediately by default:
+
+```env
+QUEUE_CONNECTION=sync
+```
+
+This means email is sent during the action that triggers it, so no terminal queue worker is required.
+
+## Optional Background Queue
+
+For high-volume production mail, switch to Laravel's database queue:
 
 ```env
 QUEUE_CONNECTION=database
 ```
 
-That means emails and queued notifications are saved into the `jobs` table first. They will not send unless a queue worker is running.
+Emails and queued notifications will then be saved into the `jobs` table first, and a queue worker must stay running to deliver them.
 
 ## Required Always-On Processes
 
-Run these two processes in production:
+When using `QUEUE_CONNECTION=database`, run these two processes in production:
 
 ```bat
 start-queue-worker.bat
 start-scheduler.bat
 ```
 
-The queue worker sends queued emails and notifications.
+The queue worker sends queued emails and notifications. With `QUEUE_CONNECTION=sync`, only the scheduler is required for recurring jobs.
 
 The scheduler checks recurring jobs, such as booking reminders and invoice reminders.
 
