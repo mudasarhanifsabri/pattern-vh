@@ -105,6 +105,27 @@ class AccountingModuleTest extends TestCase
         $this->actingAs($admin)->get(route('reports.export', ['type' => 'expenses']))->assertOk()->assertHeader('content-type', 'text/csv; charset=UTF-8');
     }
 
+    public function test_accounting_finance_sheet_exports_invoice_owner_periods(): void
+    {
+        $this->seed();
+
+        $admin = User::where('email', 'admin@example.com')->firstOrFail();
+        $dates = ['from' => now()->startOfMonth()->toDateString(), 'to' => now()->addMonth()->endOfMonth()->toDateString()];
+
+        $this->actingAs($admin)->get(route('finance-sheet.index', $dates))
+            ->assertOk()
+            ->assertSee('Finance Sheet')
+            ->assertSee('Owner Payment')
+            ->assertSee('Amount to Owner');
+        $this->actingAs($admin)->get(route('finance-sheet.pdf', $dates))
+            ->assertOk()
+            ->assertHeader('content-type', 'application/pdf');
+        $excel = $this->actingAs($admin)->get(route('finance-sheet.excel', $dates));
+        $excel->assertOk()->assertDownload('finance-sheet-'.now()->startOfMonth()->format('Ymd').'-'.now()->addMonth()->endOfMonth()->format('Ymd').'.csv');
+        $this->assertStringContainsString('Owner Payment', $excel->streamedContent());
+        $this->assertStringContainsString('Amount to Owner', $excel->streamedContent());
+    }
+
     public function test_expense_target_flow_requires_matching_records(): void
     {
         $this->seed();

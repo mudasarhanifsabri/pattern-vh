@@ -16,6 +16,7 @@ use App\Http\Controllers\CeoDashboardController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DtcmCheckinController;
 use App\Http\Controllers\ExpenseController;
+use App\Http\Controllers\FinanceSheetController;
 use App\Http\Controllers\IdentityDocumentOcrController;
 use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\InvoiceController;
@@ -333,6 +334,15 @@ Route::middleware('auth')->group(function () {
     Route::get('accounting', AccountingController::class)
         ->middleware('permission:accounting.view|accounting.manage')
         ->name('accounting.index');
+    Route::get('finance-sheet', [FinanceSheetController::class, 'index'])
+        ->middleware('permission:accounting.view|accounting.manage')
+        ->name('finance-sheet.index');
+    Route::get('finance-sheet/pdf', [FinanceSheetController::class, 'pdf'])
+        ->middleware('permission:accounting.view|accounting.manage')
+        ->name('finance-sheet.pdf');
+    Route::get('finance-sheet/excel', [FinanceSheetController::class, 'excel'])
+        ->middleware('permission:accounting.view|accounting.manage')
+        ->name('finance-sheet.excel');
     Route::get('bank-reconciliation', [BankReconciliationController::class, 'index'])
         ->middleware('permission:bank-reconciliation.view|bank-reconciliation.manage')
         ->name('bank-reconciliation.index');
