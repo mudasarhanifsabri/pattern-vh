@@ -3,6 +3,11 @@
     $lock = $booking->unit->ttLock;
     $refund = $booking->depositRefund;
     $invoices = $booking->invoices->sortBy('due_date');
+    // The base booking dates stay unchanged; this is the end of the latest active extension period.
+    $currentStayEnd = $booking->extensionRequests
+        ->whereIn('status', ['requested', 'approved_pending_payment', 'paid_extended'])
+        ->sortByDesc('requested_check_out_date')
+        ->first()?->requested_check_out_date ?? $booking->check_out_date;
     $primaryInvoice = $invoices->first();
     $depositReceipt = $booking->depositReceiptRecord;
     $pendingInvoices = $invoices->filter(fn ($invoice) => (float) $invoice->balance_amount > 0 && $invoice->status !== 'cancelled');
@@ -458,11 +463,11 @@
                     <form method="POST" action="{{ route('bookings.extension-invoice.store', $booking) }}" class="space-y-3 p-5">
                         @csrf
                         <div class="rounded-2xl bg-slate-50 p-4">
-                            <p class="text-xs font-black uppercase tracking-[0.12em] text-slate-400">Current checkout</p>
-                            <p class="mt-1 text-lg font-black text-[#071a3b]">{{ $booking->check_out_date?->format('M d, Y') }} / {{ $booking->check_out_time ? \Illuminate\Support\Carbon::parse($booking->check_out_time)->format('h:i A') : '11:00 AM' }}</p>
+                            <p class="text-xs font-black uppercase tracking-[0.12em] text-slate-400">Current stay period end</p>
+                            <p class="mt-1 text-lg font-black text-[#071a3b]">{{ $currentStayEnd?->format('M d, Y') }} / {{ $booking->check_out_time ? \Illuminate\Support\Carbon::parse($booking->check_out_time)->format('h:i A') : '11:00 AM' }}</p>
                         </div>
                         <label class="block text-sm font-black text-[#071a3b]">New checkout date
-                            <input name="requested_check_out_date" type="date" min="{{ $booking->check_out_date?->copy()->addDay()->toDateString() }}" class="erp-focus mt-1 h-11 w-full rounded-xl border border-slate-200 px-3" required>
+                            <input name="requested_check_out_date" type="date" min="{{ $currentStayEnd?->copy()->addDay()->toDateString() }}" class="erp-focus mt-1 h-11 w-full rounded-xl border border-slate-200 px-3" required>
                         </label>
                         <label class="block text-sm font-black text-[#071a3b]">Extra rent invoice amount
                             <input name="extra_rent_amount" type="number" min="0.01" step="0.01" class="erp-focus mt-1 h-11 w-full rounded-xl border border-slate-200 px-3" placeholder="AED 0.00" required>
@@ -471,8 +476,8 @@
                             <textarea name="approval_notes" rows="3" class="erp-focus mt-1 w-full rounded-xl border border-slate-200 px-3 py-2" placeholder="Optional note for this extension invoice"></textarea>
                         </label>
                         <div class="rounded-2xl bg-blue-50 p-4 text-xs font-bold leading-5 text-blue-700">
-                            <p>Confirmation: this will mark the booking as Extended, update checkout and smart lock validity to the new date, move checkout tasks, and create an invoice for the period from the old checkout date to the new checkout date.</p>
-                            <p class="mt-2">Old checkout: {{ $booking->check_out_date?->format('M d, Y') }}. Invoice status: Sent.</p>
+                            <p>Confirmation: the original booking dates remain unchanged. A separate extension invoice period is created from the current stay end to the new checkout date.</p>
+                            <p class="mt-2">Extension starts: {{ $currentStayEnd?->format('M d, Y') }}. Invoice status: Sent.</p>
                         </div>
                         <button class="w-full rounded-xl bg-blue-600 px-4 py-3 text-sm font-black text-white">Confirm extension and create invoice</button>
                     </form>
@@ -631,11 +636,11 @@
                     <form method="POST" action="{{ route('bookings.extension-invoice.store', $booking) }}" class="space-y-3">
                         @csrf
                         <div class="rounded-2xl bg-slate-50 p-4">
-                            <p class="text-xs font-black uppercase tracking-[0.12em] text-slate-400">Current checkout</p>
-                            <p class="mt-1 text-lg font-black text-[#071a3b]">{{ $booking->check_out_date?->format('M d, Y') }} / {{ $booking->check_out_time ? \Illuminate\Support\Carbon::parse($booking->check_out_time)->format('h:i A') : '11:00 AM' }}</p>
+                            <p class="text-xs font-black uppercase tracking-[0.12em] text-slate-400">Current stay period end</p>
+                            <p class="mt-1 text-lg font-black text-[#071a3b]">{{ $currentStayEnd?->format('M d, Y') }} / {{ $booking->check_out_time ? \Illuminate\Support\Carbon::parse($booking->check_out_time)->format('h:i A') : '11:00 AM' }}</p>
                         </div>
                         <label class="block text-sm font-black text-[#071a3b]">New checkout date
-                            <input name="requested_check_out_date" type="date" min="{{ $booking->check_out_date?->copy()->addDay()->toDateString() }}" class="erp-focus mt-1 h-11 w-full rounded-xl border border-slate-200 px-3" required>
+                            <input name="requested_check_out_date" type="date" min="{{ $currentStayEnd?->copy()->addDay()->toDateString() }}" class="erp-focus mt-1 h-11 w-full rounded-xl border border-slate-200 px-3" required>
                         </label>
                         <label class="block text-sm font-black text-[#071a3b]">Extra rent invoice amount
                             <input name="extra_rent_amount" type="number" min="0.01" step="0.01" class="erp-focus mt-1 h-11 w-full rounded-xl border border-slate-200 px-3" placeholder="AED 0.00" required>
@@ -644,8 +649,8 @@
                             <textarea name="approval_notes" rows="3" class="erp-focus mt-1 w-full rounded-xl border border-slate-200 px-3 py-2" placeholder="Optional note for this extension invoice"></textarea>
                         </label>
                         <div class="rounded-2xl bg-blue-50 p-4 text-xs font-bold leading-5 text-blue-700">
-                            <p>Confirmation: this will mark the booking as Extended, update checkout and smart lock validity to the new date, move checkout tasks, and create an invoice for the period from the old checkout date to the new checkout date.</p>
-                            <p class="mt-2">Old checkout: {{ $booking->check_out_date?->format('M d, Y') }}. Invoice status: Sent.</p>
+                            <p>Confirmation: the original booking dates remain unchanged. A separate extension invoice period is created from the current stay end to the new checkout date.</p>
+                            <p class="mt-2">Extension starts: {{ $currentStayEnd?->format('M d, Y') }}. Invoice status: Sent.</p>
                         </div>
                         <button class="w-full rounded-xl bg-blue-600 px-4 py-3 text-sm font-black text-white">Confirm extension and create invoice</button>
                     </form>

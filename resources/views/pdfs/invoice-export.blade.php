@@ -3,7 +3,7 @@
     $booking = $invoice->booking;
     $approvedPayments = $invoice->payments->where('status', 'approved')->sum('amount');
     $pendingPayments = $invoice->payments->where('status', 'pending')->sum('amount');
-    $nights = $booking?->check_in_date && $booking?->check_out_date ? $booking->check_in_date->diffInDays($booking->check_out_date) : 0;
+    $nights = $invoice->stay_check_in_date && $invoice->stay_check_out_date ? $invoice->stay_check_in_date->diffInDays($invoice->stay_check_out_date) : 0;
     $charges = [
         'Rent' => $invoice->rent_amount,
         'VAT 5% on rent only' => $invoice->vat_amount,
@@ -56,8 +56,8 @@
 
     <h2>Check-in and Check-out</h2>
     <table class="meta">
-        <tr><td><strong>Check-in date</strong>{{ $booking?->check_in_date?->format('d M Y') ?: '-' }}</td><td><strong>Check-in time</strong>{{ $booking?->check_in_time ?: '-' }}</td><td><strong>Booking status</strong>{{ str($booking?->booking_status ?? '')->replace('_', ' ')->headline() }}</td></tr>
-        <tr><td><strong>Check-out date</strong>{{ $booking?->check_out_date?->format('d M Y') ?: '-' }}</td><td><strong>Check-out time</strong>{{ $booking?->check_out_time ?: '-' }}</td><td><strong>Due date</strong>{{ $invoice->due_date?->format('d M Y') ?: 'On receipt' }}</td></tr>
+        <tr><td><strong>Check-in date</strong>{{ $invoice->stay_check_in_date?->format('d M Y') ?: '-' }}</td><td><strong>Check-in time</strong>{{ $booking?->check_in_time ?: '-' }}</td><td><strong>Booking status</strong>{{ str($booking?->booking_status ?? '')->replace('_', ' ')->headline() }}</td></tr>
+        <tr><td><strong>Check-out date</strong>{{ $invoice->stay_check_out_date?->format('d M Y') ?: '-' }}</td><td><strong>Check-out time</strong>{{ $booking?->check_out_time ?: '-' }}</td><td><strong>Due date</strong>{{ $invoice->due_date?->format('d M Y') ?: 'On receipt' }}</td></tr>
     </table>
 
     <h2>Invoice Charges</h2>

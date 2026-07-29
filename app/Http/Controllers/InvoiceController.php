@@ -75,9 +75,9 @@ class InvoiceController extends Controller
                     $invoice->tenant?->full_name,
                     $booking?->unit?->building?->name,
                     $booking?->unit?->unit_no,
-                    $booking?->check_in_date?->format('Y-m-d'),
+                    $invoice->stay_check_in_date?->format('Y-m-d'),
                     $booking?->check_in_time,
-                    $booking?->check_out_date?->format('Y-m-d'),
+                    $invoice->stay_check_out_date?->format('Y-m-d'),
                     $booking?->check_out_time,
                     $invoice->invoice_date?->format('Y-m-d'),
                     $invoice->due_date?->format('Y-m-d'),
@@ -141,7 +141,7 @@ class InvoiceController extends Controller
         $this->authorizeTenantInvoice($invoice);
 
         return view('invoices.show', [
-            'invoice' => $invoice->load(['booking.unit.building', 'tenant', 'payments.receipt', 'receipts']),
+            'invoice' => $invoice->load(['booking.unit.building', 'tenant', 'extensionRequest', 'payments.receipt', 'receipts']),
         ]);
     }
 
@@ -219,9 +219,9 @@ class InvoiceController extends Controller
             fputcsv($handle, ['Booking no', $booking?->booking_no]);
             fputcsv($handle, ['Property', $booking?->unit?->building?->name]);
             fputcsv($handle, ['Unit', $booking?->unit?->unit_no]);
-            fputcsv($handle, ['Check-in date', $booking?->check_in_date?->format('Y-m-d')]);
+            fputcsv($handle, ['Check-in date', $invoice->stay_check_in_date?->format('Y-m-d')]);
             fputcsv($handle, ['Check-in time', $booking?->check_in_time]);
-            fputcsv($handle, ['Check-out date', $booking?->check_out_date?->format('Y-m-d')]);
+            fputcsv($handle, ['Check-out date', $invoice->stay_check_out_date?->format('Y-m-d')]);
             fputcsv($handle, ['Check-out time', $booking?->check_out_time]);
             fputcsv($handle, ['Guests', $booking?->guest_count]);
             fputcsv($handle, []);
@@ -284,6 +284,7 @@ class InvoiceController extends Controller
         return $invoice->load([
             'booking.unit.building',
             'tenant',
+            'extensionRequest',
             'payments' => fn ($query) => $query->with('receipt')->orderBy('paid_at')->orderBy('id'),
         ]);
     }
@@ -291,7 +292,7 @@ class InvoiceController extends Controller
     private function invoiceQuery(Request $request, ?Tenant $tenant)
     {
         return Invoice::query()
-            ->with(['booking.unit.building', 'tenant'])
+            ->with(['booking.unit.building', 'tenant', 'extensionRequest'])
             ->when($tenant, fn ($query) => $query->where('tenant_id', $tenant->id))
             ->when($request->filled('booking_id'), fn ($query) => $query->where('booking_id', $request->input('booking_id')))
             ->when($request->filled('search'), function ($query) use ($request): void {

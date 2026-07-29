@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Booking;
 use App\Models\Expense;
 use App\Models\Invoice;
 use App\Models\Owner;
@@ -87,17 +86,22 @@ class OwnerStatementController extends Controller
         $shareByUnit = $owner->units->mapWithKeys(fn ($unit) => [$unit->id => (float) ($unit->pivot->share_percent ?? 100)]);
         $managementByUnit = $owner->units->mapWithKeys(fn ($unit) => [$unit->id => (float) ($unit->management_fee_percent ?? 0)]);
 
-        // Owner rent is reported when the related booking checks out, not when it checks in.
+        // Every invoice is reported in its own checkout period; extensions do not inherit original stay dates.
         $invoices = Invoice::query()
-            ->with('booking.unit.building')
+            ->with(['booking.unit.building', 'extensionRequest'])
             ->whereIn('unit_id', $unitIds)
-            ->whereHas('booking', fn ($query) => $query
-                ->whereDate('check_out_date', '>=', $from->toDateString())
-                ->whereDate('check_out_date', '<=', $to->toDateString()))
-            ->orderBy(
-                Booking::select('check_out_date')
-                    ->whereColumn('bookings.id', 'invoices.booking_id')
-            )
+            ->where(function ($query) use ($from, $to): void {
+                $query->where(function ($query) use ($from, $to): void {
+                    $query->whereHas('extensionRequest')
+                        ->whereDate('period_end', '>=', $from->toDateString())
+                        ->whereDate('period_end', '<=', $to->toDateString());
+                })->orWhere(function ($query) use ($from, $to): void {
+                    $query->whereDoesntHave('extensionRequest')
+                        ->whereHas('booking', fn ($bookingQuery) => $bookingQuery
+                            ->whereDate('check_out_date', '>=', $from->toDateString())
+                            ->whereDate('check_out_date', '<=', $to->toDateString()));
+                });
+            })
             ->get();
 
         $revenueRows = $invoices->map(function (Invoice $invoice) use ($shareByUnit, $managementByUnit): array {
@@ -109,13 +113,13 @@ class OwnerStatementController extends Controller
             $management = $gross * (($managementByUnit[$invoice->unit_id] ?? 0) / 100);
 
             return [
-                'date' => $booking->check_out_date,
+                'date' => $invoice->stay_check_out_date,
                 'description' => $invoice->invoice_no.' / '.$booking->booking_no.' / '.$booking->unit->building->name.' '.$booking->unit->unit_no,
                 'booking_rent' => (float) $invoice->rent_amount,
                 'rent_collected' => $rentCollected,
-                'booking_from' => $booking->check_in_date,
-                'booking_to' => $booking->check_out_date,
-                'booking_duration' => 'Check-in: '.$booking->check_in_date->format('M d, Y').' · Check-out: '.$booking->check_out_date->format('M d, Y'),
+                'booking_from' => $invoice->stay_check_in_date,
+                'booking_to' => $invoice->stay_check_out_date,
+                'booking_duration' => 'Check-in: '.$invoice->stay_check_in_date?->format('M d, Y').' / Check-out: '.$invoice->stay_check_out_date?->format('M d, Y'),
                 'gross' => $gross,
                 'management_fee' => $management,
                 'owner_expense' => 0,

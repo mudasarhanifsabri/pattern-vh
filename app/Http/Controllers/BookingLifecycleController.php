@@ -24,9 +24,10 @@ class BookingLifecycleController extends Controller
     {
         $tenant = $this->tenantFor($request);
         abort_unless($tenant && (int) $booking->tenant_id === (int) $tenant->id, 403);
+        $currentStayEnd = $this->extensionPeriodStart($booking);
 
         $validated = $request->validate([
-            'requested_check_out_date' => ['required', 'date', 'after:'.$booking->check_out_date->format('Y-m-d')],
+            'requested_check_out_date' => ['required', 'date', 'after:'.$currentStayEnd->format('Y-m-d')],
             'tenant_notes' => ['nullable', 'string', 'max:1000'],
         ]);
 
@@ -67,7 +68,8 @@ class BookingLifecycleController extends Controller
         ]);
 
         $booking = $extensionRequest->booking()->with(['tenant', 'unit'])->firstOrFail();
-        $this->ensureExtensionHasNoConflict($booking, $extensionRequest->requested_check_out_date);
+        $extensionStart = $this->extensionPeriodStart($booking, $extensionRequest);
+        $this->ensureExtensionHasNoConflict($booking, $extensionStart, $extensionRequest->requested_check_out_date);
 
         $invoice = $this->createExtensionInvoice($booking, $extensionRequest, (float) $validated['extra_rent_amount'], $validated['approval_notes'] ?? null);
 
@@ -96,18 +98,18 @@ class BookingLifecycleController extends Controller
 
     public function createExtensionInvoiceFromBooking(Request $request, Booking $booking, PushEventLogger $push)
     {
+        $currentStayEnd = $this->extensionPeriodStart($booking);
         $validated = $request->validate([
-            'requested_check_out_date' => ['required', 'date', 'after:'.$booking->check_out_date->format('Y-m-d')],
+            'requested_check_out_date' => ['required', 'date', 'after:'.$currentStayEnd->format('Y-m-d')],
             'extra_rent_amount' => ['required', 'numeric', 'min:0.01'],
             'approval_notes' => ['nullable', 'string', 'max:1000'],
         ]);
 
         $booking->loadMissing(['tenant', 'unit']);
-        $originalCheckout = $booking->check_out_date->copy()->startOfDay();
         $requestedCheckout = Carbon::parse($validated['requested_check_out_date'])->startOfDay();
-        $this->ensureExtensionHasNoConflict($booking, $requestedCheckout);
+        $this->ensureExtensionHasNoConflict($booking, $currentStayEnd, $requestedCheckout);
 
-        [$extension, $invoice] = DB::transaction(function () use ($booking, $validated, $originalCheckout, $requestedCheckout): array {
+        [$extension, $invoice] = DB::transaction(function () use ($booking, $validated, $currentStayEnd, $requestedCheckout): array {
             $extension = $booking->extensionRequests()->create([
                 'tenant_id' => $booking->tenant_id,
                 'requested_check_out_date' => $requestedCheckout->toDateString(),
@@ -119,14 +121,14 @@ class BookingLifecycleController extends Controller
 
             $invoice = $this->createExtensionInvoice($booking, $extension, (float) $validated['extra_rent_amount'], $validated['approval_notes'] ?? 'Extension confirmed by reservations from booking page.');
 
+            // The original booking dates are immutable; the extension is represented by its own invoice period.
             $booking->forceFill([
-                'check_out_date' => $requestedCheckout,
                 'booking_status' => 'extended',
-                'notes' => $this->appendNote($booking->notes, 'Stay extended from '.$originalCheckout->format('M d, Y').' to '.$requestedCheckout->format('M d, Y').'. Extension invoice '.$invoice->invoice_no.' created.'),
+                'notes' => $this->appendNote($booking->notes, 'Extension period '.$currentStayEnd->format('M d, Y').' to '.$requestedCheckout->format('M d, Y').'. Extension invoice '.$invoice->invoice_no.' created.'),
                 'updated_by' => auth()->id(),
             ])->save();
 
-            $this->refreshExtensionDependentDates($booking->fresh());
+            $this->refreshExtensionDependentDates($booking->fresh(), $requestedCheckout);
 
             return [$extension, $invoice];
         });
@@ -141,7 +143,7 @@ class BookingLifecycleController extends Controller
             $booking
         );
 
-        return redirect()->route('bookings.show', $booking)->with('status', 'Stay extended to '.$requestedCheckout->format('M d, Y').'. Extension invoice '.$invoice->invoice_no.' was created for the additional rent.');
+        return redirect()->route('bookings.show', $booking)->with('status', 'Extension period to '.$requestedCheckout->format('M d, Y').' was created. Invoice '.$invoice->invoice_no.' covers the additional rent.');
     }
 
     public function rejectExtension(Request $request, BookingExtensionRequest $extensionRequest, PushEventLogger $push)
@@ -377,14 +379,14 @@ class BookingLifecycleController extends Controller
         }
     }
 
-    private function ensureExtensionHasNoConflict(Booking $booking, \Illuminate\Support\Carbon|string $requestedCheckout): void
+    private function ensureExtensionHasNoConflict(Booking $booking, Carbon $extensionStart, Carbon|string $requestedCheckout): void
     {
         $hasConflict = Booking::query()
             ->whereKeyNot($booking->id)
             ->where('unit_id', $booking->unit_id)
             ->whereIn('booking_status', Booking::ACTIVE_STATUSES)
             ->whereDate('check_in_date', '<', $requestedCheckout)
-            ->whereDate('check_out_date', '>', $booking->check_out_date)
+            ->whereDate('check_out_date', '>', $extensionStart)
             ->exists();
 
         if ($hasConflict) {
@@ -396,6 +398,7 @@ class BookingLifecycleController extends Controller
 
     private function createExtensionInvoice(Booking $booking, BookingExtensionRequest $extensionRequest, float $rent, ?string $approvalNotes): Invoice
     {
+        $periodStart = $this->extensionPeriodStart($booking, $extensionRequest);
         $vat = TaxCalculator::rentVat($rent);
         $total = $rent + $vat;
 
@@ -406,7 +409,7 @@ class BookingLifecycleController extends Controller
             'unit_id' => $booking->unit_id,
             'invoice_date' => now()->toDateString(),
             'due_date' => now()->addDay()->toDateString(),
-            'period_start' => $booking->check_out_date->toDateString(),
+            'period_start' => $periodStart->toDateString(),
             'period_end' => $extensionRequest->requested_check_out_date->toDateString(),
             'payout_due_date' => $extensionRequest->requested_check_out_date->toDateString(),
             'rent_amount' => $rent,
@@ -414,7 +417,7 @@ class BookingLifecycleController extends Controller
             'total_amount' => $total,
             'balance_amount' => $total,
             'status' => 'sent',
-            'notes' => 'Extension rent invoice from '.$booking->check_out_date->format('M d, Y').' to '.$extensionRequest->requested_check_out_date->format('M d, Y'),
+            'notes' => 'Extension rent invoice from '.$periodStart->format('M d, Y').' to '.$extensionRequest->requested_check_out_date->format('M d, Y'),
             'created_by' => auth()->id(),
             'updated_by' => auth()->id(),
         ]);
@@ -431,20 +434,32 @@ class BookingLifecycleController extends Controller
         return $invoice;
     }
 
-    private function refreshExtensionDependentDates(Booking $booking): void
+    private function refreshExtensionDependentDates(Booking $booking, Carbon $stayEnd): void
     {
         $booking->tasks()
             ->where('task_type', 'checkout_cleaning')
             ->whereNotIn('status', ['completed', 'cancelled'])
-            ->update(['due_at' => $booking->check_out_date?->copy()->setTime(11, 0)]);
+            ->update(['due_at' => $stayEnd->copy()->setTime(11, 0)]);
 
         $booking->tasks()
             ->where('task_type', 'checkout_inspection')
             ->whereNotIn('status', ['completed', 'cancelled'])
-            ->update(['due_at' => $booking->check_out_date?->copy()->setTime(15, 0)]);
+            ->update(['due_at' => $stayEnd->copy()->setTime(15, 0)]);
 
-        $validUntil = Carbon::parse($booking->check_out_date?->format('Y-m-d').' '.($booking->check_out_time ?: '11:00'));
+        $validUntil = Carbon::parse($stayEnd->format('Y-m-d').' '.($booking->check_out_time ?: '11:00'));
         $booking->forceFill(['smart_lock_code_valid_until' => $validUntil])->save();
+    }
+
+    private function extensionPeriodStart(Booking $booking, ?BookingExtensionRequest $exclude = null): Carbon
+    {
+        $latestExtensionEnd = $booking->extensionRequests()
+            ->when($exclude, fn ($query) => $query->whereKeyNot($exclude->id))
+            ->whereIn('status', ['requested', 'approved_pending_payment', 'paid_extended'])
+            ->max('requested_check_out_date');
+
+        return $latestExtensionEnd
+            ? Carbon::parse($latestExtensionEnd)->startOfDay()
+            : $booking->check_out_date->copy()->startOfDay();
     }
 
     private function tenantFor(Request $request): ?Tenant

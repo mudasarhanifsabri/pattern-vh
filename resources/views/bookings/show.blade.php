@@ -408,7 +408,7 @@
                     @forelse ($booking->extensionRequests as $extension)
                         <div class="rounded-2xl border border-slate-200 p-4">
                             <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                                <div><div class="font-bold text-[#071a3b]">Extend to {{ $extension->requested_check_out_date->format('M d, Y') }}</div><p class="text-xs text-slate-500">{{ str($extension->status)->replace('_', ' ')->headline() }} @if($extension->invoice) / Invoice {{ $extension->invoice->invoice_no }} @endif</p></div>
+                                <div><div class="font-bold text-[#071a3b]">Extension period {{ $extension->invoice?->period_start?->format('M d, Y') ?? $booking->check_out_date?->format('M d, Y') }} to {{ $extension->requested_check_out_date->format('M d, Y') }}</div><p class="text-xs text-slate-500">{{ str($extension->status)->replace('_', ' ')->headline() }} @if($extension->invoice) / Invoice {{ $extension->invoice->invoice_no }} @endif</p></div>
                                 @can('bookings.manage')
                                     @if ($extension->status === 'requested')
                                         <div class="grid gap-2 md:grid-cols-2">

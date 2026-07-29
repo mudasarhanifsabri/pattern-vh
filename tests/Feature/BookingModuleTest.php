@@ -220,7 +220,7 @@ class BookingModuleTest extends TestCase
             ->assertSessionHasErrors('tenant_id');
     }
 
-    public function test_tenant_extension_request_generates_invoice_and_paid_extension_updates_booking(): void
+    public function test_tenant_extension_request_generates_a_separate_period_without_changing_the_booking_dates(): void
     {
         $this->seed();
         Mail::fake();
@@ -231,7 +231,8 @@ class BookingModuleTest extends TestCase
         $tenantUser->assignRole('Tenant');
         $booking->tenant->update(['user_id' => $tenantUser->id]);
 
-        $newCheckout = $booking->check_out_date->copy()->addDays(2)->toDateString();
+        $originalCheckout = $booking->check_out_date->copy();
+        $newCheckout = $originalCheckout->copy()->addDays(2)->toDateString();
 
         $this->actingAs($tenantUser)
             ->post(route('bookings.request-extension', $booking), [
@@ -266,7 +267,9 @@ class BookingModuleTest extends TestCase
         $this->actingAs($admin)->post(route('payments.approve', $payment))->assertRedirect();
 
         $this->assertDatabaseHas(BookingExtensionRequest::class, ['id' => $extension->id, 'status' => 'paid_extended']);
-        $this->assertSame($newCheckout, $booking->fresh()->check_out_date->format('Y-m-d'));
+        $this->assertSame($originalCheckout->toDateString(), $booking->fresh()->check_out_date->format('Y-m-d'));
+        $this->assertSame($originalCheckout->toDateString(), $invoice->fresh()->period_start->format('Y-m-d'));
+        $this->assertSame($newCheckout, $invoice->fresh()->period_end->format('Y-m-d'));
         $this->assertDatabaseHas('notification_logs', ['booking_id' => $booking->id, 'subject' => 'Building security extension details']);
     }
 
@@ -293,7 +296,7 @@ class BookingModuleTest extends TestCase
         $invoice = $extension->invoice()->firstOrFail();
 
         $this->assertSame('extended', $booking->booking_status);
-        $this->assertSame($newCheckout->toDateString(), $booking->check_out_date->format('Y-m-d'));
+        $this->assertSame($oldCheckout->toDateString(), $booking->check_out_date->format('Y-m-d'));
         $this->assertSame('approved_pending_payment', $extension->status);
         $this->assertSame($newCheckout->toDateString(), $extension->requested_check_out_date->format('Y-m-d'));
         $this->assertSame($oldCheckout->toDateString(), $invoice->period_start->format('Y-m-d'));
@@ -302,6 +305,18 @@ class BookingModuleTest extends TestCase
         $this->assertEquals(1800, (float) $invoice->rent_amount);
         $this->assertEquals(90, (float) $invoice->vat_amount);
         $this->assertEquals(1890, (float) $invoice->balance_amount);
+
+        // Statements and invoice downloads must use the extension's own period, not the original booking duration.
+        $owner = $booking->unit->owners()->firstOrFail();
+        $statementQuery = ['owner_id' => $owner->id, 'from' => $newCheckout->toDateString(), 'to' => $newCheckout->toDateString()];
+        $this->actingAs($admin)->get(route('owner-statements.index', $statementQuery))
+            ->assertOk()
+            ->assertSee($invoice->invoice_no)
+            ->assertSee($oldCheckout->format('M d, Y'))
+            ->assertSee($newCheckout->format('M d, Y'));
+        $invoiceExport = $this->actingAs($admin)->get(route('invoices.excel', $invoice));
+        $this->assertStringContainsString($oldCheckout->toDateString(), $invoiceExport->streamedContent());
+        $this->assertStringContainsString($newCheckout->toDateString(), $invoiceExport->streamedContent());
     }
 
     public function test_checkout_inspection_and_deposit_refund_flow(): void

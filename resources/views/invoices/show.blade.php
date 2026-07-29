@@ -44,7 +44,7 @@
                         @endcan
                     </div>
                 </div>
-                <dl class="mt-6 grid gap-4 md:grid-cols-3">
+                <dl class="mt-6 grid gap-4 md:grid-cols-4">
                     <div class="rounded-2xl bg-slate-50 p-4">
                         <dt class="text-xs font-bold uppercase text-slate-400">Approved paid</dt>
                         <dd class="font-bold text-[#071a3b]">AED {{ number_format((float) $invoice->paid_amount, 2) }}</dd>
@@ -56,6 +56,10 @@
                     <div class="rounded-2xl bg-slate-50 p-4">
                         <dt class="text-xs font-bold uppercase text-slate-400">Due</dt>
                         <dd class="font-bold text-[#071a3b]">{{ $invoice->due_date?->format('M d, Y') ?? 'On receipt' }}</dd>
+                    </div>
+                    <div class="rounded-2xl bg-slate-50 p-4">
+                        <dt class="text-xs font-bold uppercase text-slate-400">Stay period</dt>
+                        <dd class="font-bold text-[#071a3b]">{{ $invoice->stay_check_in_date?->format('M d, Y') ?? '-' }}<span class="block text-xs font-medium text-slate-500">to {{ $invoice->stay_check_out_date?->format('M d, Y') ?? '-' }}</span></dd>
                     </div>
                 </dl>
             </div>

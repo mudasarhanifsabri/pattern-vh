@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Carbon;
 
 #[Fillable([
     'invoice_no', 'booking_id', 'tenant_id', 'unit_id', 'invoice_date', 'due_date', 'rent_amount',
@@ -50,4 +51,26 @@ class Invoice extends Model
     public function receipts(): HasMany { return $this->hasMany(Receipt::class); }
     public function collectionRequests(): HasMany { return $this->hasMany(PaymentCollectionRequest::class); }
     public function extensionRequest() { return $this->hasOne(BookingExtensionRequest::class); }
+
+    // Extension invoices have their own stay dates; initial invoices continue to use the original booking dates.
+    public function getStayCheckInDateAttribute(): ?Carbon
+    {
+        return $this->isExtensionInvoice() && $this->period_start
+            ? $this->period_start
+            : $this->booking?->check_in_date;
+    }
+
+    public function getStayCheckOutDateAttribute(): ?Carbon
+    {
+        return $this->isExtensionInvoice() && $this->period_end
+            ? $this->period_end
+            : $this->booking?->check_out_date;
+    }
+
+    private function isExtensionInvoice(): bool
+    {
+        return $this->relationLoaded('extensionRequest')
+            ? $this->extensionRequest !== null
+            : $this->extensionRequest()->exists();
+    }
 }

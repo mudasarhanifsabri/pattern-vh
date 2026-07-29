@@ -76,13 +76,11 @@ class InvoicePaymentWorkflow
             return;
         }
 
-        $extension->booking->update([
-            'check_out_date' => $extension->requested_check_out_date,
-            'booking_status' => 'extended',
-        ]);
+        // Keep the original booking dates intact; the paid extension keeps its own invoice period.
+        $extension->booking->update(['booking_status' => 'extended']);
 
         $extension->update(['status' => 'paid_extended']);
-        $this->refreshExtensionDependentDates($extension->booking->fresh());
+        $this->refreshExtensionDependentDates($extension->booking->fresh(), $extension->requested_check_out_date);
 
         $extension->booking->notificationLogs()->create([
             'channel' => 'email',
@@ -100,22 +98,22 @@ class InvoicePaymentWorkflow
         }
     }
 
-    private function refreshExtensionDependentDates(Booking $booking): void
+    private function refreshExtensionDependentDates(Booking $booking, \Illuminate\Support\Carbon $stayEnd): void
     {
         $booking->tasks()
             ->where('task_type', 'checkout_cleaning')
             ->whereNotIn('status', ['completed', 'cancelled'])
-            ->update(['due_at' => $booking->check_out_date?->copy()->setTime(11, 0)]);
+            ->update(['due_at' => $stayEnd->copy()->setTime(11, 0)]);
 
         $booking->tasks()
             ->where('task_type', 'checkout_inspection')
             ->whereNotIn('status', ['completed', 'cancelled'])
-            ->update(['due_at' => $booking->check_out_date?->copy()->setTime(15, 0)]);
+            ->update(['due_at' => $stayEnd->copy()->setTime(15, 0)]);
 
         if ($booking->smart_lock_code_valid_until) {
             $booking->forceFill([
                 'smart_lock_code_valid_until' => \Illuminate\Support\Carbon::parse(
-                    $booking->check_out_date?->format('Y-m-d').' '.($booking->check_out_time ?: '11:00')
+                    $stayEnd->format('Y-m-d').' '.($booking->check_out_time ?: '11:00')
                 ),
             ])->save();
         }
