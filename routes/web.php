@@ -262,6 +262,9 @@ Route::middleware('auth')->group(function () {
     Route::post('tasks/{bookingTask}/remarks', [TaskManagementController::class, 'addRemark'])
         ->middleware('permission:booking-tasks.manage')
         ->name('tasks.remarks.store');
+    Route::post('tasks/{bookingTask}/remarks/{bookingTaskRemark}/replies', [TaskManagementController::class, 'addRemarkReply'])
+        ->middleware('permission:booking-tasks.manage')
+        ->name('tasks.remarks.replies.store');
     Route::post('tasks/{bookingTask}/costs', [TaskManagementController::class, 'addCost'])
         ->middleware('permission:booking-tasks.manage')
         ->name('tasks.costs.store');
@@ -471,6 +474,12 @@ Route::middleware('auth')->group(function () {
 
     Route::resource('invoices', InvoiceController::class)->except(['index', 'show'])->middleware('permission:invoices.manage');
     Route::resource('invoices', InvoiceController::class)->only(['index', 'show'])->middleware('permission:invoices.view|invoices.manage');
+    Route::get('invoices/export/pdf', [InvoiceController::class, 'listPdf'])
+        ->middleware('permission:invoices.view|invoices.manage')
+        ->name('invoices.export.pdf');
+    Route::get('invoices/export/list', [InvoiceController::class, 'exportList'])
+        ->middleware('permission:invoices.view|invoices.manage')
+        ->name('invoices.export.list');
     Route::get('invoices/{invoice}/pdf', [InvoiceController::class, 'pdf'])
         ->middleware('permission:invoices.view|invoices.manage')
         ->name('invoices.pdf');

@@ -19,20 +19,77 @@ class InvoiceController extends Controller
     {
         $tenant = $this->tenantFor($request);
 
-        $invoices = Invoice::query()
-            ->with(['booking.unit.building', 'tenant'])
-            ->when($tenant, fn ($query) => $query->where('tenant_id', $tenant->id))
-            ->when(request('booking_id'), fn ($query, string $bookingId) => $query->where('booking_id', $bookingId))
-            ->when(request('search'), fn ($query, string $search) => $query->where(function ($query) use ($search): void {
-                $query->where('invoice_no', 'like', "%{$search}%")
-                    ->orWhereHas('tenant', fn ($query) => $query->where('full_name', 'like', "%{$search}%"));
-            }))
-            ->when(request('status'), fn ($query, string $status) => $query->where('status', $status))
+        $invoices = $this->invoiceQuery($request, $tenant)
             ->latest()
             ->paginate(10)
             ->withQueryString();
 
         return view('invoices.index', compact('invoices', 'tenant'));
+    }
+
+    public function listPdf(Request $request)
+    {
+        $tenant = $this->tenantFor($request);
+        $invoices = $this->invoiceQuery($request, $tenant)->latest()->get();
+        $tempDir = storage_path('app/mpdf');
+
+        if (! is_dir($tempDir)) {
+            mkdir($tempDir, 0775, true);
+        }
+
+        // The list export carries the same stay dates shown in the invoice registry.
+        $pdf = new Mpdf([
+            'mode' => 'utf-8',
+            'format' => 'A4-L',
+            'default_font' => 'dejavusans',
+            'tempDir' => $tempDir,
+            'margin_left' => 8,
+            'margin_right' => 8,
+            'margin_top' => 10,
+            'margin_bottom' => 10,
+        ]);
+        $pdf->SetTitle('Invoice List Export');
+        $pdf->WriteHTML(view('pdfs.invoice-list-export', compact('invoices', 'tenant'))->render());
+
+        return response($pdf->Output('', 'S'), 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'attachment; filename="invoices-'.now()->format('Ymd').'.pdf"',
+        ]);
+    }
+
+    public function exportList(Request $request): StreamedResponse
+    {
+        $tenant = $this->tenantFor($request);
+        $invoices = $this->invoiceQuery($request, $tenant)->latest()->get();
+
+        return response()->streamDownload(function () use ($invoices): void {
+            $handle = fopen('php://output', 'w');
+
+            // Excel opens the CSV directly and keeps the booking stay dates in separate columns.
+            fputcsv($handle, ['Invoice no', 'Booking no', 'Tenant', 'Property', 'Unit', 'Check-in date', 'Check-in time', 'Check-out date', 'Check-out time', 'Invoice date', 'Due date', 'Total (AED)', 'Paid (AED)', 'Balance (AED)', 'Status']);
+            foreach ($invoices as $invoice) {
+                $booking = $invoice->booking;
+                fputcsv($handle, [
+                    $invoice->invoice_no,
+                    $booking?->booking_no,
+                    $invoice->tenant?->full_name,
+                    $booking?->unit?->building?->name,
+                    $booking?->unit?->unit_no,
+                    $booking?->check_in_date?->format('Y-m-d'),
+                    $booking?->check_in_time,
+                    $booking?->check_out_date?->format('Y-m-d'),
+                    $booking?->check_out_time,
+                    $invoice->invoice_date?->format('Y-m-d'),
+                    $invoice->due_date?->format('Y-m-d'),
+                    number_format((float) $invoice->total_amount, 2, '.', ''),
+                    number_format((float) $invoice->paid_amount, 2, '.', ''),
+                    number_format((float) $invoice->balance_amount, 2, '.', ''),
+                    str($invoice->status)->replace('_', ' ')->headline()->toString(),
+                ]);
+            }
+
+            fclose($handle);
+        }, 'invoices-'.now()->format('Ymd').'.csv', ['Content-Type' => 'text/csv; charset=UTF-8']);
     }
 
     public function create(Request $request)
@@ -229,6 +286,22 @@ class InvoiceController extends Controller
             'tenant',
             'payments' => fn ($query) => $query->with('receipt')->orderBy('paid_at')->orderBy('id'),
         ]);
+    }
+
+    private function invoiceQuery(Request $request, ?Tenant $tenant)
+    {
+        return Invoice::query()
+            ->with(['booking.unit.building', 'tenant'])
+            ->when($tenant, fn ($query) => $query->where('tenant_id', $tenant->id))
+            ->when($request->filled('booking_id'), fn ($query) => $query->where('booking_id', $request->input('booking_id')))
+            ->when($request->filled('search'), function ($query) use ($request): void {
+                $search = $request->string('search')->toString();
+                $query->where(function ($query) use ($search): void {
+                    $query->where('invoice_no', 'like', "%{$search}%")
+                        ->orWhereHas('tenant', fn ($query) => $query->where('full_name', 'like', "%{$search}%"));
+                });
+            })
+            ->when($request->filled('status'), fn ($query) => $query->where('status', $request->input('status')));
     }
 
     private function chargeRows(Invoice $invoice): array

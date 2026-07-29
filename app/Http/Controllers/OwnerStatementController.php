@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Booking;
 use App\Models\Expense;
+use App\Models\Invoice;
 use App\Models\Owner;
 use App\Support\OwnerStatementPdf;
 use Illuminate\Http\Request;
@@ -86,25 +87,35 @@ class OwnerStatementController extends Controller
         $shareByUnit = $owner->units->mapWithKeys(fn ($unit) => [$unit->id => (float) ($unit->pivot->share_percent ?? 100)]);
         $managementByUnit = $owner->units->mapWithKeys(fn ($unit) => [$unit->id => (float) ($unit->management_fee_percent ?? 0)]);
 
-        $bookings = Booking::query()
-            ->with('unit.building')
+        // Owner rent is reported when the related booking checks out, not when it checks in.
+        $invoices = Invoice::query()
+            ->with('booking.unit.building')
             ->whereIn('unit_id', $unitIds)
-            ->whereIn('booking_status', array_merge(Booking::ACTIVE_STATUSES, ['checked_out']))
-            ->whereBetween('check_in_date', [$from->toDateString(), $to->toDateString()])
+            ->whereHas('booking', fn ($query) => $query
+                ->whereDate('check_out_date', '>=', $from->toDateString())
+                ->whereDate('check_out_date', '<=', $to->toDateString()))
+            ->orderBy(
+                Booking::select('check_out_date')
+                    ->whereColumn('bookings.id', 'invoices.booking_id')
+            )
             ->get();
 
-        $revenueRows = $bookings->map(function (Booking $booking) use ($shareByUnit, $managementByUnit): array {
-            $share = $shareByUnit[$booking->unit_id] ?? 100;
-            $gross = (float) $booking->rent_amount * ($share / 100);
-            $management = $gross * (($managementByUnit[$booking->unit_id] ?? 0) / 100);
+        $revenueRows = $invoices->map(function (Invoice $invoice) use ($shareByUnit, $managementByUnit): array {
+            $booking = $invoice->booking;
+            $share = $shareByUnit[$invoice->unit_id] ?? 100;
+            // Payments may include deposits and fees; owner rent can never exceed the invoice rent amount.
+            $rentCollected = min((float) $invoice->paid_amount, (float) $invoice->rent_amount);
+            $gross = $rentCollected * ($share / 100);
+            $management = $gross * (($managementByUnit[$invoice->unit_id] ?? 0) / 100);
 
             return [
-                'date' => $booking->check_in_date,
-                'description' => $booking->booking_no.' / '.$booking->unit->building->name.' '.$booking->unit->unit_no,
-                'booking_rent' => (float) $booking->rent_amount,
+                'date' => $booking->check_out_date,
+                'description' => $invoice->invoice_no.' / '.$booking->booking_no.' / '.$booking->unit->building->name.' '.$booking->unit->unit_no,
+                'booking_rent' => (float) $invoice->rent_amount,
+                'rent_collected' => $rentCollected,
                 'booking_from' => $booking->check_in_date,
                 'booking_to' => $booking->check_out_date,
-                'booking_duration' => $booking->check_in_date->format('M d, Y').' to '.$booking->check_out_date->format('M d, Y'),
+                'booking_duration' => 'Check-in: '.$booking->check_in_date->format('M d, Y').' · Check-out: '.$booking->check_out_date->format('M d, Y'),
                 'gross' => $gross,
                 'management_fee' => $management,
                 'owner_expense' => 0,
@@ -115,12 +126,14 @@ class OwnerStatementController extends Controller
         $expenses = Expense::query()
             ->with('unit.building')
             ->where('owner_id', $owner->id)
-            ->whereBetween('incurred_on', [$from->toDateString(), $to->toDateString()])
+            ->whereDate('incurred_on', '>=', $from->toDateString())
+            ->whereDate('incurred_on', '<=', $to->toDateString())
             ->get()
             ->map(fn (Expense $expense): array => [
                 'date' => $expense->incurred_on,
                 'description' => $expense->name.' / '.($expense->unit?->unit_no ? $expense->unit->building->name.' '.$expense->unit->unit_no : str($expense->type)->headline()),
                 'booking_rent' => null,
+                'rent_collected' => null,
                 'booking_from' => null,
                 'booking_to' => null,
                 'booking_duration' => null,
@@ -146,12 +159,14 @@ class OwnerStatementController extends Controller
         return response()->streamDownload(function () use ($owner, $statement): void {
             $handle = fopen('php://output', 'w');
             fputcsv($handle, ['Owner', $owner->full_name]);
-            fputcsv($handle, ['Date', 'Description', 'Booking Rent', 'Booking From', 'Booking To', 'Gross', 'Management Fee', 'Owner Expense', 'Net']);
+            // Include both booking stay dates so the exported owner ledger can be reconciled by checkout period.
+            fputcsv($handle, ['Date', 'Description', 'Invoice Rent', 'Rent Collected', 'Check-in Date', 'Check-out Date', 'Rent Share', 'Management Fee', 'Owner Expense', 'Net']);
             foreach ($statement['rows'] as $row) {
                 fputcsv($handle, [
                     $row['date']->format('Y-m-d'),
                     $row['description'],
                     $row['booking_rent'],
+                    $row['rent_collected'],
                     $row['booking_from']?->format('Y-m-d'),
                     $row['booking_to']?->format('Y-m-d'),
                     $row['gross'],
@@ -160,7 +175,7 @@ class OwnerStatementController extends Controller
                     $row['net'],
                 ]);
             }
-            fputcsv($handle, ['Totals', '', '', '', '', $statement['gross'], $statement['management_fee'], $statement['expenses'], $statement['net']]);
+            fputcsv($handle, ['Totals', '', '', '', '', '', $statement['gross'], $statement['management_fee'], $statement['expenses'], $statement['net']]);
             fclose($handle);
         }, 'owner-statement-'.$owner->id.'-'.$from->format('Ymd').'-'.$to->format('Ymd').'.csv', ['Content-Type' => 'text/csv']);
     }

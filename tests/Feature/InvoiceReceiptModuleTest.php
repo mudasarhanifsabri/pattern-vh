@@ -243,7 +243,13 @@ class InvoiceReceiptModuleTest extends TestCase
             'reference_no' => 'REJECTED-EXPORT',
         ]);
 
-        $this->actingAs($admin)->get(route('invoices.index'))->assertOk()->assertSee('Invoice registry');
+        $this->actingAs($admin)->get(route('invoices.index'))->assertOk()->assertSee('Invoice registry')->assertSee('Download PDF')->assertSee('Export List');
+        $listPdf = $this->actingAs($admin)->get(route('invoices.export.pdf'));
+        $listPdf->assertOk()->assertDownload('invoices-'.now()->format('Ymd').'.pdf')->assertHeader('content-type', 'application/pdf');
+        $listExport = $this->actingAs($admin)->get(route('invoices.export.list'));
+        $listExport->assertOk()->assertDownload('invoices-'.now()->format('Ymd').'.csv')->assertHeader('content-type', 'text/csv; charset=UTF-8');
+        $this->assertStringContainsString('Check-in date', $listExport->streamedContent());
+        $this->assertStringContainsString('Check-out date', $listExport->streamedContent());
         $this->actingAs($admin)->get(route('invoices.show', $invoice))->assertOk()->assertSee('Record payment')->assertSee('Export Excel');
         $this->actingAs($admin)->get(route('payments.index'))->assertOk()->assertSee('Payment registry')->assertSee('Stripe placeholder');
         $this->actingAs($admin)->get(route('security-deposits.index'))->assertOk()->assertSee('Security Deposits')->assertSee('Active deposit ledger');

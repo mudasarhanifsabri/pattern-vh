@@ -42,7 +42,7 @@ class MaintainerPwaController extends Controller
     public function show(BookingTask $task)
     {
         $this->authorizeTask($task);
-        $task->load(['booking.tenant', 'unit.building', 'assignee', 'events.user', 'remarks.user', 'costItems']);
+        $task->load(['booking.tenant', 'unit.building', 'assignee', 'events.user', 'remarks.user', 'remarks.replies.user', 'costItems']);
 
         return view('maintainer.tasks.show', compact('task'));
     }
@@ -256,7 +256,7 @@ class MaintainerPwaController extends Controller
 
     private function taskForScreen(BookingTask $task): BookingTask
     {
-        return $task->load(['booking.tenant', 'unit.building', 'assignee', 'events.user', 'remarks.user', 'costItems']);
+        return $task->load(['booking.tenant', 'unit.building', 'assignee', 'events.user', 'remarks.user', 'remarks.replies.user', 'costItems']);
     }
 
     private function setupRequired()

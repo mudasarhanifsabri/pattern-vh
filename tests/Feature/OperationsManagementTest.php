@@ -173,4 +173,38 @@ class OperationsManagementTest extends TestCase
             ])
             ->assertSessionHasErrors('pictures');
     }
+
+    public function test_manager_can_reply_to_a_maintainer_task_remark(): void
+    {
+        $this->seed();
+
+        $admin = User::where('email', 'admin@example.com')->firstOrFail();
+        $cleaner = User::where('email', 'demo.cleaner@example.com')->firstOrFail();
+        $task = BookingTask::whereHas('assignee', fn ($query) => $query->where('user_id', $cleaner->id))->firstOrFail();
+        $remark = $task->remarks()->create([
+            'user_id' => $cleaner->id,
+            'remark' => 'Kitchen deep clean complete. Please review the photos.',
+            'status_update' => 'waiting_approval',
+            'pictures' => [],
+        ]);
+
+        // A manager reply stays attached to the originating maintainer remark.
+        $this->actingAs($admin)
+            ->post(route('tasks.remarks.replies.store', [$task, $remark]), ['reply' => 'Please also upload the final balcony photo.'])
+            ->assertRedirect()
+            ->assertSessionHas('status', 'Reply added to maintainer remark.');
+
+        $this->assertDatabaseHas('booking_task_remark_replies', [
+            'booking_task_remark_id' => $remark->id,
+            'user_id' => $admin->id,
+            'reply' => 'Please also upload the final balcony photo.',
+        ]);
+        $this->actingAs($admin)->get(route('tasks.show', $task))
+            ->assertOk()
+            ->assertSee('Maintainer Updates')
+            ->assertSee('Please also upload the final balcony photo.');
+        $this->actingAs($cleaner)->get(route('maintainer.tasks.timeline', $task))
+            ->assertOk()
+            ->assertSee('Please also upload the final balcony photo.');
+    }
 }

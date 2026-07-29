@@ -28,6 +28,10 @@
                     @if(collect($remark->pictures ?? [])->isNotEmpty())
                         <div class="mt-2 flex gap-2">@foreach(collect($remark->pictures)->take(3) as $photo)<img src="{{ asset($photo) }}" alt="Remark photo" class="h-12 w-12 rounded-lg object-cover">@endforeach</div>
                     @endif
+                    {{-- Manager responses are visible to the maintainer in the same update timeline. --}}
+                    @if($remark->replies->isNotEmpty())
+                        <div class="mt-3 space-y-2 border-l-2 border-blue-100 pl-3">@foreach($remark->replies as $reply)<div class="rounded-xl bg-blue-50 p-3"><p class="text-xs font-black text-blue-800">{{ $reply->user?->name ?? 'Operations Team' }}</p><p class="mt-1 text-sm leading-5 text-slate-700">{{ $reply->reply }}</p><p class="mt-1 text-[10px] text-slate-400">{{ $reply->created_at?->format('d M Y - h:i A') }}</p></div>@endforeach</div>
+                    @endif
                 </div>
             @endforeach
         </div>

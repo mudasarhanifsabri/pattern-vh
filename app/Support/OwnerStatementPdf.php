@@ -36,7 +36,7 @@ class OwnerStatementPdf
 
         $this->text(38, 612, 'Accounts Summary', 12, 'bold')
             ->summaryLine(38, 590, 'Opening Balance', $openingBalance)
-            ->summaryLine(38, 572, 'Rent Share Billed', $billedAmount)
+            ->summaryLine(38, 572, 'Rent Share Collected', $billedAmount)
             ->summaryLine(38, 554, 'Amount Paid', $amountPaid)
             ->summaryLine(38, 536, 'Balance Due', $balanceDue);
 
@@ -74,7 +74,7 @@ class OwnerStatementPdf
         $this->line(398, 116, 555, 116, '000000')
             ->text(438, 96, 'Balance Due', 10, 'bold')
             ->text(500, 96, $this->money($balanceDue), 10, 'bold')
-            ->text(38, 52, 'Generated from Pattern RMS rent collections only. Security deposits are company-held tenant liabilities and excluded from owner income.', 7)
+            ->text(38, 52, 'Collected invoice rent is included by booking check-out date. Security deposits are excluded from owner income.', 7)
             ->text(38, 38, 'Statement generated '.now()->format('d M Y H:i'), 7);
 
         return $this->output();

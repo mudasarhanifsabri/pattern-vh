@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Booking;
 use App\Models\BookingTask;
 use App\Models\BookingTaskCostItem;
+use App\Models\BookingTaskRemark;
 use App\Models\CheckInInspectionItem;
 use App\Models\OperationsTeamMember;
 use App\Models\Tenant;
@@ -86,7 +87,15 @@ class TaskManagementController extends Controller
 
     public function show(BookingTask $bookingTask)
     {
-        $bookingTask->load(['booking.tenant', 'unit.building', 'assignee.user', 'events.user', 'remarks.user', 'costItems']);
+        // The task detail page is the operations record for maintainer status, photos, remarks, and management replies.
+        $bookingTask->load([
+            'booking.tenant',
+            'unit.building',
+            'assignee.user',
+            'events.user',
+            'remarks' => fn ($query) => $query->with(['user', 'replies.user'])->latest(),
+            'costItems',
+        ]);
         $teamMembers = OperationsTeamMember::orderBy('full_name')->get();
 
         return view('tasks.show', ['task' => $bookingTask, 'teamMembers' => $teamMembers]);
@@ -155,6 +164,24 @@ class TaskManagementController extends Controller
         $this->event($bookingTask, 'remark_added', $validated['remark']);
 
         return back()->with('status', 'Remark added.');
+    }
+
+    public function addRemarkReply(Request $request, BookingTask $bookingTask, BookingTaskRemark $bookingTaskRemark)
+    {
+        abort_unless((int) $bookingTaskRemark->booking_task_id === (int) $bookingTask->id, 404);
+
+        $validated = $request->validate([
+            'reply' => ['required', 'string', 'max:2000'],
+        ]);
+
+        // Keep manager responses in the original remark thread instead of creating unrelated timeline items.
+        $bookingTaskRemark->replies()->create([
+            'user_id' => Auth::id(),
+            'reply' => $validated['reply'],
+        ]);
+        $this->event($bookingTask, 'remark_replied', $validated['reply']);
+
+        return back()->with('status', 'Reply added to maintainer remark.');
     }
 
     public function addCost(Request $request, BookingTask $bookingTask)

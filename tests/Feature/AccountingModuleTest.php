@@ -69,7 +69,6 @@ class AccountingModuleTest extends TestCase
             ->where('status', 'approved')
             ->whereHas('invoice', fn ($query) => $query->where('status', 'paid')->where('balance_amount', '<=', 0))
             ->firstOrFail();
-        $bookingDuration = now()->addDays(3)->format('M d, Y').' to '.now()->addDays(8)->format('M d, Y');
         $payoutPeriodStart = $payoutPayment->invoice->period_start->format('M d, Y');
         $payoutPeriodEnd = $payoutPayment->invoice->period_end->format('M d, Y');
         $statementDates = [
@@ -80,9 +79,10 @@ class AccountingModuleTest extends TestCase
         $this->actingAs($admin)->get(route('owner-statements.index', ['owner_id' => $owner->id, ...$statementDates]))
             ->assertOk()
             ->assertSee('Owner Account Statement')
-            ->assertSee('Booking rent')
+            ->assertSee('Rent collected')
             ->assertSee('AED 8,500.00')
-            ->assertSee($bookingDuration)
+            ->assertSee('Check-in:')
+            ->assertSee('Check-out:')
             ->assertSee('PDF');
         $this->actingAs($admin)->get(route('owner-statements.pdf', ['owner_id' => $owner->id, ...$statementDates]))->assertOk()->assertHeader('content-type', 'application/pdf');
         $this->actingAs($admin)->get(route('owner-payouts.index', ['owner_id' => $owner->id]))
@@ -153,6 +153,46 @@ class AccountingModuleTest extends TestCase
             'owner_id' => null,
             'unit_id' => null,
         ]);
+    }
+
+    public function test_owner_statement_uses_booking_checkout_date_for_collected_rent_and_period_expenses(): void
+    {
+        $this->seed();
+
+        $admin = User::where('email', 'admin@example.com')->firstOrFail();
+        $invoice = Invoice::with('booking.unit.owners')->where('invoice_no', 'INV-DEMO-0001')->firstOrFail();
+        $booking = $invoice->booking;
+        $owner = $booking->unit->owners->firstOrFail();
+        $checkoutDate = $booking->check_out_date->toDateString();
+
+        Expense::create([
+            'expense_no' => 'EXP-CHECKOUT-0001',
+            'name' => 'Checkout period owner expense',
+            'type' => 'maintenance',
+            'expense_to_role' => 'owner',
+            'owner_id' => $owner->id,
+            'unit_id' => $booking->unit_id,
+            'association' => 'owner_account',
+            'incurred_on' => $checkoutDate,
+            'amount' => 321,
+        ]);
+
+        // The booking begins outside this one-day filter, but its checkout invoice must still appear.
+        $query = ['owner_id' => $owner->id, 'from' => $checkoutDate, 'to' => $checkoutDate];
+        $this->actingAs($admin)->get(route('owner-statements.index', $query))
+            ->assertOk()
+            ->assertSee($invoice->invoice_no)
+            ->assertSee('Rent collected')
+            ->assertSee('Check-in:')
+            ->assertSee('Check-out:')
+            ->assertSee('Checkout period owner expense');
+
+        $export = $this->actingAs($admin)->get(route('owner-statements.index', [...$query, 'export' => 1]));
+        $export->assertOk()->assertHeader('content-type', 'text/csv; charset=UTF-8');
+        $this->assertStringContainsString('Rent Collected', $export->streamedContent());
+        $this->assertStringContainsString($booking->check_in_date->toDateString(), $export->streamedContent());
+        $this->assertStringContainsString($checkoutDate, $export->streamedContent());
+        $this->assertStringContainsString('Checkout period owner expense', $export->streamedContent());
     }
 
     public function test_owner_payout_date_stays_with_the_paid_invoice_period_after_extension(): void
