@@ -7,6 +7,8 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Carbon;
 
 #[Fillable([
     'booking_no', 'booking_type', 'unit_id', 'tenant_id', 'agent_id', 'check_in_date', 'check_out_date',
@@ -29,6 +31,8 @@ class Booking extends Model
     public const STATUSES = ['draft', 'confirmed', 'extended', 'checked_in', 'checkout_requested', 'checked_out', 'cancelled'];
 
     public const ACTIVE_STATUSES = ['confirmed', 'extended', 'checked_in', 'checkout_requested'];
+
+    public const OCCUPYING_EXTENSION_STATUSES = ['approved_pending_payment', 'paid_extended'];
 
     protected function casts(): array
     {
@@ -57,6 +61,31 @@ class Booking extends Model
     public function getConfirmationSignatureStatusAttribute(): string
     {
         return $this->confirmation_signed_at ? 'signed' : 'not_signed';
+    }
+
+    public function getEffectiveCheckOutDateAttribute(): Carbon
+    {
+        $latestExtensionEnd = $this->relationLoaded('extensionRequests')
+            ? $this->extensionRequests
+                ->whereIn('status', self::OCCUPYING_EXTENSION_STATUSES)
+                ->max('requested_check_out_date')
+            : $this->extensionRequests()
+                ->whereIn('status', self::OCCUPYING_EXTENSION_STATUSES)
+                ->max('requested_check_out_date');
+
+        return $latestExtensionEnd
+            ? Carbon::parse($latestExtensionEnd)->startOfDay()
+            : $this->check_out_date->copy()->startOfDay();
+    }
+
+    public function scopeEffectiveCheckoutOnOrAfter(Builder $query, Carbon|string $date): Builder
+    {
+        return $query->where(function (Builder $query) use ($date): void {
+            $query->whereDate('check_out_date', '>=', $date)
+                ->orWhereHas('extensionRequests', fn (Builder $extensions) => $extensions
+                    ->whereIn('status', self::OCCUPYING_EXTENSION_STATUSES)
+                    ->whereDate('requested_check_out_date', '>=', $date));
+        });
     }
 
     public function getDepositReceiptRecordAttribute(): ?Receipt

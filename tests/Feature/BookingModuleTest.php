@@ -319,6 +319,46 @@ class BookingModuleTest extends TestCase
         $this->assertStringContainsString($newCheckout->toDateString(), $invoiceExport->streamedContent());
     }
 
+    public function test_extended_booking_remains_booked_in_unit_list_and_availability_calendar(): void
+    {
+        $this->seed();
+
+        $admin = User::where('email', 'admin@example.com')->firstOrFail();
+        $booking = Booking::where('booking_no', 'BK-DEMO-0001')->firstOrFail();
+        $booking->forceFill([
+            'check_in_date' => today()->subDays(5),
+            'check_out_date' => today()->subDay(),
+            'booking_status' => 'extended',
+        ])->save();
+        $booking->unit->update(['availability_status' => 'available']);
+
+        $extendedCheckout = today()->addDays(4);
+        BookingExtensionRequest::create([
+            'booking_id' => $booking->id,
+            'tenant_id' => $booking->tenant_id,
+            'requested_check_out_date' => $extendedCheckout,
+            'extra_rent_amount' => 1000,
+            'status' => 'approved_pending_payment',
+        ]);
+
+        $availableResponse = $this->actingAs($admin)
+            ->get(route('units.index', ['status' => 'available']))
+            ->assertOk();
+        $this->assertFalse(
+            $availableResponse->viewData('units')->getCollection()->contains('id', $booking->unit_id)
+        );
+
+        $this->actingAs($admin)
+            ->get(route('availability-calendar.index', [
+                'start' => today()->toDateString(),
+                'days' => 7,
+                'unit_id' => $booking->unit_id,
+            ]))
+            ->assertOk()
+            ->assertSee($booking->tenant->full_name)
+            ->assertSee($extendedCheckout->format('M d, Y'));
+    }
+
     public function test_checkout_inspection_and_deposit_refund_flow(): void
     {
         $this->seed();

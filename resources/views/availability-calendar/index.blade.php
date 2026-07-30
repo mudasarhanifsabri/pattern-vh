@@ -109,7 +109,8 @@
                         @foreach($unitBookings as $booking)
                             @php
                                 $barStart = $booking->check_in_date->greaterThan($start) ? $booking->check_in_date : $start;
-                                $barEnd = $booking->check_out_date->lessThan($end) ? $booking->check_out_date : $end;
+                                $effectiveCheckout = $booking->effective_check_out_date;
+                                $barEnd = $effectiveCheckout->lessThan($end) ? $effectiveCheckout : $end;
                                 $offset = $start->diffInDays($barStart);
                                 $span = max(1, $barStart->diffInDays($barEnd) + 1);
                                 $left = $unitWidth + ($offset * $cellWidth) + 4;
@@ -154,7 +155,7 @@
                         <div>
                             <p class="text-xs font-bold text-slate-500">{{ $unit->building->name }} / Unit {{ $unit->unit_no }}</p>
                             <h3 class="mt-1 text-lg font-black text-[#071a3b]">{{ $booking->tenant->full_name }}</h3>
-                            <p class="mt-1 text-xs text-slate-500">{{ $booking->check_in_date->format('M d') }} to {{ $booking->check_out_date->format('M d, Y') }}</p>
+                            <p class="mt-1 text-xs text-slate-500">{{ $booking->check_in_date->format('M d') }} to {{ $booking->effective_check_out_date->format('M d, Y') }}</p>
                         </div>
                         <span class="rounded-full bg-blue-50 px-3 py-1 text-xs font-black text-blue-700">{{ str($booking->booking_status)->replace('_', ' ')->headline() }}</span>
                     </div>

@@ -29,7 +29,7 @@ class UnitController extends Controller
         $unavailableStatuses = ['booked', 'occupied'];
         $activeBookingFilter = fn ($query) => $query
             ->whereIn('booking_status', $activeBookingStatuses)
-            ->whereDate('check_out_date', '>=', today());
+            ->effectiveCheckoutOnOrAfter(today());
 
         $units = Unit::query()
             ->with(['building', 'owners'])

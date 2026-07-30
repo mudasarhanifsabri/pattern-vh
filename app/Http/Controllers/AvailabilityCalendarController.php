@@ -28,11 +28,12 @@ class AvailabilityCalendarController extends Controller
             ->get();
 
         $bookings = Booking::query()
-            ->with(['tenant', 'unit'])
+            ->with(['tenant', 'unit', 'extensionRequests' => fn ($query) => $query
+                ->whereIn('status', Booking::OCCUPYING_EXTENSION_STATUSES)])
             ->whereIn('booking_status', Booking::ACTIVE_STATUSES)
             ->when($request->filled('source'), fn ($query) => $query->where('source', $request->input('source')))
             ->whereDate('check_in_date', '<=', $end)
-            ->whereDate('check_out_date', '>=', $start)
+            ->effectiveCheckoutOnOrAfter($start)
             ->get()
             ->groupBy('unit_id');
 
