@@ -5,7 +5,7 @@
         ['route' => 'owner-payouts.index', 'label' => 'Payouts', 'icon' => 'M4 7h16M6 7V5h12v2M5 11h14v8H5zM9 15h6'],
         ['route' => 'profile.edit', 'label' => 'Profile', 'icon' => 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21a8 8 0 0 1 16 0'],
     ] as $tab)
-        @php($active = request()->routeIs($tab['route']) || ($tab['route'] === 'owner-statements.index' && request()->routeIs('owner-statements.*')) || ($tab['route'] === 'owner-payouts.index' && request()->routeIs('owner-payouts.*')))
+        @php($active = request()->routeIs($tab['route']) || ($tab['route'] === 'owner-statements.index' && (request()->routeIs('owner-statements.*') || request()->routeIs('owners.account.*'))) || ($tab['route'] === 'owner-payouts.index' && request()->routeIs('owner-payouts.*')))
         <a href="{{ route($tab['route']) }}" class="tenant-nav-item pressable flex flex-col items-center justify-center gap-1 px-1 py-2 text-[11px] font-bold {{ $active ? 'tenant-nav-item-active text-blue-600' : 'text-slate-500' }}">
             <span class="tenant-nav-icon {{ $active ? 'bg-blue-50' : '' }} grid h-9 w-9 place-items-center rounded-2xl">
                 <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="{{ $tab['icon'] }}"/></svg>

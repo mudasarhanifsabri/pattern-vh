@@ -27,6 +27,9 @@
     </section>
 
     @if($owner && $statement)
+        <div class="flex justify-end">
+            <a href="{{ route('owners.account.index', $owner) }}" class="inline-flex h-11 items-center rounded-2xl border border-blue-200 bg-blue-50 px-4 text-sm font-black text-blue-700">Detailed account ledger →</a>
+        </div>
         @if($ownerOnly)
             <section class="overflow-hidden rounded-[1.6rem] bg-white shadow-[0_18px_45px_rgba(15,23,42,0.08)]">
                 <div class="bg-gradient-to-br from-slate-950 via-slate-800 to-blue-700 p-5 text-white">

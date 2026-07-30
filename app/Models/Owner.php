@@ -72,6 +72,11 @@ class Owner extends Model
         return $this->hasMany(Expense::class);
     }
 
+    public function accountEntries(): HasMany
+    {
+        return $this->hasMany(OwnerAccountEntry::class);
+    }
+
     public function unitContracts(): HasMany
     {
         return $this->hasMany(OwnerUnitContract::class);

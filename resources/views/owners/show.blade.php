@@ -151,10 +151,11 @@
             <aside class="space-y-6">
                 <section class="erp-card p-5">
                     <div class="flex items-center justify-between gap-3">
-                        <h2 class="text-lg font-bold text-[#071a3b]">Owner statement</h2>
-                        <a href="{{ route('owner-statements.index', ['owner_id' => $owner->id]) }}" class="text-sm font-bold text-blue-700 hover:text-blue-900">Open</a>
+                        <h2 class="text-lg font-bold text-[#071a3b]">Statement of account</h2>
+                        <a href="{{ route('owners.account.index', $owner) }}" class="text-sm font-bold text-blue-700 hover:text-blue-900">Open</a>
                     </div>
-                    <p class="mt-3 text-sm text-slate-500">View collected rent, owner expenses, and statement lines filtered to this owner.</p>
+                    <p class="mt-3 text-sm text-slate-500">Open the separate paginated ledger for bank transfers, expenses, payments, fees, refunds, adjustments, and other entries.</p>
+                    <a href="{{ route('owner-statements.index', ['owner_id' => $owner->id]) }}" class="mt-3 inline-flex text-xs font-bold text-slate-500 hover:text-blue-700">Period income statement →</a>
                 </section>
 
                 <section class="erp-card p-5">

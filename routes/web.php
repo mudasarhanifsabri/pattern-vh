@@ -25,6 +25,7 @@ use App\Http\Controllers\NotificationCenterController;
 use App\Http\Controllers\OperationsPlannerController;
 use App\Http\Controllers\OperationsTeamMemberController;
 use App\Http\Controllers\OwnerController;
+use App\Http\Controllers\OwnerAccountController;
 use App\Http\Controllers\OwnerNoteController;
 use App\Http\Controllers\OwnerPayoutController;
 use App\Http\Controllers\OwnerStatementController;
@@ -139,6 +140,12 @@ Route::middleware('auth')->group(function () {
         ->middleware('permission:owners.manage')
         ->name('owners.send-invite');
     Route::post('owners/{owner}/notes', [OwnerNoteController::class, 'store'])->middleware('permission:owners.manage')->name('owners.notes.store');
+    Route::get('owners/{owner}/account', [OwnerAccountController::class, 'index'])
+        ->middleware('permission:owners.view|owners.manage|portal.owner')
+        ->name('owners.account.index');
+    Route::post('owners/{owner}/account', [OwnerAccountController::class, 'store'])
+        ->middleware('permission:owners.manage')
+        ->name('owners.account.store');
 
     foreach ([
         'tenants' => TenantController::class,

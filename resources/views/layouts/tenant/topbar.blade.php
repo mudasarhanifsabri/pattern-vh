@@ -4,7 +4,7 @@
         && ! auth()->user()?->can('accounting.manage')
         && ! auth()->user()?->can('users.manage');
     $tenantTopbarTitle = $ownerOnly
-        ? (request()->routeIs('owner-statements.*') ? 'Statement' : (request()->routeIs('owner-payouts.*') ? 'Payouts' : (request()->routeIs('units.*') ? 'Property' : (request()->routeIs('reports.*') ? 'Income' : (request()->routeIs('support.*') ? 'Messages' : (request()->routeIs('profile.*') ? 'Profile' : 'Owner'))))))
+        ? ((request()->routeIs('owner-statements.*') || request()->routeIs('owners.account.*')) ? 'Statement' : (request()->routeIs('owner-payouts.*') ? 'Payouts' : (request()->routeIs('units.*') ? 'Property' : (request()->routeIs('reports.*') ? 'Income' : (request()->routeIs('support.*') ? 'Messages' : (request()->routeIs('profile.*') ? 'Profile' : 'Owner'))))))
         : (request()->routeIs('bookings.show') ? 'Booking Details' : (request()->routeIs('bookings.*') ? 'Bookings' : (request()->routeIs('tenant.invoices.*') ? 'Payments' : (request()->routeIs('support.*') ? 'Messages' : (request()->routeIs('profile.*') ? 'Profile' : 'My Stay')))));
     $tenantTopbarBackRoute = request()->routeIs('bookings.show')
         ? route('bookings.index')
