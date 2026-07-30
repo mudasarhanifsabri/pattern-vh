@@ -11,6 +11,7 @@ use App\Support\ActivityLogger;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Validation\Rule;
+use Mpdf\Mpdf;
 
 class OwnerAccountController extends Controller
 {
@@ -197,7 +198,7 @@ class OwnerAccountController extends Controller
             ['path' => $request->url(), 'query' => $request->query()],
         );
 
-        return view('owners.account', [
+        $viewData = [
             'owner' => $owner,
             'entries' => $entries,
             'types' => OwnerAccountEntry::TYPES,
@@ -208,7 +209,47 @@ class OwnerAccountController extends Controller
                 'debits' => $allRows->sum('debit'),
                 'balance' => $allRows->sum('credit') - $allRows->sum('debit'),
             ],
-        ]);
+        ];
+
+        if ($request->boolean('pdf')) {
+            $tempDir = storage_path('app/mpdf');
+            if (! is_dir($tempDir)) {
+                mkdir($tempDir, 0775, true);
+            }
+
+            $pdf = new Mpdf([
+                'mode' => 'utf-8',
+                'format' => 'A4-L',
+                'default_font' => 'dejavusans',
+                'tempDir' => $tempDir,
+                'margin_left' => 10,
+                'margin_right' => 10,
+                'margin_top' => 10,
+                'margin_bottom' => 12,
+            ]);
+            $pdf->SetTitle($owner->full_name.' Statement of Account');
+            $pdf->SetHTMLFooter('<div style="text-align:right;font-size:8pt;color:#64748b;">Page {PAGENO} of {nbpg}</div>');
+            $pdf->WriteHTML(view('pdfs.owner-account', [
+                ...$viewData,
+                'entries' => $allRows,
+                'selectedUnit' => $unitId ? $owner->units->firstWhere('id', $unitId) : null,
+                'filters' => [
+                    'from' => $from,
+                    'to' => $to,
+                    'type' => $type ? (OwnerAccountEntry::TYPES[$type] ?? str($type)->headline()) : null,
+                    'search' => $search,
+                ],
+            ])->render());
+
+            $filename = 'owner-account-'.str($owner->full_name)->slug().'-'.now()->format('Ymd').'.pdf';
+
+            return response($pdf->Output('', 'S'), 200, [
+                'Content-Type' => 'application/pdf',
+                'Content-Disposition' => 'attachment; filename="'.$filename.'"',
+            ]);
+        }
+
+        return view('owners.account', $viewData);
     }
 
     public function store(Request $request, Owner $owner)

@@ -12,7 +12,10 @@
 
         <div class="flex flex-wrap items-center justify-between gap-3">
             <a href="{{ $ownerPortal ? route('owner-statements.index') : route('owners.show', $owner) }}" class="text-sm font-bold text-slate-600 hover:text-blue-700">← {{ $ownerPortal ? 'Statement summary' : 'Owner details' }}</a>
-            @can('owners.manage')<button type="button" data-modal-open="account-entry-modal" class="rounded-xl bg-blue-600 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-blue-600/20">Add entry</button>@endcan
+            <div class="flex flex-wrap gap-2">
+                <a href="{{ route('owners.account.index', array_merge([$owner], request()->except(['page', 'pdf']), ['pdf' => 1])) }}" class="rounded-xl border border-blue-200 bg-blue-50 px-5 py-3 text-sm font-bold text-blue-700">Download PDF</a>
+                @can('owners.manage')<button type="button" data-modal-open="account-entry-modal" class="rounded-xl bg-blue-600 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-blue-600/20">Add entry</button>@endcan
+            </div>
         </div>
 
         <section class="grid gap-4 md:grid-cols-3">

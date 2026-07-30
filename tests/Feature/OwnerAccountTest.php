@@ -113,5 +113,11 @@ class OwnerAccountTest extends TestCase
             ->assertSee('Paid invoice')
             ->assertSee('Invoice period')
             ->assertSee(($invoice->period_start ?: $invoice->stay_check_in_date)->format('M d, Y'));
+
+        $this->actingAs($admin)
+            ->get(route('owners.account.index', [$owner, 'unit_id' => $invoice->unit_id, 'pdf' => 1]))
+            ->assertOk()
+            ->assertHeader('content-type', 'application/pdf')
+            ->assertHeader('content-disposition', 'attachment; filename="owner-account-'.str($owner->full_name)->slug().'-'.now()->format('Ymd').'.pdf"');
     }
 }
