@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
 
 #[Fillable([
-    'invoice_no', 'booking_id', 'tenant_id', 'unit_id', 'invoice_date', 'due_date', 'rent_amount',
+    'invoice_no', 'booking_id', 'tenant_id', 'unit_id', 'invoice_date', 'due_date', 'rent_amount', 'pattern_topup_amount',
     'period_start', 'period_end', 'payout_due_date', 'period_index', 'is_initial_invoice',
     'deposit_amount', 'dtcm_fee', 'cleaning_fee', 'agency_fee', 'vat_amount', 'total_amount', 'paid_amount',
     'balance_amount', 'status', 'notes', 'sent_at', 'created_by', 'updated_by',
@@ -32,6 +32,7 @@ class Invoice extends Model
             'period_index' => 'integer',
             'is_initial_invoice' => 'boolean',
             'rent_amount' => 'decimal:2',
+            'pattern_topup_amount' => 'decimal:2',
             'deposit_amount' => 'decimal:2',
             'dtcm_fee' => 'decimal:2',
             'cleaning_fee' => 'decimal:2',

@@ -407,6 +407,7 @@ class BookingController extends Controller
             'check_out_time' => ['nullable', 'date_format:H:i'],
             'guest_count' => ['required', 'integer', 'min:1', 'max:99'],
             'rent_amount' => ['nullable', 'numeric', 'min:0'],
+            'pattern_topup_amount' => ['nullable', 'numeric', 'min:0', 'lte:rent_amount'],
             'deposit_amount' => ['nullable', 'numeric', 'min:0'],
             'dtcm_fee' => ['nullable', 'numeric', 'min:0'],
             'cleaning_fee' => ['nullable', 'numeric', 'min:0'],
@@ -417,6 +418,7 @@ class BookingController extends Controller
             'rental_periods.*.start' => ['nullable', 'date'],
             'rental_periods.*.end' => ['nullable', 'date'],
             'rental_periods.*.rent_amount' => ['nullable', 'numeric', 'min:0'],
+            'rental_periods.*.pattern_topup_amount' => ['nullable', 'numeric', 'min:0'],
             'booking_status' => ['required', Rule::in(['draft', 'confirmed'])],
             'source' => ['nullable', 'string', 'max:191'],
             'notes' => ['nullable', 'string', 'max:4000'],
@@ -446,6 +448,10 @@ class BookingController extends Controller
                 'start' => $period['start'],
                 'end' => $period['end'],
                 'rent_amount' => (float) ($period['rent_amount'] ?? 0),
+                'pattern_topup_amount' => min(
+                    (float) ($period['pattern_topup_amount'] ?? 0),
+                    (float) ($period['rent_amount'] ?? 0)
+                ),
             ])
             ->all();
     }

@@ -29,7 +29,7 @@
         <div class="erp-card p-5">
             <h2 class="text-lg font-bold text-[#071a3b]">Fees and rent schedule</h2>
             <div class="mt-5 grid gap-4 md:grid-cols-3">
-                @foreach (['rent_amount' => 'Default monthly rent', 'deposit_amount' => 'Deposit', 'dtcm_fee' => 'DTCM', 'cleaning_fee' => 'Cleaning', 'agency_fee' => 'Agency fee'] as $field => $label)
+                @foreach (['rent_amount' => 'Default monthly rent', 'pattern_topup_amount' => 'Pattern top-up', 'deposit_amount' => 'Deposit', 'dtcm_fee' => 'DTCM', 'cleaning_fee' => 'Cleaning', 'agency_fee' => 'Agency fee'] as $field => $label)
                     <div><x-input-label :for="$field" :value="$label" /><x-text-input :id="$field" :name="$field" class="mt-1 block w-full" :value="old($field, $booking->{$field} ?? 0)" /></div>
                 @endforeach
             </div>
@@ -59,6 +59,7 @@
         const checkIn = document.getElementById('check_in_date');
         const checkOut = document.getElementById('check_out_date');
         const defaultRent = document.getElementById('rent_amount');
+        const defaultTopup = document.getElementById('pattern_topup_amount');
         const list = document.querySelector('[data-rental-periods]');
         const count = document.querySelector('[data-period-count]');
         const existing = JSON.parse(list?.dataset.existingPeriods || '[]');
@@ -104,6 +105,7 @@
                     start: iso(cursor),
                     end: iso(periodEnd),
                     rent: oldPeriod.rent_amount ?? defaultRent.value ?? 0,
+                    topup: oldPeriod.pattern_topup_amount ?? defaultTopup?.value ?? 0,
                 });
                 cursor = new Date(periodEnd);
                 cursor.setDate(cursor.getDate() + 1);
@@ -112,7 +114,7 @@
 
             count.textContent = `${periods.length} period${periods.length === 1 ? '' : 's'}`;
             list.innerHTML = periods.map((period) => `
-                <div class="grid gap-3 rounded-2xl border border-blue-100 bg-white p-3 md:grid-cols-[1.2fr_1fr_1fr_1fr] md:items-end">
+                <div class="grid gap-3 rounded-2xl border border-blue-100 bg-white p-3 md:grid-cols-[1.2fr_1fr_1fr_1fr_1fr] md:items-end">
                     <input type="hidden" name="rental_periods[${period.index - 1}][index]" value="${period.index}">
                     <input type="hidden" name="rental_periods[${period.index - 1}][label]" value="${period.label}">
                     <input type="hidden" name="rental_periods[${period.index - 1}][start]" value="${period.start}">
@@ -121,12 +123,14 @@
                     <div><p class="text-xs font-bold uppercase text-slate-400">From</p><p class="mt-1 text-sm font-bold text-slate-600">${period.start}</p></div>
                     <div><p class="text-xs font-bold uppercase text-slate-400">To</p><p class="mt-1 text-sm font-bold text-slate-600">${period.end}</p></div>
                     <label><span class="text-xs font-bold uppercase text-slate-400">Rent AED</span><input name="rental_periods[${period.index - 1}][rent_amount]" value="${period.rent}" class="erp-focus mt-1 h-10 w-full rounded-xl border border-slate-200 px-3 text-sm"></label>
+                    <label><span class="text-xs font-bold uppercase text-slate-400">Pattern top-up</span><input name="rental_periods[${period.index - 1}][pattern_topup_amount]" value="${period.topup}" type="number" min="0" max="${period.rent}" step="0.01" class="erp-focus mt-1 h-10 w-full rounded-xl border border-slate-200 px-3 text-sm"></label>
                 </div>
             `).join('');
         };
 
-        [checkIn, checkOut, defaultRent].forEach((input) => input.addEventListener('change', buildPeriods));
+        [checkIn, checkOut, defaultRent, defaultTopup].filter(Boolean).forEach((input) => input.addEventListener('change', buildPeriods));
         defaultRent.addEventListener('input', buildPeriods);
+        defaultTopup?.addEventListener('input', buildPeriods);
         buildPeriods();
     });
 </script>

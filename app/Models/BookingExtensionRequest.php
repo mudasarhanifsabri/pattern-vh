@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 #[Fillable([
-    'booking_id', 'tenant_id', 'invoice_id', 'requested_check_out_date', 'extra_rent_amount', 'status',
+    'booking_id', 'tenant_id', 'invoice_id', 'requested_check_out_date', 'extra_rent_amount', 'pattern_topup_amount', 'status',
     'tenant_notes', 'approval_notes', 'approved_by', 'approved_at',
 ])]
 class BookingExtensionRequest extends Model
@@ -19,6 +19,7 @@ class BookingExtensionRequest extends Model
         return [
             'requested_check_out_date' => 'date',
             'extra_rent_amount' => 'decimal:2',
+            'pattern_topup_amount' => 'decimal:2',
             'approved_at' => 'datetime',
         ];
     }

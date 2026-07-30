@@ -515,6 +515,10 @@
                         <label class="block text-sm font-black text-[#071a3b]">Extra rent invoice amount
                             <input name="extra_rent_amount" type="number" min="0.01" step="0.01" class="erp-focus mt-1 h-11 w-full rounded-xl border border-slate-200 px-3" placeholder="AED 0.00" required>
                         </label>
+                        <label class="block text-sm font-black text-[#071a3b]">Pattern top-up
+                            <input name="pattern_topup_amount" type="number" min="0" step="0.01" value="0" class="erp-focus mt-1 h-11 w-full rounded-xl border border-slate-200 px-3" required>
+                            <span class="mt-1 block text-xs font-semibold text-slate-500">Owner extension entitlement = extension rent minus this amount.</span>
+                        </label>
                         <label class="block text-sm font-black text-[#071a3b]">Internal note
                             <textarea name="approval_notes" rows="3" class="erp-focus mt-1 w-full rounded-xl border border-slate-200 px-3 py-2" placeholder="Optional note for this extension invoice"></textarea>
                         </label>
@@ -687,6 +691,9 @@
                         </label>
                         <label class="block text-sm font-black text-[#071a3b]">Extra rent invoice amount
                             <input name="extra_rent_amount" type="number" min="0.01" step="0.01" class="erp-focus mt-1 h-11 w-full rounded-xl border border-slate-200 px-3" placeholder="AED 0.00" required>
+                        </label>
+                        <label class="block text-sm font-black text-[#071a3b]">Pattern top-up
+                            <input name="pattern_topup_amount" type="number" min="0" step="0.01" value="0" class="erp-focus mt-1 h-11 w-full rounded-xl border border-slate-200 px-3" required>
                         </label>
                         <label class="block text-sm font-black text-[#071a3b]">Internal note
                             <textarea name="approval_notes" rows="3" class="erp-focus mt-1 w-full rounded-xl border border-slate-200 px-3 py-2" placeholder="Optional note for this extension invoice"></textarea>

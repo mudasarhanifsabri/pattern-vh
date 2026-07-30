@@ -109,14 +109,15 @@ class OwnerStatementController extends Controller
             $share = $shareByUnit[$invoice->unit_id] ?? 100;
             // Payments may include deposits and fees; owner rent can never exceed the invoice rent amount.
             $rentCollected = min((float) $invoice->paid_amount, (float) $invoice->rent_amount);
-            $gross = $rentCollected * ($share / 100);
+            $ownerRentCollected = min($rentCollected, max((float) $invoice->rent_amount - (float) $invoice->pattern_topup_amount, 0));
+            $gross = $ownerRentCollected * ($share / 100);
             $management = $gross * (($managementByUnit[$invoice->unit_id] ?? 0) / 100);
 
             return [
                 'date' => $invoice->stay_check_out_date,
                 'description' => $invoice->invoice_no.' / '.$booking->booking_no.' / '.$booking->unit->building->name.' '.$booking->unit->unit_no,
-                'booking_rent' => (float) $invoice->rent_amount,
-                'rent_collected' => $rentCollected,
+                'booking_rent' => $ownerRentCollected,
+                'rent_collected' => $ownerRentCollected,
                 'booking_from' => $invoice->stay_check_in_date,
                 'booking_to' => $invoice->stay_check_out_date,
                 'booking_duration' => 'Check-in: '.$invoice->stay_check_in_date?->format('M d, Y').' / Check-out: '.$invoice->stay_check_out_date?->format('M d, Y'),
@@ -164,7 +165,7 @@ class OwnerStatementController extends Controller
             $handle = fopen('php://output', 'w');
             fputcsv($handle, ['Owner', $owner->full_name]);
             // Include both booking stay dates so the exported owner ledger can be reconciled by checkout period.
-            fputcsv($handle, ['Date', 'Description', 'Invoice Rent', 'Rent Collected', 'Check-in Date', 'Check-out Date', 'Rent Share', 'Management Fee', 'Owner Expense', 'Net']);
+            fputcsv($handle, ['Date', 'Description', 'Owner Rent Entitlement', 'Owner Rent Collected', 'Check-in Date', 'Check-out Date', 'Rent Share', 'Management Fee', 'Owner Expense', 'Net']);
             foreach ($statement['rows'] as $row) {
                 fputcsv($handle, [
                     $row['date']->format('Y-m-d'),

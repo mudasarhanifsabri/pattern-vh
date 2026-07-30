@@ -26,6 +26,7 @@ class BookingInvoiceScheduler
         $periods->each(function (array $period) use ($booking): void {
             $isInitial = (int) $period['index'] === 1;
             $rent = (float) $period['rent_amount'];
+            $patternTopup = min((float) ($period['pattern_topup_amount'] ?? $booking->pattern_topup_amount), $rent);
             $deposit = $isInitial ? (float) $booking->deposit_amount : 0;
             $dtcm = $isInitial ? (float) $booking->dtcm_fee : 0;
             $cleaning = $isInitial ? (float) $booking->cleaning_fee : 0;
@@ -59,6 +60,7 @@ class BookingInvoiceScheduler
                 'payout_due_date' => $invoice->payout_due_date ?: $payoutDueDate,
                 'is_initial_invoice' => $isInitial,
                 'rent_amount' => $rent,
+                'pattern_topup_amount' => $patternTopup,
                 'deposit_amount' => $deposit,
                 'dtcm_fee' => $dtcm,
                 'cleaning_fee' => $cleaning,
@@ -103,6 +105,10 @@ class BookingInvoiceScheduler
                 'start' => Carbon::parse($period['start'])->toDateString(),
                 'end' => Carbon::parse($period['end'])->toDateString(),
                 'rent_amount' => (float) ($period['rent_amount'] ?? 0),
+                'pattern_topup_amount' => min(
+                    (float) ($period['pattern_topup_amount'] ?? $booking->pattern_topup_amount),
+                    (float) ($period['rent_amount'] ?? 0)
+                ),
             ]);
         }
 
@@ -129,6 +135,7 @@ class BookingInvoiceScheduler
                 'start' => $cursor->toDateString(),
                 'end' => $periodEnd->toDateString(),
                 'rent_amount' => (float) $booking->rent_amount,
+                'pattern_topup_amount' => min((float) $booking->pattern_topup_amount, (float) $booking->rent_amount),
             ]);
 
             $cursor = $periodEnd->copy()->addDay();

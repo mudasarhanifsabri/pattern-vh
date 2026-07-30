@@ -64,6 +64,7 @@ class BookingLifecycleController extends Controller
     {
         $validated = $request->validate([
             'extra_rent_amount' => ['required', 'numeric', 'min:0.01'],
+            'pattern_topup_amount' => ['nullable', 'numeric', 'min:0', 'lte:extra_rent_amount'],
             'approval_notes' => ['nullable', 'string', 'max:1000'],
         ]);
 
@@ -71,7 +72,7 @@ class BookingLifecycleController extends Controller
         $extensionStart = $this->extensionPeriodStart($booking, $extensionRequest);
         $this->ensureExtensionHasNoConflict($booking, $extensionStart, $extensionRequest->requested_check_out_date);
 
-        $invoice = $this->createExtensionInvoice($booking, $extensionRequest, (float) $validated['extra_rent_amount'], $validated['approval_notes'] ?? null);
+        $invoice = $this->createExtensionInvoice($booking, $extensionRequest, (float) $validated['extra_rent_amount'], (float) ($validated['pattern_topup_amount'] ?? 0), $validated['approval_notes'] ?? null);
 
         $booking->notificationLogs()->create([
             'channel' => 'email',
@@ -102,6 +103,7 @@ class BookingLifecycleController extends Controller
         $validated = $request->validate([
             'requested_check_out_date' => ['required', 'date', 'after:'.$currentStayEnd->format('Y-m-d')],
             'extra_rent_amount' => ['required', 'numeric', 'min:0.01'],
+            'pattern_topup_amount' => ['nullable', 'numeric', 'min:0', 'lte:extra_rent_amount'],
             'approval_notes' => ['nullable', 'string', 'max:1000'],
         ]);
 
@@ -114,12 +116,13 @@ class BookingLifecycleController extends Controller
                 'tenant_id' => $booking->tenant_id,
                 'requested_check_out_date' => $requestedCheckout->toDateString(),
                 'extra_rent_amount' => $validated['extra_rent_amount'],
+                'pattern_topup_amount' => $validated['pattern_topup_amount'] ?? 0,
                 'tenant_notes' => null,
                 'approval_notes' => $validated['approval_notes'] ?? 'Extension confirmed by reservations from booking page.',
                 'status' => 'requested',
             ]);
 
-            $invoice = $this->createExtensionInvoice($booking, $extension, (float) $validated['extra_rent_amount'], $validated['approval_notes'] ?? 'Extension confirmed by reservations from booking page.');
+            $invoice = $this->createExtensionInvoice($booking, $extension, (float) $validated['extra_rent_amount'], (float) ($validated['pattern_topup_amount'] ?? 0), $validated['approval_notes'] ?? 'Extension confirmed by reservations from booking page.');
 
             // The original booking dates are immutable; the extension is represented by its own invoice period.
             $booking->forceFill([
@@ -396,7 +399,7 @@ class BookingLifecycleController extends Controller
         }
     }
 
-    private function createExtensionInvoice(Booking $booking, BookingExtensionRequest $extensionRequest, float $rent, ?string $approvalNotes): Invoice
+    private function createExtensionInvoice(Booking $booking, BookingExtensionRequest $extensionRequest, float $rent, float $patternTopup, ?string $approvalNotes): Invoice
     {
         $periodStart = $this->extensionPeriodStart($booking, $extensionRequest);
         $vat = TaxCalculator::rentVat($rent);
@@ -413,6 +416,7 @@ class BookingLifecycleController extends Controller
             'period_end' => $extensionRequest->requested_check_out_date->toDateString(),
             'payout_due_date' => $extensionRequest->requested_check_out_date->toDateString(),
             'rent_amount' => $rent,
+            'pattern_topup_amount' => min($patternTopup, $rent),
             'vat_amount' => $vat,
             'total_amount' => $total,
             'balance_amount' => $total,
@@ -425,6 +429,7 @@ class BookingLifecycleController extends Controller
         $extensionRequest->update([
             'invoice_id' => $invoice->id,
             'extra_rent_amount' => $rent,
+            'pattern_topup_amount' => min($patternTopup, $rent),
             'approval_notes' => $approvalNotes,
             'status' => 'approved_pending_payment',
             'approved_by' => auth()->id(),

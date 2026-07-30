@@ -64,7 +64,7 @@
         <section class="{{ $ownerOnly ? 'rounded-[1.6rem] bg-white p-5 shadow-[0_18px_45px_rgba(15,23,42,0.08)]' : 'erp-card overflow-hidden' }}">
             <div class="{{ $ownerOnly ? '' : 'border-b border-slate-100 p-5' }}">
                 <h2 class="text-lg font-black text-[#071a3b]">Statement activity</h2>
-                <p class="mt-1 text-sm text-slate-500">Collected invoice rent is included by booking check-out date. Owner expenses use their incurred date; security deposits remain excluded.</p>
+                <p class="mt-1 text-sm text-slate-500">Owner rent entitlement is included by each invoice period. Owner expenses use their incurred date; security deposits and Pattern top-up remain excluded.</p>
             </div>
 
             <div class="mt-5 space-y-3 md:hidden">
@@ -75,7 +75,7 @@
                                 <p class="text-xs font-bold uppercase tracking-[0.14em] text-blue-600">{{ $row['date']->format('M d, Y') }}</p>
                                 <h3 class="mt-1 text-sm font-black leading-5 text-[#071a3b]">{{ $row['description'] }}</h3>
                                 @if($row['booking_duration'])
-                                    <p class="mt-2 text-xs font-bold text-slate-500">Rent collected: AED {{ number_format($row['rent_collected'], 2) }}</p>
+                                    <p class="mt-2 text-xs font-bold text-slate-500">Owner rent entitlement: AED {{ number_format($row['rent_collected'], 2) }}</p>
                                     <p class="mt-1 text-xs font-semibold text-slate-500">{{ $row['booking_duration'] }}</p>
                                 @endif
                             </div>
@@ -93,7 +93,7 @@
             </div>
 
             <div class="hidden overflow-x-auto md:block">
-                <table class="min-w-full divide-y divide-slate-200 text-sm"><thead class="bg-slate-50 text-left text-[11px] font-bold uppercase tracking-[0.16em] text-slate-500"><tr><th class="px-4 py-3">Checkout date</th><th class="px-4 py-3">Invoice / Booking</th><th class="px-4 py-3">Stay dates</th><th class="px-4 py-3">Rent collected</th><th class="px-4 py-3">Rent share</th><th class="px-4 py-3">Mgmt fee</th><th class="px-4 py-3">Expense</th><th class="px-4 py-3">Net payable</th></tr></thead><tbody class="divide-y divide-slate-100 bg-white">@forelse($statement['rows'] as $row)<tr><td class="px-4 py-4">{{ $row['date']->format('M d, Y') }}</td><td class="px-4 py-4"><p class="font-bold text-[#071a3b]">{{ $row['description'] }}</p></td><td class="px-4 py-4 text-xs font-semibold text-slate-500">{{ $row['booking_duration'] ?? '-' }}</td><td class="px-4 py-4">{{ $row['rent_collected'] !== null ? 'AED '.number_format($row['rent_collected'], 2) : '-' }}</td><td class="px-4 py-4">AED {{ number_format($row['gross'], 2) }}</td><td class="px-4 py-4">AED {{ number_format($row['management_fee'], 2) }}</td><td class="px-4 py-4">AED {{ number_format($row['owner_expense'], 2) }}</td><td class="px-4 py-4 font-black text-[#071a3b]">AED {{ number_format($row['net'], 2) }}</td></tr>@empty<tr><td colspan="8" class="px-4 py-10 text-center text-sm text-slate-500">No statement rows for this period.</td></tr>@endforelse</tbody></table>
+                <table class="min-w-full divide-y divide-slate-200 text-sm"><thead class="bg-slate-50 text-left text-[11px] font-bold uppercase tracking-[0.16em] text-slate-500"><tr><th class="px-4 py-3">Checkout date</th><th class="px-4 py-3">Invoice / Booking</th><th class="px-4 py-3">Stay dates</th><th class="px-4 py-3">Owner rent entitlement</th><th class="px-4 py-3">Rent share</th><th class="px-4 py-3">Mgmt fee</th><th class="px-4 py-3">Expense</th><th class="px-4 py-3">Net payable</th></tr></thead><tbody class="divide-y divide-slate-100 bg-white">@forelse($statement['rows'] as $row)<tr><td class="px-4 py-4">{{ $row['date']->format('M d, Y') }}</td><td class="px-4 py-4"><p class="font-bold text-[#071a3b]">{{ $row['description'] }}</p></td><td class="px-4 py-4 text-xs font-semibold text-slate-500">{{ $row['booking_duration'] ?? '-' }}</td><td class="px-4 py-4">{{ $row['rent_collected'] !== null ? 'AED '.number_format($row['rent_collected'], 2) : '-' }}</td><td class="px-4 py-4">AED {{ number_format($row['gross'], 2) }}</td><td class="px-4 py-4">AED {{ number_format($row['management_fee'], 2) }}</td><td class="px-4 py-4">AED {{ number_format($row['owner_expense'], 2) }}</td><td class="px-4 py-4 font-black text-[#071a3b]">AED {{ number_format($row['net'], 2) }}</td></tr>@empty<tr><td colspan="8" class="px-4 py-10 text-center text-sm text-slate-500">No statement rows for this period.</td></tr>@endforelse</tbody></table>
             </div>
         </section>
     @else

@@ -12,7 +12,7 @@ use Illuminate\Support\Carbon;
 
 #[Fillable([
     'booking_no', 'booking_type', 'unit_id', 'tenant_id', 'agent_id', 'check_in_date', 'check_out_date',
-    'check_in_time', 'check_out_time', 'guest_count', 'rent_amount', 'deposit_amount', 'dtcm_fee',
+    'check_in_time', 'check_out_time', 'guest_count', 'rent_amount', 'pattern_topup_amount', 'deposit_amount', 'dtcm_fee',
     'cleaning_fee', 'agency_fee', 'vat_amount', 'rental_periods', 'total_amount', 'booking_status', 'source', 'notes',
     'smart_lock_code_mode', 'smart_lock_code', 'smart_lock_code_valid_from', 'smart_lock_code_valid_until',
     'smart_lock_code_generated_at', 'smart_lock_keyboard_pwd_id', 'smart_lock_code_changed_by_tenant_at',
@@ -40,6 +40,7 @@ class Booking extends Model
             'check_in_date' => 'date',
             'check_out_date' => 'date',
             'rent_amount' => 'decimal:2',
+            'pattern_topup_amount' => 'decimal:2',
             'deposit_amount' => 'decimal:2',
             'dtcm_fee' => 'decimal:2',
             'cleaning_fee' => 'decimal:2',

@@ -77,6 +77,7 @@ class BookingModuleTest extends TestCase
                 'check_out_time' => '11:00',
                 'guest_count' => 2,
                 'rent_amount' => 4000,
+                'pattern_topup_amount' => 500,
                 'deposit_amount' => 1000,
                 'dtcm_fee' => 50,
                 'cleaning_fee' => 200,
@@ -89,6 +90,8 @@ class BookingModuleTest extends TestCase
         $booking = Booking::where('unit_id', $unit->id)->firstOrFail();
 
         $this->assertEquals(200, (float) $booking->vat_amount);
+        $this->assertEquals(500, (float) $booking->pattern_topup_amount);
+        $this->assertEquals(500, (float) $booking->invoices()->firstOrFail()->pattern_topup_amount);
         $this->assertEquals(5650, (float) $booking->total_amount);
         $this->assertSame('auto', $booking->smart_lock_code_mode);
         $this->assertNotEmpty($booking->smart_lock_code);
@@ -306,6 +309,7 @@ class BookingModuleTest extends TestCase
             ->post(route('bookings.extension-invoice.store', $booking), [
                 'requested_check_out_date' => $newCheckout->toDateString(),
                 'extra_rent_amount' => 1800,
+                'pattern_topup_amount' => 300,
                 'approval_notes' => 'Guest confirmed three more nights.',
             ])
             ->assertRedirect(route('bookings.show', $booking))
@@ -323,6 +327,8 @@ class BookingModuleTest extends TestCase
         $this->assertSame($newCheckout->toDateString(), $invoice->period_end->format('Y-m-d'));
         $this->assertSame('sent', $invoice->status);
         $this->assertEquals(1800, (float) $invoice->rent_amount);
+        $this->assertEquals(300, (float) $invoice->pattern_topup_amount);
+        $this->assertEquals(300, (float) $extension->pattern_topup_amount);
         $this->assertEquals(90, (float) $invoice->vat_amount);
         $this->assertEquals(1890, (float) $invoice->balance_amount);
 
@@ -336,12 +342,15 @@ class BookingModuleTest extends TestCase
 
         // Statements and invoice downloads must use the extension's own period, not the original booking duration.
         $owner = $booking->unit->owners()->firstOrFail();
+        $invoice->update(['paid_amount' => 1890, 'balance_amount' => 0, 'status' => 'paid']);
         $statementQuery = ['owner_id' => $owner->id, 'from' => $newCheckout->toDateString(), 'to' => $newCheckout->toDateString()];
         $this->actingAs($admin)->get(route('owner-statements.index', $statementQuery))
             ->assertOk()
             ->assertSee($invoice->invoice_no)
             ->assertSee($oldCheckout->format('M d, Y'))
-            ->assertSee($newCheckout->format('M d, Y'));
+            ->assertSee($newCheckout->format('M d, Y'))
+            ->assertSee('Owner rent entitlement')
+            ->assertSee('AED 1,500.00');
         $invoiceExport = $this->actingAs($admin)->get(route('invoices.excel', $invoice));
         $this->assertStringContainsString($oldCheckout->toDateString(), $invoiceExport->streamedContent());
         $this->assertStringContainsString($newCheckout->toDateString(), $invoiceExport->streamedContent());
