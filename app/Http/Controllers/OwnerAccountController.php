@@ -44,6 +44,7 @@ class OwnerAccountController extends Controller
                 'source' => 'Manual entry',
                 'created_by' => $entry->creator?->name,
                 'unit' => $entry->unit,
+                'period' => null,
             ]);
 
         $expenses = Expense::query()
@@ -64,6 +65,7 @@ class OwnerAccountController extends Controller
                 'source' => 'Expense registry',
                 'created_by' => null,
                 'unit' => $expense->unit,
+                'period' => null,
             ]);
 
         $transfers = OwnerPayoutTransfer::query()
@@ -85,6 +87,7 @@ class OwnerAccountController extends Controller
                 'source' => 'Owner payout',
                 'created_by' => null,
                 'unit' => $transfer->unit,
+                'period' => null,
             ]);
 
         $shareByUnit = $owner->units->mapWithKeys(
@@ -117,6 +120,8 @@ class OwnerAccountController extends Controller
 
                 $description = 'Rent collected — '.$invoice->invoice_no
                     .($invoice->booking?->booking_no ? ' / '.$invoice->booking->booking_no : '');
+                $periodStart = $invoice->period_start ?: $invoice->stay_check_in_date;
+                $periodEnd = $invoice->period_end ?: $invoice->stay_check_out_date;
                 $base = [
                     'date' => $date,
                     'reference' => $invoice->invoice_no,
@@ -124,6 +129,9 @@ class OwnerAccountController extends Controller
                     'source' => 'Paid invoice',
                     'created_by' => null,
                     'unit' => $invoice->unit,
+                    'period' => $periodStart && $periodEnd
+                        ? $periodStart->format('M d, Y').' — '.$periodEnd->format('M d, Y')
+                        : null,
                 ];
 
                 $rows = [[

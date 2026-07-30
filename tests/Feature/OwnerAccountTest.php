@@ -110,6 +110,8 @@ class OwnerAccountTest extends TestCase
             ->assertOk()
             ->assertSee('Rent collected')
             ->assertSee($invoice->invoice_no)
-            ->assertSee('Paid invoice');
+            ->assertSee('Paid invoice')
+            ->assertSee('Invoice period')
+            ->assertSee(($invoice->period_start ?: $invoice->stay_check_in_date)->format('M d, Y'));
     }
 }

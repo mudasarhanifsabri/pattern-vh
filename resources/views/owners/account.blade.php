@@ -35,11 +35,12 @@
         <section class="erp-card overflow-hidden">
             <div class="overflow-x-auto">
                 <table class="min-w-full divide-y divide-slate-200 text-sm">
-                    <thead class="bg-slate-50 text-left text-[11px] font-bold uppercase tracking-[0.14em] text-slate-500"><tr><th class="px-4 py-3">Date</th><th class="px-4 py-3">Type / source</th><th class="px-4 py-3">Description</th><th class="px-4 py-3">Reference</th><th class="px-4 py-3 text-right">Debit</th><th class="px-4 py-3 text-right">Credit</th><th class="px-4 py-3 text-right">Balance</th></tr></thead>
+                    <thead class="bg-slate-50 text-left text-[11px] font-bold uppercase tracking-[0.14em] text-slate-500"><tr><th class="px-4 py-3">Date</th><th class="px-4 py-3">Invoice period</th><th class="px-4 py-3">Type / source</th><th class="px-4 py-3">Description</th><th class="px-4 py-3">Reference</th><th class="px-4 py-3 text-right">Debit</th><th class="px-4 py-3 text-right">Credit</th><th class="px-4 py-3 text-right">Balance</th></tr></thead>
                     <tbody class="divide-y divide-slate-100 bg-white">
                         @forelse($entries as $entry)
                             <tr>
                                 <td class="whitespace-nowrap px-4 py-4 font-semibold text-slate-600">{{ $entry['date']->format('M d, Y') }}</td>
+                                <td class="whitespace-nowrap px-4 py-4 text-xs font-semibold text-slate-500">{{ $entry['period'] ?: '—' }}</td>
                                 <td class="px-4 py-4"><span class="rounded-full bg-blue-50 px-2.5 py-1 text-xs font-bold text-blue-700">{{ $entry['type_label'] }}</span><p class="mt-2 text-[11px] text-slate-400">{{ $entry['source'] }}</p></td>
                                 <td class="min-w-64 px-4 py-4"><p class="font-bold text-[#071a3b]">{{ $entry['description'] }}</p>@if($entry['unit'])<p class="mt-1 text-xs font-bold text-blue-600">{{ $entry['unit']->building?->name }} / {{ $entry['unit']->unit_no }}</p>@endif @if($entry['notes'])<p class="mt-1 text-xs text-slate-500">{{ $entry['notes'] }}</p>@endif</td>
                                 <td class="whitespace-nowrap px-4 py-4 text-slate-500">{{ $entry['reference'] ?: '—' }}</td>
@@ -47,7 +48,7 @@
                                 <td class="whitespace-nowrap px-4 py-4 text-right font-bold text-emerald-700">{{ $entry['credit'] ? 'AED '.number_format($entry['credit'],2) : '—' }}</td>
                                 <td class="whitespace-nowrap px-4 py-4 text-right font-black {{ $entry['balance'] >= 0 ? 'text-[#071a3b]' : 'text-rose-700' }}">AED {{ number_format($entry['balance'],2) }}</td>
                             </tr>
-                        @empty<tr><td colspan="7" class="px-4 py-12 text-center text-slate-500">No account entries match these filters.</td></tr>@endforelse
+                        @empty<tr><td colspan="8" class="px-4 py-12 text-center text-slate-500">No account entries match these filters.</td></tr>@endforelse
                     </tbody>
                 </table>
             </div>
