@@ -78,6 +78,21 @@ class Booking extends Model
             : $this->check_out_date->copy()->startOfDay();
     }
 
+    public function getTenantCheckOutDateAttribute(): Carbon
+    {
+        $paidExtensionEnd = $this->relationLoaded('extensionRequests')
+            ? $this->extensionRequests
+                ->where('status', 'paid_extended')
+                ->max('requested_check_out_date')
+            : $this->extensionRequests()
+                ->where('status', 'paid_extended')
+                ->max('requested_check_out_date');
+
+        return $paidExtensionEnd
+            ? Carbon::parse($paidExtensionEnd)->startOfDay()
+            : $this->check_out_date->copy()->startOfDay();
+    }
+
     public function scopeEffectiveCheckoutOnOrAfter(Builder $query, Carbon|string $date): Builder
     {
         return $query->where(function (Builder $query) use ($date): void {

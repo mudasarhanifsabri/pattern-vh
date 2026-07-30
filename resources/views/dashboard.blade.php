@@ -12,13 +12,14 @@
     @if ($tenant)
         @php
             $booking = $currentBooking;
-            $nights = $booking ? $booking->check_in_date->diffInDays($booking->check_out_date) : 0;
+            $tenantCheckOut = $booking?->tenant_check_out_date;
+            $nights = $booking ? $booking->check_in_date->diffInDays($tenantCheckOut) : 0;
             $balanceDue = (float) $tenantBalanceDue;
             $openRefund = $tenantOpenRefund;
             $tenantBankReady = filled($tenant->bank_account_name) && filled($tenant->iban);
             $smartLockCodeDisplay = $booking?->smart_lock_code ? trim(chunk_split($booking->smart_lock_code, 1, ' ')) : 'Pending';
             $smartLockValidFrom = $booking ? \Illuminate\Support\Carbon::parse($booking->check_in_date->format('Y-m-d').' '.($booking->check_in_time ?: '15:00')) : null;
-            $smartLockValidUntil = $booking ? \Illuminate\Support\Carbon::parse($booking->check_out_date->format('Y-m-d').' '.($booking->check_out_time ?: '11:00')) : null;
+            $smartLockValidUntil = $booking ? \Illuminate\Support\Carbon::parse($tenantCheckOut->format('Y-m-d').' '.($booking->check_out_time ?: '11:00')) : null;
             $today = now()->startOfDay();
             $tenantBookingStatus = $booking ? str($booking->booking_status)->replace('_', ' ')->headline()->toString() : null;
             if ($booking && $balanceDue > 0) {
@@ -29,7 +30,7 @@
             $stayCounterNote = 'Your stay counter will appear here.';
             if ($booking) {
                 $checkInDay = $booking->check_in_date->copy()->startOfDay();
-                $checkOutDay = $booking->check_out_date->copy()->startOfDay();
+                $checkOutDay = $tenantCheckOut->copy()->startOfDay();
 
                 if ($today->lt($checkInDay)) {
                     $daysUntilCheckIn = $today->diffInDays($checkInDay);
@@ -82,7 +83,7 @@
                     </div>
                     <div class="grid grid-cols-4 divide-x divide-slate-100 px-2 py-4 text-center">
                         <div class="min-w-0 px-1"><p class="text-sm font-semibold text-slate-500 max-[380px]:text-xs">Check-in</p><p class="mt-1 text-base font-black text-blue-600 max-[380px]:text-sm">{{ $booking->check_in_date->format('d M Y') }}</p><p class="text-sm font-semibold text-slate-500 max-[380px]:text-xs">{{ $booking->check_in_time ? \Illuminate\Support\Carbon::parse($booking->check_in_time)->format('h:i A') : '03:00 PM' }}</p></div>
-                        <div class="min-w-0 px-1"><p class="text-sm font-semibold text-slate-500 max-[380px]:text-xs">Check-out</p><p class="mt-1 text-base font-black text-blue-600 max-[380px]:text-sm">{{ $booking->check_out_date->format('d M Y') }}</p><p class="text-sm font-semibold text-slate-500 max-[380px]:text-xs">{{ $booking->check_out_time ? \Illuminate\Support\Carbon::parse($booking->check_out_time)->format('h:i A') : '11:00 AM' }}</p></div>
+                        <div class="min-w-0 px-1"><p class="text-sm font-semibold text-slate-500 max-[380px]:text-xs">Check-out</p><p class="mt-1 text-base font-black text-blue-600 max-[380px]:text-sm">{{ $tenantCheckOut->format('d M Y') }}</p><p class="text-sm font-semibold text-slate-500 max-[380px]:text-xs">{{ $booking->check_out_time ? \Illuminate\Support\Carbon::parse($booking->check_out_time)->format('h:i A') : '11:00 AM' }}</p></div>
                         <div class="min-w-0 px-1"><p class="text-sm font-semibold text-slate-500 max-[380px]:text-xs">{{ $stayCounterLabel }}</p><p class="mt-1 text-base font-black text-blue-600 max-[380px]:text-sm">{{ $stayCounterValue }}</p><p class="text-xs font-semibold text-slate-500 max-[380px]:text-[11px]">{{ $stayCounterNote }}</p></div>
                         <div class="min-w-0 px-1"><p class="text-sm font-semibold text-slate-500 max-[380px]:text-xs">Booking ID</p><p class="mx-auto mt-1 max-w-[7.5rem] break-words text-sm font-black leading-tight text-blue-600 max-[380px]:text-xs">{{ $booking->booking_no }}</p><p class="text-sm font-semibold text-slate-500 max-[380px]:text-xs">{{ $nights }} Nights</p></div>
                     </div>

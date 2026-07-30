@@ -16,6 +16,7 @@ use App\Models\Tenant;
 use App\Models\Unit;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Mail;
 use Spatie\Permission\Models\Role;
 use Spatie\Permission\PermissionRegistrar;
@@ -254,6 +255,13 @@ class BookingModuleTest extends TestCase
 
         $extension->refresh();
         $invoice = $extension->invoice()->firstOrFail();
+
+        $this->actingAs($tenantUser)
+            ->get(route('dashboard'))
+            ->assertOk()
+            ->assertSee($originalCheckout->format('d M Y'))
+            ->assertDontSee(Carbon::parse($newCheckout)->format('d M Y'));
+
         $payment = Payment::create([
             'invoice_id' => $invoice->id,
             'booking_id' => $booking->id,
@@ -265,6 +273,11 @@ class BookingModuleTest extends TestCase
         ]);
 
         $this->actingAs($admin)->post(route('payments.approve', $payment))->assertRedirect();
+
+        $this->actingAs($tenantUser)
+            ->get(route('dashboard'))
+            ->assertOk()
+            ->assertSee(Carbon::parse($newCheckout)->format('d M Y'));
 
         $this->assertDatabaseHas(BookingExtensionRequest::class, ['id' => $extension->id, 'status' => 'paid_extended']);
         $this->assertSame($originalCheckout->toDateString(), $booking->fresh()->check_out_date->format('Y-m-d'));
@@ -305,6 +318,14 @@ class BookingModuleTest extends TestCase
         $this->assertEquals(1800, (float) $invoice->rent_amount);
         $this->assertEquals(90, (float) $invoice->vat_amount);
         $this->assertEquals(1890, (float) $invoice->balance_amount);
+
+        $this->actingAs($admin)
+            ->get(route('bookings.show', $booking))
+            ->assertOk()
+            ->assertSee('Previous checkout')
+            ->assertSee('New checkout')
+            ->assertSee($oldCheckout->format('M d, Y'))
+            ->assertSee($newCheckout->format('M d, Y'));
 
         // Statements and invoice downloads must use the extension's own period, not the original booking duration.
         $owner = $booking->unit->owners()->firstOrFail();

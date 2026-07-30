@@ -8,6 +8,19 @@
         ->whereIn('status', ['requested', 'approved_pending_payment', 'paid_extended'])
         ->sortByDesc('requested_check_out_date')
         ->first()?->requested_check_out_date ?? $booking->check_out_date;
+    $extensionHistory = $booking->extensionRequests
+        ->sortBy('created_at')
+        ->values()
+        ->map(function ($extension) use ($booking) {
+            return [
+                'previous' => $extension->invoice?->period_start ?? $booking->check_out_date,
+                'new' => $extension->requested_check_out_date,
+                'amount' => (float) $extension->extra_rent_amount,
+                'status' => $extension->status,
+                'date' => $extension->approved_at ?? $extension->created_at,
+                'invoice' => $extension->invoice,
+            ];
+        });
     $primaryInvoice = $invoices->first();
     $depositReceipt = $booking->depositReceiptRecord;
     $pendingInvoices = $invoices->filter(fn ($invoice) => (float) $invoice->balance_amount > 0 && $invoice->status !== 'cancelled');
@@ -135,6 +148,36 @@
             @endforeach
         </div>
     </section>
+
+    @if($extensionHistory->isNotEmpty())
+        <section class="rounded-[1.4rem] border border-slate-200 bg-white p-5 shadow-sm">
+            <div class="flex items-center justify-between gap-3">
+                <div>
+                    <p class="text-xs font-black uppercase tracking-[0.16em] text-blue-600">Date history</p>
+                    <h2 class="mt-1 text-lg font-black text-[#071a3b]">Booking extensions</h2>
+                </div>
+                <span class="rounded-full bg-blue-50 px-3 py-1 text-xs font-black text-blue-700">{{ $extensionHistory->count() }} extension(s)</span>
+            </div>
+            <div class="mt-4 overflow-x-auto">
+                <table class="min-w-full text-left text-sm">
+                    <thead class="border-b border-slate-200 text-[11px] font-black uppercase tracking-[0.12em] text-slate-400">
+                        <tr><th class="px-3 py-3">Previous checkout</th><th class="px-3 py-3">New checkout</th><th class="px-3 py-3">Amount</th><th class="px-3 py-3">Status</th><th class="px-3 py-3">Date</th></tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100">
+                        @foreach($extensionHistory as $entry)
+                            <tr>
+                                <td class="px-3 py-3 font-bold text-slate-600">{{ $entry['previous']?->format('M d, Y') }}</td>
+                                <td class="px-3 py-3 font-black text-[#071a3b]">{{ $entry['new']?->format('M d, Y') }}</td>
+                                <td class="px-3 py-3 font-bold text-[#071a3b]">AED {{ number_format($entry['amount'], 2) }}</td>
+                                <td class="px-3 py-3"><span class="rounded-full {{ $entry['status'] === 'paid_extended' ? 'bg-emerald-50 text-emerald-700' : ($entry['status'] === 'rejected' ? 'bg-rose-50 text-rose-700' : 'bg-amber-50 text-amber-700') }} px-2.5 py-1 text-xs font-black">{{ str($entry['status'])->replace('_', ' ')->headline() }}</span></td>
+                                <td class="px-3 py-3 text-slate-500">{{ $entry['date']?->format('M d, Y H:i') }}</td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    @endif
 
     <nav class="sticky top-[72px] z-20 -mx-1 overflow-x-auto border-b border-slate-200 bg-[#f3f7fc]/95 px-1 py-2 backdrop-blur">
         <div class="flex min-w-max gap-2">

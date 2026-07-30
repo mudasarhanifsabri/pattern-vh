@@ -27,17 +27,18 @@
 
 @if($tenantPortal)
     @php
-        $nights = $booking->check_in_date->diffInDays($booking->check_out_date);
+        $tenantCheckOut = $booking->tenant_check_out_date;
+        $nights = $booking->check_in_date->diffInDays($tenantCheckOut);
         $wifiName = $booking->unit->wifi_name ?: 'Pattern_Guest';
         $wifiPassword = $booking->unit->wifi_password ?: 'Ask support';
         $smartLockCodeDisplay = $booking->smart_lock_code ? trim(chunk_split($booking->smart_lock_code, 1, ' ')) : 'Pending';
         $smartLockValidFrom = \Illuminate\Support\Carbon::parse($booking->check_in_date->format('Y-m-d').' '.($booking->check_in_time ?: '15:00'));
-        $smartLockValidUntil = \Illuminate\Support\Carbon::parse($booking->check_out_date->format('Y-m-d').' '.($booking->check_out_time ?: '11:00'));
+        $smartLockValidUntil = \Illuminate\Support\Carbon::parse($tenantCheckOut->format('Y-m-d').' '.($booking->check_out_time ?: '11:00'));
         $bookingBalanceDue = (float) $booking->invoices->sum(fn ($invoice) => (float) $invoice->balance_amount);
         $tenantBookingStatus = $bookingBalanceDue > 0 ? 'Pending Payment' : str($booking->booking_status)->replace('_', ' ')->headline()->toString();
         $today = now()->startOfDay();
         $checkInDay = $booking->check_in_date->copy()->startOfDay();
-        $checkOutDay = $booking->check_out_date->copy()->startOfDay();
+        $checkOutDay = $tenantCheckOut->copy()->startOfDay();
         if ($today->lt($checkInDay)) {
             $daysUntilCheckIn = $today->diffInDays($checkInDay);
             $stayCounterLabel = 'Check-in countdown';
@@ -83,7 +84,7 @@
             <div class="space-y-3">
                 @foreach([
                     ['Check-in', $booking->check_in_date->format('d M Y, h:i A'), 'M8 7V3m8 0V3M7 11h10M5 21h14a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2z'],
-                    ['Check-out', $booking->check_out_date->format('d M Y, h:i A'), 'M8 7V3m8 0V3M7 11h10M5 21h14a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2z'],
+                    ['Check-out', $tenantCheckOut->format('d M Y').', '.\Illuminate\Support\Carbon::parse($booking->check_out_time ?: '11:00')->format('h:i A'), 'M8 7V3m8 0V3M7 11h10M5 21h14a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2z'],
                     ['Guests', ($booking->guest_count ?: 1).' guest(s)', 'M17 20h5v-2a4 4 0 0 0-4-4h-1M9 20H4v-2a4 4 0 0 1 4-4h1m4-4a4 4 0 1 0-8 0 4 4 0 0 0 8 0zm8 0a4 4 0 1 0-8 0 4 4 0 0 0 8 0z'],
                     [$stayCounterLabel, $stayCounterValue, 'M12 8v4l3 3m6-3a9 9 0 1 1-18 0 9 9 0 0 1 18 0z'],
                     ['Nights', $nights.' Nights', 'M12 8v4l3 3m6-3a9 9 0 1 1-18 0 9 9 0 0 1 18 0z'],
