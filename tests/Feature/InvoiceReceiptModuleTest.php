@@ -41,6 +41,43 @@ class InvoiceReceiptModuleTest extends TestCase
         $this->assertDatabaseCount('check_in_inspection_items', 0);
     }
 
+    public function test_admin_can_delete_an_invoice_without_financial_records(): void
+    {
+        $this->seed();
+
+        $admin = User::where('email', 'admin@example.com')->firstOrFail();
+        $invoice = Invoice::query()->firstOrFail()->replicate();
+        $invoice->forceFill([
+            'invoice_no' => 'INV-DELETE-TEST',
+            'status' => 'sent',
+            'paid_amount' => 0,
+            'balance_amount' => $invoice->total_amount,
+        ])->save();
+
+        $this->actingAs($admin)
+            ->delete(route('invoices.destroy', $invoice))
+            ->assertRedirect(route('invoices.index'))
+            ->assertSessionHas('status', 'Invoice deleted successfully.');
+
+        $this->assertSoftDeleted($invoice);
+    }
+
+    public function test_invoice_with_financial_records_cannot_be_deleted(): void
+    {
+        $this->seed();
+
+        $admin = User::where('email', 'admin@example.com')->firstOrFail();
+        $invoice = Invoice::whereHas('payments')->firstOrFail();
+
+        $this->actingAs($admin)
+            ->from(route('invoices.show', $invoice))
+            ->delete(route('invoices.destroy', $invoice))
+            ->assertRedirect(route('invoices.show', $invoice))
+            ->assertSessionHasErrors('invoice');
+
+        $this->assertNotSoftDeleted($invoice);
+    }
+
     public function test_admin_can_create_invoice_and_approve_payment_to_issue_receipt(): void
     {
         $this->seed();

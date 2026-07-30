@@ -9,6 +9,7 @@ use App\Support\ActivityLogger;
 use App\Support\ReferenceNumber;
 use App\Support\TaxCalculator;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Mpdf\Mpdf;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -166,7 +167,43 @@ class InvoiceController extends Controller
             'updated_by' => auth()->id(),
         ]));
 
+        $invoice->extensionRequest()->update([
+            'pattern_topup_amount' => $validated['pattern_topup_amount'] ?? 0,
+        ]);
+
         return redirect()->route('invoices.show', $invoice)->with('status', 'Invoice updated successfully.');
+    }
+
+    public function destroy(Invoice $invoice)
+    {
+        $invoice->loadCount(['payments', 'receipts', 'collectionRequests']);
+
+        if ($invoice->payments_count > 0 || $invoice->receipts_count > 0 || $invoice->collection_requests_count > 0) {
+            return back()->withErrors([
+                'invoice' => 'This invoice cannot be deleted because it has payment, receipt, or collection records. Cancel the invoice instead to preserve the financial audit trail.',
+            ]);
+        }
+
+        DB::transaction(function () use ($invoice): void {
+            $extension = $invoice->extensionRequest()->first();
+
+            if ($extension) {
+                $extension->forceFill([
+                    'invoice_id' => null,
+                    'status' => 'requested',
+                    'extra_rent_amount' => 0,
+                    'pattern_topup_amount' => 0,
+                    'approval_notes' => $this->appendNote($extension->approval_notes, 'Invoice deleted; extension returned to requested status.'),
+                    'approved_by' => null,
+                    'approved_at' => null,
+                ])->save();
+            }
+
+            ActivityLogger::log('invoices.deleted', "Deleted invoice {$invoice->invoice_no}.", $invoice);
+            $invoice->delete();
+        });
+
+        return redirect()->route('invoices.index')->with('status', 'Invoice deleted successfully.');
     }
 
     public function pdf(Invoice $invoice)
@@ -265,6 +302,7 @@ class InvoiceController extends Controller
             'invoice_date' => ['required', 'date'],
             'due_date' => ['nullable', 'date'],
             'rent_amount' => ['nullable', 'numeric', 'min:0'],
+            'pattern_topup_amount' => ['nullable', 'numeric', 'min:0', 'lte:rent_amount'],
             'deposit_amount' => ['nullable', 'numeric', 'min:0'],
             'dtcm_fee' => ['nullable', 'numeric', 'min:0'],
             'cleaning_fee' => ['nullable', 'numeric', 'min:0'],
@@ -336,5 +374,10 @@ class InvoiceController extends Controller
         if ($tenant) {
             abort_unless((int) $invoice->tenant_id === (int) $tenant->id, 403);
         }
+    }
+
+    private function appendNote(?string $existing, string $note): string
+    {
+        return trim(trim((string) $existing).PHP_EOL.$note);
     }
 }

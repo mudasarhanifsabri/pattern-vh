@@ -41,6 +41,11 @@
                         @endcan
                         @can('invoices.manage')
                             <a href="{{ route('invoices.edit', $invoice) }}" class="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-600">Edit</a>
+                            <form method="POST" action="{{ route('invoices.destroy', $invoice) }}" onsubmit="return confirm('Delete invoice {{ $invoice->invoice_no }}? This is allowed only when it has no financial records.');">
+                                @csrf
+                                @method('DELETE')
+                                <button class="rounded-xl border border-rose-200 px-4 py-2.5 text-sm font-bold text-rose-700">Delete</button>
+                            </form>
                         @endcan
                     </div>
                 </div>
