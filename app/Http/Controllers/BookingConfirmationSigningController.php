@@ -56,7 +56,7 @@ class BookingConfirmationSigningController extends Controller
         abort_unless(hash_equals((string) $booking->confirmation_token, $token), 403);
 
         return view('bookings.sign-confirmation', [
-            'booking' => $booking->load(['unit.building', 'tenant', 'agent']),
+            'booking' => $booking->load(['unit.building', 'tenant', 'agent', 'extensionRequests']),
             'token' => $token,
         ]);
     }

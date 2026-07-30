@@ -279,6 +279,13 @@ class BookingModuleTest extends TestCase
             ->assertOk()
             ->assertSee(Carbon::parse($newCheckout)->format('d M Y'));
 
+        $confirmationHtml = view('pdfs.booking-confirmation', [
+            'booking' => $booking->fresh(['unit.building', 'tenant', 'extensionRequests']),
+            'logo' => null,
+        ])->render();
+        $this->assertStringContainsString(Carbon::parse($newCheckout)->format('d-m-Y'), $confirmationHtml);
+        $this->assertStringNotContainsString($originalCheckout->format('d-m-Y'), $confirmationHtml);
+
         $this->assertDatabaseHas(BookingExtensionRequest::class, ['id' => $extension->id, 'status' => 'paid_extended']);
         $this->assertSame($originalCheckout->toDateString(), $booking->fresh()->check_out_date->format('Y-m-d'));
         $this->assertSame($originalCheckout->toDateString(), $invoice->fresh()->period_start->format('Y-m-d'));

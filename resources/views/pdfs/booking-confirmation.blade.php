@@ -57,7 +57,7 @@
     $tenant = $booking->tenant;
     $bookingDate = $booking->created_at?->format('d-m-Y') ?? now()->format('d-m-Y');
     $checkInDate = $booking->check_in_date?->format('d-m-Y') ?? '-';
-    $checkOutDate = $booking->check_out_date?->format('d-m-Y') ?? '-';
+    $checkOutDate = $booking->tenant_check_out_date?->format('d-m-Y') ?? '-';
     $checkInTime = $booking->check_in_time ? \Illuminate\Support\Carbon::parse($booking->check_in_time)->format('H:i') : '15:00';
     $checkOutTime = $booking->check_out_time ? \Illuminate\Support\Carbon::parse($booking->check_out_time)->format('H:i') : '11:00';
     $reservationFee = (float) $booking->rent_amount + (float) $booking->vat_amount;

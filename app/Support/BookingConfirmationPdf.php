@@ -17,6 +17,7 @@ class BookingConfirmationPdf
             'tenant',
             'agent',
             'invoices.payments',
+            'extensionRequests',
         ]);
 
         $tempDir = storage_path('app/mpdf');
@@ -88,11 +89,11 @@ class BookingConfirmationPdf
 
     private function stayNights(Booking $booking): int
     {
-        if (! $booking->check_in_date || ! $booking->check_out_date) {
+        if (! $booking->check_in_date) {
             return 0;
         }
 
-        return max(1, $booking->check_in_date->diffInDays($booking->check_out_date));
+        return max(1, $booking->check_in_date->diffInDays($booking->tenant_check_out_date));
     }
 
     private function unitImageData(Booking $booking): ?string
