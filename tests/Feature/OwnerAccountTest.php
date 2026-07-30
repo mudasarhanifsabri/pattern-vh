@@ -7,6 +7,7 @@ use App\Models\OwnerAccountEntry;
 use App\Models\User;
 use App\Models\Unit;
 use App\Models\Building;
+use App\Models\Invoice;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -95,5 +96,20 @@ class OwnerAccountTest extends TestCase
         $this->actingAs($portalUser)
             ->get(route('owners.account.index', $otherOwner))
             ->assertForbidden();
+    }
+
+    public function test_paid_invoice_rent_and_management_fee_are_fetched_into_owner_account(): void
+    {
+        $this->seed();
+        $admin = User::where('email', 'admin@example.com')->firstOrFail();
+        $invoice = Invoice::with('booking.unit.owners')->where('invoice_no', 'INV-DEMO-0001')->firstOrFail();
+        $owner = $invoice->booking->unit->owners->firstOrFail();
+
+        $this->actingAs($admin)
+            ->get(route('owners.account.index', [$owner, 'unit_id' => $invoice->unit_id]))
+            ->assertOk()
+            ->assertSee('Rent collected')
+            ->assertSee($invoice->invoice_no)
+            ->assertSee('Paid invoice');
     }
 }

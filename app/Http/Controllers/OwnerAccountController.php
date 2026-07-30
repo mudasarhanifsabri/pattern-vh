@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Expense;
+use App\Models\Invoice;
 use App\Models\Owner;
 use App\Models\OwnerAccountEntry;
 use App\Models\OwnerPayoutTransfer;
@@ -86,7 +87,71 @@ class OwnerAccountController extends Controller
                 'unit' => $transfer->unit,
             ]);
 
-        $allRows = $manual->concat($expenses)->concat($transfers)
+        $shareByUnit = $owner->units->mapWithKeys(
+            fn ($unit) => [$unit->id => (float) ($unit->pivot->share_percent ?? 100)]
+        );
+        $managementByUnit = $owner->units->mapWithKeys(
+            fn ($unit) => [$unit->id => (float) ($unit->management_fee_percent ?? 0)]
+        );
+
+        $rentRows = Invoice::query()
+            ->with(['booking', 'unit.building', 'extensionRequest'])
+            ->whereIn('unit_id', $owner->units->pluck('id'))
+            ->when($unitId, fn ($query) => $query->where('unit_id', $unitId))
+            ->where('paid_amount', '>', 0)
+            ->whereNotIn('status', ['draft', 'cancelled'])
+            ->get()
+            ->flatMap(function (Invoice $invoice) use ($shareByUnit, $managementByUnit) {
+                $rentCollected = min((float) $invoice->paid_amount, (float) $invoice->rent_amount);
+                $ownerEligibleRent = min(
+                    $rentCollected,
+                    max((float) $invoice->rent_amount - (float) $invoice->pattern_topup_amount, 0)
+                );
+                $grossShare = $ownerEligibleRent * (($shareByUnit[$invoice->unit_id] ?? 100) / 100);
+                $managementFee = $grossShare * (($managementByUnit[$invoice->unit_id] ?? 0) / 100);
+                $date = $invoice->stay_check_out_date ?: $invoice->period_end ?: $invoice->invoice_date;
+
+                if ($grossShare <= 0 || ! $date) {
+                    return [];
+                }
+
+                $description = 'Rent collected — '.$invoice->invoice_no
+                    .($invoice->booking?->booking_no ? ' / '.$invoice->booking->booking_no : '');
+                $base = [
+                    'date' => $date,
+                    'reference' => $invoice->invoice_no,
+                    'notes' => $invoice->unit?->building?->name.' / '.$invoice->unit?->unit_no,
+                    'source' => 'Paid invoice',
+                    'created_by' => null,
+                    'unit' => $invoice->unit,
+                ];
+
+                $rows = [[
+                    ...$base,
+                    'key' => 'invoice-rent-'.$invoice->id,
+                    'type' => 'rent_income',
+                    'type_label' => 'Rent income',
+                    'description' => $description,
+                    'debit' => 0,
+                    'credit' => $grossShare,
+                ]];
+
+                if ($managementFee > 0) {
+                    $rows[] = [
+                        ...$base,
+                        'key' => 'invoice-fee-'.$invoice->id,
+                        'type' => 'management_fee',
+                        'type_label' => 'Management fee',
+                        'description' => 'Management fee — '.$invoice->invoice_no,
+                        'debit' => $managementFee,
+                        'credit' => 0,
+                    ];
+                }
+
+                return $rows;
+            });
+
+        $allRows = $manual->concat($rentRows)->concat($expenses)->concat($transfers)
             ->filter(function (array $row) use ($search, $type, $from, $to): bool {
                 if ($type && $row['type'] !== $type) {
                     return false;
