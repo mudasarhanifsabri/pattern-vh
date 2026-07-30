@@ -375,6 +375,38 @@ class BookingModuleTest extends TestCase
         $this->assertNotNull($booking->fresh()->unit->building);
     }
 
+    public function test_dashboard_occupancy_uses_today_and_the_extended_checkout_date(): void
+    {
+        $this->seed();
+
+        $admin = User::where('email', 'admin@example.com')->firstOrFail();
+        Booking::query()->update(['booking_status' => 'cancelled']);
+        \App\Models\Unit::query()->update(['availability_status' => 'available']);
+
+        $booking = Booking::where('booking_no', 'BK-DEMO-0001')->firstOrFail();
+        $booking->extensionRequests()->delete();
+        $booking->forceFill([
+            'check_in_date' => today()->subDays(5),
+            'check_out_date' => today()->subDay(),
+            'booking_status' => 'extended',
+        ])->save();
+        BookingExtensionRequest::create([
+            'booking_id' => $booking->id,
+            'tenant_id' => $booking->tenant_id,
+            'requested_check_out_date' => today()->addDays(3),
+            'extra_rent_amount' => 1000,
+            'status' => 'paid_extended',
+        ]);
+
+        $response = $this->actingAs($admin)
+            ->get(route('dashboard'))
+            ->assertOk();
+        $operations = $response->viewData('operationsDashboard');
+
+        $this->assertSame(50.0, $operations['occupancy']);
+        $this->assertSame('1 booked / 1 available', $operations['cards'][1]['note']);
+    }
+
     public function test_checkout_inspection_and_deposit_refund_flow(): void
     {
         $this->seed();

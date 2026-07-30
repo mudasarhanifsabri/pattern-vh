@@ -48,7 +48,7 @@ class DashboardController extends Controller
                     'building',
                     'bookings' => fn ($query) => $query
                         ->with('tenant')
-                        ->whereIn('booking_status', Booking::ACTIVE_STATUSES)
+                        ->occupyingOn(today())
                         ->orderBy('check_in_date'),
                 ])
                 ->get() : collect(),
@@ -279,22 +279,24 @@ class DashboardController extends Controller
     private function activeBookingFilter(): \Closure
     {
         return fn ($query) => $query
-            ->whereIn('booking_status', Booking::ACTIVE_STATUSES)
-            ->whereDate('check_out_date', '>=', today());
+            ->occupyingOn(today());
     }
 
     private function occupiedNightsForPeriod($periodStart, $periodEnd): int
     {
         return Booking::query()
+            ->with(['extensionRequests' => fn ($query) => $query
+                ->whereIn('status', Booking::OCCUPYING_EXTENSION_STATUSES)])
+            ->whereHas('unit', fn ($query) => $query->whereNull('units.deleted_at'))
             ->whereIn('booking_status', Booking::ACTIVE_STATUSES)
             ->whereDate('check_in_date', '<=', $periodEnd->toDateString())
-            ->whereDate('check_out_date', '>=', $periodStart->toDateString())
-            ->get(['check_in_date', 'check_out_date'])
+            ->effectiveCheckoutOnOrAfter($periodStart)
+            ->get(['id', 'unit_id', 'check_in_date', 'check_out_date'])
             ->sum(function (Booking $booking) use ($periodStart, $periodEnd): int {
                 $periodStartDay = $periodStart->copy()->startOfDay();
                 $periodEndDay = $periodEnd->copy()->startOfDay();
                 $start = $booking->check_in_date->copy()->startOfDay();
-                $end = $booking->check_out_date->copy()->startOfDay();
+                $end = $booking->effective_check_out_date;
                 $start = $start->greaterThan($periodStartDay) ? $start : $periodStartDay;
                 $end = $end->lessThan($periodEndDay) ? $end : $periodEndDay;
 

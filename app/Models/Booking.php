@@ -88,6 +88,14 @@ class Booking extends Model
         });
     }
 
+    public function scopeOccupyingOn(Builder $query, Carbon|string $date): Builder
+    {
+        return $query
+            ->whereIn('booking_status', self::ACTIVE_STATUSES)
+            ->whereDate('check_in_date', '<=', $date)
+            ->effectiveCheckoutOnOrAfter($date);
+    }
+
     public function getDepositReceiptRecordAttribute(): ?Receipt
     {
         $invoices = $this->relationLoaded('invoices')

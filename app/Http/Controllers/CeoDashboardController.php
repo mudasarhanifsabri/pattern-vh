@@ -30,8 +30,7 @@ class CeoDashboardController extends Controller
             ->where(fn ($query) => $query
                 ->whereIn('availability_status', ['booked', 'occupied'])
                 ->orWhereHas('bookings', fn ($booking) => $booking
-                    ->whereIn('booking_status', Booking::ACTIVE_STATUSES)
-                    ->whereDate('check_out_date', '>=', today())))
+                    ->occupyingOn(today())))
             ->count();
 
         $months = collect(range(5, 0))->map(function (int $back): array {
