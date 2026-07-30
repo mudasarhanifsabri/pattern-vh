@@ -103,7 +103,9 @@ class Booking extends Model
 
     public function unit(): BelongsTo
     {
-        return $this->belongsTo(Unit::class);
+        return $this->belongsTo(Unit::class)
+            ->withTrashed()
+            ->withDefault(['unit_no' => 'Archived']);
     }
 
     public function tenant(): BelongsTo

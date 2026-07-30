@@ -359,6 +359,22 @@ class BookingModuleTest extends TestCase
             ->assertSee($extendedCheckout->format('M d, Y'));
     }
 
+    public function test_dashboard_handles_a_booking_for_an_archived_apartment(): void
+    {
+        $this->seed();
+
+        $admin = User::where('email', 'admin@example.com')->firstOrFail();
+        $booking = Booking::where('booking_no', 'BK-DEMO-0001')->firstOrFail();
+        $booking->unit->delete();
+
+        $this->actingAs($admin)
+            ->get(route('dashboard'))
+            ->assertOk();
+
+        $this->assertTrue($booking->fresh()->unit->trashed());
+        $this->assertNotNull($booking->fresh()->unit->building);
+    }
+
     public function test_checkout_inspection_and_deposit_refund_flow(): void
     {
         $this->seed();

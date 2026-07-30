@@ -51,7 +51,12 @@ class Unit extends Model
 
     public function building(): BelongsTo
     {
-        return $this->belongsTo(Building::class);
+        return $this->belongsTo(Building::class)
+            ->withTrashed()
+            ->withDefault([
+                'name' => 'Property unavailable',
+                'area' => 'Dubai',
+            ]);
     }
 
     public function owners(): BelongsToMany
