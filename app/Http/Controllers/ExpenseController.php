@@ -23,14 +23,26 @@ class ExpenseController extends Controller
     {
         $expenses = Expense::query()
             ->with(['owner', 'unit.building'])
-            ->when(request('search'), fn ($query, string $search) => $query->where('expense_no', 'like', "%{$search}%")->orWhere('name', 'like', "%{$search}%"))
+            ->when(request('search'), fn ($query, string $search) => $query->where(
+                fn ($searchQuery) => $searchQuery
+                    ->where('expense_no', 'like', "%{$search}%")
+                    ->orWhere('name', 'like', "%{$search}%")
+            ))
             ->when(request('type'), fn ($query, string $type) => $query->where('type', $type))
             ->when(request('expense_to_role'), fn ($query, string $role) => $query->where('expense_to_role', $role))
+            ->when(request('unit_id'), fn ($query, string $unitId) => $query->where('unit_id', $unitId))
             ->latest('incurred_on')
             ->paginate(12)
             ->withQueryString();
 
-        return view('expenses.index', compact('expenses'));
+        return view('expenses.index', [
+            'expenses' => $expenses,
+            'units' => Unit::query()
+                ->with('building')
+                ->whereHas('expenses')
+                ->orderBy('unit_no')
+                ->get(),
+        ]);
     }
 
     public function create()

@@ -105,6 +105,43 @@ class AccountingModuleTest extends TestCase
         $this->actingAs($admin)->get(route('reports.export', ['type' => 'expenses']))->assertOk()->assertHeader('content-type', 'text/csv; charset=UTF-8');
     }
 
+    public function test_expense_list_can_be_filtered_by_unit(): void
+    {
+        $this->seed();
+
+        $admin = User::where('email', 'admin@example.com')->firstOrFail();
+        $units = Unit::query()->take(2)->get();
+        $this->assertCount(2, $units);
+
+        Expense::create([
+            'expense_no' => 'EXP-UNIT-FILTER-A',
+            'name' => 'Selected unit expense',
+            'type' => 'maintenance',
+            'expense_to_role' => 'company',
+            'unit_id' => $units[0]->id,
+            'association' => 'unit',
+            'incurred_on' => now(),
+            'amount' => 100,
+        ]);
+        Expense::create([
+            'expense_no' => 'EXP-UNIT-FILTER-B',
+            'name' => 'Other unit expense',
+            'type' => 'maintenance',
+            'expense_to_role' => 'company',
+            'unit_id' => $units[1]->id,
+            'association' => 'unit',
+            'incurred_on' => now(),
+            'amount' => 200,
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('expenses.index', ['unit_id' => $units[0]->id]))
+            ->assertOk()
+            ->assertSee('All units')
+            ->assertSee('Selected unit expense')
+            ->assertDontSee('Other unit expense');
+    }
+
     public function test_accounting_finance_sheet_exports_invoice_owner_periods(): void
     {
         $this->seed();
