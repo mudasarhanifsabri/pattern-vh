@@ -191,6 +191,15 @@ class BookingController extends Controller
                 ->whereNotIn('status', ['completed', 'cancelled'])
                 ->update(['status' => 'cancelled']);
 
+            $hasAnotherActiveBooking = Booking::query()
+                ->where('unit_id', $booking->unit_id)
+                ->whereKeyNot($booking->id)
+                ->whereIn('booking_status', Booking::ACTIVE_STATUSES)
+                ->exists();
+            $booking->unit()->update([
+                'availability_status' => $hasAnotherActiveBooking ? 'booked' : 'available',
+            ]);
+
             $booking->notificationLogs()->create([
                 'channel' => 'internal',
                 'recipient' => 'reservations',

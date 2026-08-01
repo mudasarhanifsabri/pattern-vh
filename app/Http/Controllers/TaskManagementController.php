@@ -396,7 +396,13 @@ class TaskManagementController extends Controller
 
         if ($task->status === 'completed') {
             $openTasks = BookingTask::where('unit_id', $task->unit_id)->whereNotIn('status', ['completed', 'closed', 'cancelled'])->exists();
-            Unit::whereKey($task->unit_id)->update(['availability_status' => $openTasks ? 'maintenance' : 'available']);
+            $activeBooking = Booking::query()
+                ->where('unit_id', $task->unit_id)
+                ->whereIn('booking_status', Booking::ACTIVE_STATUSES)
+                ->exists();
+            Unit::whereKey($task->unit_id)->update([
+                'availability_status' => $activeBooking ? 'booked' : ($openTasks ? 'maintenance' : 'available'),
+            ]);
             return;
         }
 

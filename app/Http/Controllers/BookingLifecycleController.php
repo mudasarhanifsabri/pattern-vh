@@ -222,6 +222,14 @@ class BookingLifecycleController extends Controller
         $this->ensureBookingStatus($booking, Booking::ACTIVE_STATUSES, 'Checkout can only be completed for an active booking.');
 
         $booking->update(['booking_status' => 'checked_out']);
+        $hasAnotherActiveBooking = Booking::query()
+            ->where('unit_id', $booking->unit_id)
+            ->whereKeyNot($booking->id)
+            ->whereIn('booking_status', Booking::ACTIVE_STATUSES)
+            ->exists();
+        $booking->unit()->update([
+            'availability_status' => $hasAnotherActiveBooking ? 'booked' : 'available',
+        ]);
         $cancelled = $invoiceScheduler->cancelFutureUnpaidInvoices($booking);
         $this->createCheckoutTasks($booking);
         $booking->depositRefund()->firstOrCreate([], [

@@ -94,6 +94,7 @@ class BookingModuleTest extends TestCase
         $this->assertEquals(500, (float) $booking->invoices()->firstOrFail()->pattern_topup_amount);
         $this->assertEquals(5650, (float) $booking->total_amount);
         $this->assertSame('auto', $booking->smart_lock_code_mode);
+        $this->assertSame('booked', $unit->fresh()->availability_status);
         $this->assertNotEmpty($booking->smart_lock_code);
         $this->assertNotNull($booking->smart_lock_code_valid_from);
         $this->assertNotNull($booking->smart_lock_code_valid_until);
@@ -556,6 +557,7 @@ class BookingModuleTest extends TestCase
         $booking->refresh();
 
         $this->assertSame('checked_out', $booking->booking_status);
+        $this->assertSame('available', $booking->unit->fresh()->availability_status);
         $this->assertDatabaseHas(BookingDepositRefund::class, [
             'booking_id' => $booking->id,
             'tenant_id' => $booking->tenant_id,

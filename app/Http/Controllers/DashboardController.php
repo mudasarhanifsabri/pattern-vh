@@ -48,7 +48,7 @@ class DashboardController extends Controller
                     'building',
                     'bookings' => fn ($query) => $query
                         ->with('tenant')
-                        ->occupyingOn(today())
+                        ->whereIn('booking_status', Booking::ACTIVE_STATUSES)
                         ->orderBy('check_in_date'),
                 ])
                 ->get() : collect(),

@@ -42,6 +42,7 @@ class DtcmCheckinController extends Controller
         ]);
 
         $dtcmCheckin->booking()->update(['booking_status' => 'checked_in']);
+        $dtcmCheckin->booking->unit()->update(['availability_status' => 'occupied']);
 
         ActivityLogger::log('dtcm_checkins.registered', "DTCM check-in completed for booking {$dtcmCheckin->booking->booking_no}.", $dtcmCheckin);
 
