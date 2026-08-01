@@ -105,6 +105,55 @@ class BookingModuleTest extends TestCase
             && count($mail->attachments()) >= 1);
     }
 
+    public function test_admin_creating_a_draft_booking_also_generates_its_invoice(): void
+    {
+        $this->seed();
+        Mail::fake();
+
+        $admin = User::where('email', 'admin@example.com')->firstOrFail();
+        $building = Building::query()->firstOrFail();
+        $unit = Unit::create([
+            'building_id' => $building->id,
+            'unit_no' => 'DRAFT-INV-01',
+            'unit_type' => 'Studio',
+            'availability_status' => 'available',
+            'rent_period' => 'monthly',
+        ]);
+        $tenant = Tenant::create([
+            'full_name' => 'Draft Invoice Tenant',
+            'mobile_no' => '+971501234999',
+            'identity_type' => 'passport',
+        ]);
+
+        $this->actingAs($admin)
+            ->post(route('bookings.store'), [
+                'booking_type' => 'holiday_home',
+                'unit_id' => $unit->id,
+                'tenant_id' => $tenant->id,
+                'check_in_date' => '2026-08-10',
+                'check_out_date' => '2026-08-15',
+                'guest_count' => 1,
+                'rent_amount' => 2000,
+                'deposit_amount' => 500,
+                'dtcm_fee' => 20,
+                'cleaning_fee' => 100,
+                'agency_fee' => 0,
+                'booking_status' => 'draft',
+                'source' => 'Direct',
+            ])
+            ->assertRedirect();
+
+        $booking = Booking::where('unit_id', $unit->id)->firstOrFail();
+
+        $this->assertDatabaseHas(Invoice::class, [
+            'booking_id' => $booking->id,
+            'tenant_id' => $tenant->id,
+            'status' => 'sent',
+            'total_amount' => 2720,
+            'balance_amount' => 2720,
+        ]);
+    }
+
     public function test_admin_can_manage_booking_smart_lock_access_code(): void
     {
         $this->seed();

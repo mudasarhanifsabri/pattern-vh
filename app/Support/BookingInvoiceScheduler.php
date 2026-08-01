@@ -13,7 +13,9 @@ class BookingInvoiceScheduler
     {
         $booking->loadMissing(['tenant', 'unit']);
 
-        if (! in_array($booking->booking_status, Booking::ACTIVE_STATUSES, true)) {
+        // Draft bookings need an invoice so payment can confirm the booking.
+        // Only terminal bookings should be excluded from invoice generation.
+        if (! in_array($booking->booking_status, ['draft', ...Booking::ACTIVE_STATUSES], true)) {
             return;
         }
 
