@@ -49,8 +49,7 @@
                             <span class="mt-4 inline-flex rounded-full bg-white/15 px-3 py-1.5 text-xs font-black backdrop-blur">{{ str($unit->availability_status)->headline() }}</span>
                         </div>
                     </div>
-                    <div class="grid grid-cols-3 divide-x divide-slate-100 p-4 text-center">
-                        <div><p class="text-[10px] font-bold uppercase text-slate-400">Rent</p><p class="mt-1 text-sm font-black text-[#071a3b]">AED {{ number_format((float) $unit->rent_amount, 0) }}</p></div>
+                    <div class="grid grid-cols-2 divide-x divide-slate-100 p-4 text-center">
                         <div><p class="text-[10px] font-bold uppercase text-slate-400">Fee</p><p class="mt-1 text-sm font-black text-[#071a3b]">{{ $unit->management_fee_percent ?: 0 }}%</p></div>
                         <div><p class="text-[10px] font-bold uppercase text-slate-400">Size</p><p class="mt-1 text-sm font-black text-[#071a3b]">{{ $unit->size_sqft ? number_format((float) $unit->size_sqft) : '-' }}</p></div>
                     </div>
