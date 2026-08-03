@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Expense;
 use App\Models\Invoice;
 use App\Models\Owner;
+use App\Models\Unit;
 use App\Support\OwnerStatementPdf;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -16,15 +17,19 @@ class OwnerStatementController extends Controller
         $owner = $this->ownerFor($request);
         $from = $request->date('from') ?: now()->startOfMonth();
         $to = $request->date('to') ?: now()->endOfMonth();
-        $statement = $owner ? $this->buildStatement($owner, $from, $to) : null;
+        $unit = $owner ? $this->unitFor($request, $owner) : null;
+        $statement = $owner ? $this->buildStatement($owner, $from, $to, $unit?->id) : null;
 
         if ($owner && $request->boolean('export')) {
             return $this->export($owner, $statement, $from, $to);
         }
 
         return view('owner-statements.index', [
-            'owners' => Owner::orderBy('full_name')->get(),
+            'owners' => $request->user()->can('owner-statements.manage')
+                ? Owner::with('units.building')->orderBy('full_name')->get()
+                : collect([$owner])->filter(),
             'owner' => $owner,
+            'unit' => $unit,
             'from' => $from,
             'to' => $to,
             'statement' => $statement,
@@ -38,12 +43,13 @@ class OwnerStatementController extends Controller
 
         $from = $request->date('from') ?: now()->startOfMonth();
         $to = $request->date('to') ?: now()->endOfMonth();
-        $statement = $this->buildStatement($owner, $from, $to);
-        $filename = 'owner-statement-'.$owner->id.'-'.$from->format('Ymd').'-'.$to->format('Ymd').'.pdf';
+        $unit = $this->unitFor($request, $owner);
+        $statement = $this->buildStatement($owner, $from, $to, $unit?->id);
+        $filename = 'owner-statement-'.$owner->id.($unit ? '-unit-'.$unit->id : '').'-'.$from->format('Ymd').'-'.$to->format('Ymd').'.pdf';
 
-        return response($pdf->make($owner, $statement, $from, $to), 200, [
+        return response($pdf->make($owner, $statement, $from, $to, $unit), 200, [
             'Content-Type' => 'application/pdf',
-            'Content-Disposition' => 'inline; filename="'.$filename.'"',
+            'Content-Disposition' => ($request->boolean('download') ? 'attachment' : 'inline').'; filename="'.$filename.'"',
         ]);
     }
 
@@ -54,14 +60,27 @@ class OwnerStatementController extends Controller
 
         $from = $request->date('from') ?: now()->startOfMonth();
         $to = $request->date('to') ?: now()->endOfMonth();
+        $unit = $this->unitFor($request, $owner);
+        $pdfQuery = $request->except('download');
 
         return view('owner-statements.pdf-preview', [
             'owner' => $owner,
+            'unit' => $unit,
             'from' => $from,
             'to' => $to,
-            'pdfUrl' => route('owner-statements.pdf', $request->query()),
+            'pdfUrl' => route('owner-statements.pdf', $pdfQuery),
+            'downloadUrl' => route('owner-statements.pdf', array_merge($pdfQuery, ['download' => 1])),
             'backUrl' => route('owner-statements.index', $request->query()),
         ]);
+    }
+
+    private function unitFor(Request $request, Owner $owner): ?Unit
+    {
+        if (! $request->filled('unit_id')) {
+            return null;
+        }
+
+        return $owner->units->firstWhere('id', $request->integer('unit_id'));
     }
 
     private function ownerFor(Request $request): ?Owner
@@ -80,9 +99,10 @@ class OwnerStatementController extends Controller
         return Owner::with('units.building')->first();
     }
 
-    private function buildStatement(Owner $owner, $from, $to): array
+    private function buildStatement(Owner $owner, $from, $to, ?int $unitId = null): array
     {
-        $unitIds = $owner->units->pluck('id');
+        $unitIds = $owner->units->pluck('id')
+            ->when($unitId, fn ($ids) => $ids->filter(fn ($id) => (int) $id === $unitId));
         $shareByUnit = $owner->units->mapWithKeys(fn ($unit) => [$unit->id => (float) ($unit->pivot->share_percent ?? 100)]);
         $managementByUnit = $owner->units->mapWithKeys(fn ($unit) => [$unit->id => (float) ($unit->management_fee_percent ?? 0)]);
 
@@ -131,6 +151,7 @@ class OwnerStatementController extends Controller
         $expenses = Expense::query()
             ->with('unit.building')
             ->where('owner_id', $owner->id)
+            ->when($unitId, fn ($query) => $query->where('unit_id', $unitId))
             ->whereDate('incurred_on', '>=', $from->toDateString())
             ->whereDate('incurred_on', '<=', $to->toDateString())
             ->get()

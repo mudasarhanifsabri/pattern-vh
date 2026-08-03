@@ -21,9 +21,9 @@
             </a>
             <div class="min-w-0 flex-1 text-center">
                 <p class="truncate text-sm font-black text-[#071a3b]">{{ $owner->full_name }}</p>
-                <p class="text-xs font-semibold text-slate-500">{{ $from->format('M d, Y') }} to {{ $to->format('M d, Y') }}</p>
+                <p class="text-xs font-semibold text-slate-500">{{ $unit ? $unit->building?->name.' / Unit '.$unit->unit_no.' · ' : '' }}{{ $from->format('M d, Y') }} to {{ $to->format('M d, Y') }}</p>
             </div>
-            <a href="{{ $pdfUrl }}" download class="inline-flex h-11 items-center justify-center rounded-2xl bg-blue-600 px-4 text-sm font-black text-white">
+            <a href="{{ $downloadUrl }}" class="inline-flex h-11 items-center justify-center rounded-2xl bg-blue-600 px-4 text-sm font-black text-white">
                 Save
             </a>
         </div>

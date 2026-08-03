@@ -3,16 +3,17 @@
 namespace App\Support;
 
 use App\Models\Owner;
+use App\Models\Unit;
 use Illuminate\Support\Collection;
 
 class OwnerStatementPdf
 {
     private array $commands = [];
 
-    public function make(Owner $owner, array $statement, $from, $to): string
+    public function make(Owner $owner, array $statement, $from, $to, ?Unit $unit = null): string
     {
         $this->commands = [];
-        $unitTitle = $owner->units
+        $unitTitle = ($unit ? collect([$unit]) : $owner->units)
             ->map(fn ($unit) => trim(($unit->building?->name ? $unit->building->name.' ' : '').$unit->unit_no))
             ->filter()
             ->take(3)

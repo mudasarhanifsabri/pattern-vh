@@ -4,26 +4,44 @@
         && ! auth()->user()?->can('accounting.view')
         && ! auth()->user()?->can('accounting.manage')
         && ! auth()->user()?->can('users.manage');
+    $statementQuery = array_filter([
+        'owner_id' => $owner?->id,
+        'unit_id' => $unit?->id,
+        'from' => $from->format('Y-m-d'),
+        'to' => $to->format('Y-m-d'),
+    ], fn ($value) => filled($value));
 @endphp
 
 <x-slot name="header"><div><p class="text-[11px] font-bold uppercase tracking-[0.22em] text-blue-600">Accounting</p><h1 class="text-2xl font-bold text-[#071a3b]">Owner Account Statement</h1></div></x-slot>
 
 <div class="{{ $ownerOnly ? 'tenant-app-screen' : '' }} space-y-5">
     <section class="{{ $ownerOnly ? 'rounded-[1.6rem] bg-white p-5 shadow-[0_18px_45px_rgba(15,23,42,0.08)]' : 'erp-card p-5' }}">
-        <form method="GET" class="grid gap-3 {{ $ownerOnly ? '' : 'lg:grid-cols-[1fr_160px_160px_auto_auto] lg:items-end' }}">
+        <form method="GET" class="grid gap-3 {{ $ownerOnly ? '' : 'lg:grid-cols-[1fr_1fr_150px_150px_auto] lg:items-end' }}">
             @can('owner-statements.manage')
                 <div><x-input-label for="owner_id" value="Owner" /><select id="owner_id" name="owner_id" class="erp-focus mt-1 h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm">@foreach($owners as $ownerOption)<option value="{{ $ownerOption->id }}" @selected($owner?->id === $ownerOption->id)>{{ $ownerOption->full_name }}</option>@endforeach</select></div>
             @endcan
+            <div>
+                <x-input-label for="unit_id" value="Unit" />
+                <select id="unit_id" name="unit_id" class="erp-focus mt-1 h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm">
+                    <option value="">All units</option>
+                    @foreach($owners as $unitOwner)
+                        @foreach($unitOwner->units as $unitOption)
+                            <option value="{{ $unitOption->id }}" data-owner-id="{{ $unitOwner->id }}" @selected($unit?->id === $unitOption->id)>{{ $unitOption->building?->name }} / Unit {{ $unitOption->unit_no }}</option>
+                        @endforeach
+                    @endforeach
+                </select>
+            </div>
             <div><x-input-label for="from" value="From" /><x-text-input id="from" name="from" type="date" class="mt-1 block h-12 w-full rounded-2xl" :value="$from->format('Y-m-d')" /></div>
             <div><x-input-label for="to" value="To" /><x-text-input id="to" name="to" type="date" class="mt-1 block h-12 w-full rounded-2xl" :value="$to->format('Y-m-d')" /></div>
             <button class="h-12 rounded-2xl bg-slate-900 px-4 text-sm font-black text-white">Filter</button>
-            @if($owner)
-                <div class="grid grid-cols-2 gap-2 {{ $ownerOnly ? '' : 'lg:contents' }}">
-                    <a href="{{ $ownerOnly ? route('owner-statements.pdf-preview', request()->query()) : route('owner-statements.pdf', request()->query()) }}" @unless($ownerOnly) target="_blank" @endunless class="inline-flex h-12 items-center justify-center rounded-2xl bg-slate-900 px-4 text-sm font-black text-white">PDF</a>
-                    <a href="{{ route('owner-statements.index', array_merge(request()->query(), ['export' => 1])) }}" class="inline-flex h-12 items-center justify-center rounded-2xl bg-blue-600 px-4 text-sm font-black text-white">CSV</a>
-                </div>
-            @endif
         </form>
+        @if($owner)
+            <div class="mt-3 grid gap-2 sm:grid-cols-3">
+                <a href="{{ route('owner-statements.pdf-preview', $statementQuery) }}" class="inline-flex h-12 items-center justify-center rounded-2xl bg-slate-900 px-4 text-sm font-black text-white">Preview PDF</a>
+                <a href="{{ route('owner-statements.pdf', array_merge($statementQuery, ['download' => 1])) }}" class="inline-flex h-12 items-center justify-center rounded-2xl bg-blue-600 px-4 text-sm font-black text-white">Download PDF</a>
+                <a href="{{ route('owner-statements.index', array_merge($statementQuery, ['export' => 1])) }}" class="inline-flex h-12 items-center justify-center rounded-2xl border border-blue-200 bg-blue-50 px-4 text-sm font-black text-blue-700">Download CSV</a>
+            </div>
+        @endif
     </section>
 
     @if($owner && $statement)
@@ -67,7 +85,7 @@
         <section class="{{ $ownerOnly ? 'rounded-[1.6rem] bg-white p-5 shadow-[0_18px_45px_rgba(15,23,42,0.08)]' : 'erp-card overflow-hidden' }}">
             <div class="{{ $ownerOnly ? '' : 'border-b border-slate-100 p-5' }}">
                 <h2 class="text-lg font-black text-[#071a3b]">Statement activity</h2>
-                <p class="mt-1 text-sm text-slate-500">Owner rent entitlement is included by each invoice period. Owner expenses use their incurred date; security deposits and Pattern top-up remain excluded.</p>
+                <p class="mt-1 text-sm text-slate-500">Rent collected and owner entitlement are included by each invoice period. Owner expenses use their incurred date; security deposits and Pattern top-up remain excluded.</p>
             </div>
 
             <div class="mt-5 space-y-3 md:hidden">
@@ -103,4 +121,25 @@
         <div class="rounded-2xl border border-dashed border-slate-200 bg-white px-4 py-10 text-center text-sm text-slate-500">Select an owner to view the account statement.</div>
     @endif
 </div>
+@can('owner-statements.manage')
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const ownerSelect = document.getElementById('owner_id');
+    const unitSelect = document.getElementById('unit_id');
+    if (!ownerSelect || !unitSelect) return;
+
+    const filterUnits = (reset = false) => {
+        const ownerId = ownerSelect.value;
+        Array.from(unitSelect.options).forEach((option) => {
+            if (!option.value) return;
+            option.hidden = option.dataset.ownerId !== ownerId;
+        });
+        if (reset && unitSelect.selectedOptions[0]?.dataset.ownerId !== ownerId) unitSelect.value = '';
+    };
+
+    ownerSelect.addEventListener('change', () => filterUnits(true));
+    filterUnits();
+});
+</script>
+@endcan
 </x-app-layout>
