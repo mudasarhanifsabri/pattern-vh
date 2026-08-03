@@ -27,10 +27,9 @@ class CeoDashboardController extends Controller
         $revenue = $rentRevenue + $serviceRevenue;
         $unitCount = max(Unit::count(), 1);
         $occupied = Unit::query()
-            ->where(fn ($query) => $query
-                ->where('availability_status', 'occupied')
-                ->orWhereHas('bookings', fn ($booking) => $booking
-                    ->occupyingOn(today())))
+            ->whereHas('bookings', fn ($booking) => $booking
+                ->whereIn('booking_status', Booking::ACTIVE_STATUSES)
+                ->effectiveCheckoutOnOrAfter(today()))
             ->count();
 
         $months = collect(range(5, 0))->map(function (int $back): array {

@@ -176,7 +176,7 @@
     @elseif ($owner)
         @php
             $ownerUnitsCount = $ownerUnits->count();
-            $occupiedOwnerUnits = $ownerUnits->filter(fn ($unit) => $unit->availability_status === 'occupied' || $unit->bookings->isNotEmpty())->count();
+            $occupiedOwnerUnits = $ownerUnits->filter(fn ($unit) => $unit->bookings->isNotEmpty())->count();
             $availableOwnerUnits = $ownerUnits->filter(fn ($unit) => $unit->availability_status === 'available' && $unit->bookings->isEmpty())->count();
             $ownerCollectionTotal = $recentPayments->sum(fn ($payment) => (float) $payment->amount);
         @endphp

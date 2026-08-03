@@ -26,7 +26,6 @@ class UnitController extends Controller
     {
         $owner = $this->currentOwner();
         $activeBookingStatuses = Booking::ACTIVE_STATUSES;
-        $unavailableStatuses = ['occupied'];
         $activeBookingFilter = fn ($query) => $query
             ->whereIn('booking_status', $activeBookingStatuses)
             ->effectiveCheckoutOnOrAfter(today());
@@ -45,16 +44,14 @@ class UnitController extends Controller
             })
             ->when(request('status'), function ($query, string $status) use ($activeBookingFilter): void {
                 if ($status === 'available') {
-                    $query->where('availability_status', 'available')
-                        ->whereDoesntHave('bookings', $activeBookingFilter);
+                    $query->whereDoesntHave('bookings', $activeBookingFilter)
+                        ->whereNotIn('availability_status', ['maintenance', 'blocked']);
 
                     return;
                 }
 
                 if ($status === 'occupied') {
-                    $query->where(fn ($query) => $query
-                        ->whereIn('availability_status', $unavailableStatuses)
-                        ->orWhereHas('bookings', $activeBookingFilter));
+                    $query->whereHas('bookings', $activeBookingFilter);
 
                     return;
                 }
@@ -73,8 +70,8 @@ class UnitController extends Controller
             'units' => $units,
             'stats' => [
                 'total' => (clone $statsQuery)->count(),
-                'available' => (clone $statsQuery)->where('availability_status', 'available')->whereDoesntHave('bookings', $activeBookingFilter)->count(),
-                'occupied' => (clone $statsQuery)->where(fn ($query) => $query->whereIn('availability_status', $unavailableStatuses)->orWhereHas('bookings', $activeBookingFilter))->count(),
+                'available' => (clone $statsQuery)->whereDoesntHave('bookings', $activeBookingFilter)->whereNotIn('availability_status', ['maintenance', 'blocked'])->count(),
+                'occupied' => (clone $statsQuery)->whereHas('bookings', $activeBookingFilter)->count(),
                 'maintenance' => (clone $statsQuery)->where('availability_status', 'maintenance')->count(),
             ],
         ]);

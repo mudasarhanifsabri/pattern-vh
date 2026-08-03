@@ -80,7 +80,9 @@
                     @php
                         $picture = collect($unit->pictures ?? [])->first();
                         $activeBooking = $unit->bookings->first();
-                        $displayStatus = $activeBooking ? 'occupied' : $unit->availability_status;
+                        $displayStatus = $activeBooking
+                            ? 'occupied'
+                            : (in_array($unit->availability_status, ['maintenance', 'blocked'], true) ? $unit->availability_status : 'available');
                         $displayStatusLabel = $activeBooking ? 'Occupied' : str($displayStatus)->headline();
                     @endphp
                     <article class="group overflow-hidden rounded-[1.5rem] border border-slate-200 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-xl hover:shadow-slate-950/10">

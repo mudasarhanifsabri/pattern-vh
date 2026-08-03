@@ -49,6 +49,7 @@ class DashboardController extends Controller
                     'bookings' => fn ($query) => $query
                         ->with('tenant')
                         ->whereIn('booking_status', Booking::ACTIVE_STATUSES)
+                        ->effectiveCheckoutOnOrAfter(today())
                         ->orderBy('check_in_date'),
                 ])
                 ->get() : collect(),
@@ -256,16 +257,12 @@ class DashboardController extends Controller
         $base = Unit::query()
             ->when($unitIds, fn ($query) => $query->whereIn('id', $unitIds));
         $total = (clone $base)->count();
-        $unavailableStatuses = ['occupied'];
-
         $occupied = (clone $base)
-            ->where(fn ($query) => $query
-                ->whereIn('availability_status', $unavailableStatuses)
-                ->orWhereHas('bookings', $activeBookingFilter))
+            ->whereHas('bookings', $activeBookingFilter)
             ->count();
         $available = (clone $base)
-            ->where('availability_status', 'available')
             ->whereDoesntHave('bookings', $activeBookingFilter)
+            ->whereNotIn('availability_status', ['maintenance', 'blocked'])
             ->count();
 
         return [
@@ -279,7 +276,8 @@ class DashboardController extends Controller
     private function activeBookingFilter(): \Closure
     {
         return fn ($query) => $query
-            ->occupyingOn(today());
+            ->whereIn('booking_status', Booking::ACTIVE_STATUSES)
+            ->effectiveCheckoutOnOrAfter(today());
     }
 
     private function occupiedNightsForPeriod($periodStart, $periodEnd): int
