@@ -142,6 +142,35 @@ class AccountingModuleTest extends TestCase
             ->assertDontSee('Other unit expense');
     }
 
+    public function test_accounting_manager_can_delete_an_expense(): void
+    {
+        $this->seed();
+
+        $admin = User::where('email', 'admin@example.com')->firstOrFail();
+        $expense = Expense::create([
+            'expense_no' => 'EXP-DELETE-TEST',
+            'name' => 'Expense to delete',
+            'type' => 'other',
+            'expense_to_role' => 'company',
+            'association' => 'company',
+            'incurred_on' => now()->toDateString(),
+            'amount' => 99,
+            'created_by' => $admin->id,
+            'updated_by' => $admin->id,
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('expenses.show', $expense))
+            ->assertOk()
+            ->assertSee('Delete');
+
+        $this->actingAs($admin)
+            ->delete(route('expenses.destroy', $expense))
+            ->assertRedirect(route('expenses.index'));
+
+        $this->assertSoftDeleted('expenses', ['id' => $expense->id]);
+    }
+
     public function test_accounting_finance_sheet_exports_invoice_owner_periods(): void
     {
         $this->seed();
