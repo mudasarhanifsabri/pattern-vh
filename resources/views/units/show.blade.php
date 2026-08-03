@@ -15,7 +15,7 @@
         $ownerPortal = auth()->user()?->can('portal.owner') && ! auth()->user()?->can('units.manage');
         $statusClass = match ($unit->availability_status) {
             'available' => 'bg-emerald-50 text-emerald-700',
-            'booked', 'occupied' => 'bg-blue-50 text-blue-700',
+            'occupied' => 'bg-blue-50 text-blue-700',
             'maintenance' => 'bg-amber-50 text-amber-700',
             default => 'bg-rose-50 text-rose-700',
         };

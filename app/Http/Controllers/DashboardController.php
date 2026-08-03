@@ -126,7 +126,7 @@ class DashboardController extends Controller
             'updatedLabel' => now()->format('H:i'),
             'cards' => [
                 ['label' => 'Revenue', 'value' => 'AED '.number_format($revenue >= 1000 ? $revenue / 1000 : $revenue, $revenue >= 1000 ? 1 : 0).($revenue >= 1000 ? 'k' : ''), 'note' => '+12.4% vs last month', 'tone' => 'blue', 'icon' => 'M4 19V5m0 14h16M8 15l3-3 3 2 4-6'],
-                ['label' => 'Occupancy', 'value' => $occupancy.'%', 'note' => $occupiedUnits.' booked / '.$availableUnits.' available', 'tone' => 'cyan', 'icon' => 'M7 3h10v18H7zM10 7h4M10 11h4M10 15h4'],
+                ['label' => 'Occupancy', 'value' => $occupancy.'%', 'note' => $occupiedUnits.' occupied / '.$availableUnits.' available', 'tone' => 'cyan', 'icon' => 'M7 3h10v18H7zM10 7h4M10 11h4M10 15h4'],
                 ['label' => 'Active bookings', 'value' => $activeBookings, 'note' => '+'.Booking::whereDate('created_at', today())->count().' today', 'tone' => 'violet', 'icon' => 'M8 2v4m8-4v4M4 10h16M6 5h12a2 2 0 0 1 2 2v12H4V7a2 2 0 0 1 2-2z'],
                 ['label' => 'Pending payments', 'value' => 'AED '.number_format($pendingBalance >= 1000 ? $pendingBalance / 1000 : $pendingBalance, $pendingBalance >= 1000 ? 1 : 0).($pendingBalance >= 1000 ? 'k' : ''), 'note' => Invoice::where('balance_amount', '>', 0)->count().' invoices pending', 'tone' => 'amber', 'icon' => 'M8 4h8M9 4c0 3 6 3 6 6s-6 3-6 6h6m-6 4h8'],
             ],
@@ -151,7 +151,7 @@ class DashboardController extends Controller
             ],
             'miniCards' => [
                 ['label' => 'Total units', 'value' => Unit::count(), 'note' => Building::count().' buildings in portfolio', 'tone' => 'rose'],
-                ['label' => 'Occupancy rate', 'value' => $occupancy.'%', 'note' => $occupiedUnits.' of '.$unitCount.' units booked', 'tone' => 'emerald'],
+                ['label' => 'Occupancy rate', 'value' => $occupancy.'%', 'note' => $occupiedUnits.' of '.$unitCount.' units occupied', 'tone' => 'emerald'],
                 ['label' => 'Monthly revenue', 'value' => 'AED '.number_format($revenue, 0), 'note' => 'Current month collected', 'tone' => 'emerald'],
                 ['label' => 'Collection rate', 'value' => $collectionRate.'%', 'note' => 'Payment collection efficiency', 'tone' => 'cyan'],
                 ['label' => 'Active tenants', 'value' => Tenant::count(), 'note' => Booking::whereIn('booking_status', $activeBookingStatuses)->count().' active stays', 'tone' => 'rose'],
@@ -244,7 +244,7 @@ class DashboardController extends Controller
 
         return [
             ['label' => 'My units', 'value' => $unitIds->count(), 'note' => 'Units assigned to your owner account', 'tone' => 'blue'],
-            ['label' => 'Booked / occupied', 'value' => $occupancy['occupied'], 'note' => 'Booked, occupied, or has an active booking', 'tone' => 'emerald'],
+            ['label' => 'Occupied', 'value' => $occupancy['occupied'], 'note' => 'Units with a current active stay', 'tone' => 'emerald'],
             ['label' => 'Vacant', 'value' => $occupancy['available'], 'note' => 'Available with no active booking', 'tone' => 'amber'],
             ['label' => 'Owner expenses', 'value' => 'AED '.number_format((float) Expense::where('owner_id', $owner->id)->sum('amount'), 0), 'note' => 'Expenses linked to your account', 'tone' => 'cyan'],
         ];
@@ -256,7 +256,7 @@ class DashboardController extends Controller
         $base = Unit::query()
             ->when($unitIds, fn ($query) => $query->whereIn('id', $unitIds));
         $total = (clone $base)->count();
-        $unavailableStatuses = ['booked', 'occupied'];
+        $unavailableStatuses = ['occupied'];
 
         $occupied = (clone $base)
             ->where(fn ($query) => $query

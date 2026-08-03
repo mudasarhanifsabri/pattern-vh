@@ -94,7 +94,7 @@ class BookingModuleTest extends TestCase
         $this->assertEquals(500, (float) $booking->invoices()->firstOrFail()->pattern_topup_amount);
         $this->assertEquals(5650, (float) $booking->total_amount);
         $this->assertSame('auto', $booking->smart_lock_code_mode);
-        $this->assertSame('booked', $unit->fresh()->availability_status);
+        $this->assertSame('available', $unit->fresh()->availability_status);
         $this->assertNotEmpty($booking->smart_lock_code);
         $this->assertNotNull($booking->smart_lock_code_valid_from);
         $this->assertNotNull($booking->smart_lock_code_valid_until);
@@ -406,7 +406,7 @@ class BookingModuleTest extends TestCase
         $this->assertStringContainsString($newCheckout->toDateString(), $invoiceExport->streamedContent());
     }
 
-    public function test_extended_booking_remains_booked_in_unit_list_and_availability_calendar(): void
+    public function test_extended_booking_remains_occupied_in_unit_list_and_availability_calendar(): void
     {
         $this->seed();
 
@@ -491,7 +491,7 @@ class BookingModuleTest extends TestCase
         $operations = $response->viewData('operationsDashboard');
 
         $this->assertSame(50.0, $operations['occupancy']);
-        $this->assertSame('1 booked / 1 available', $operations['cards'][1]['note']);
+        $this->assertSame('1 occupied / 1 available', $operations['cards'][1]['note']);
     }
 
     public function test_checkout_inspection_and_deposit_refund_flow(): void

@@ -26,7 +26,7 @@
 
 <div class="space-y-6">
     <div class="-mt-3 flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
-        <p class="max-w-3xl text-base leading-7 text-slate-500">Scan booked, available, blocked, owner stays, and maintenance periods across every unit.</p>
+        <p class="max-w-3xl text-base leading-7 text-slate-500">Scan occupied, available, blocked, owner stays, and maintenance periods across every unit.</p>
         @can('bookings.manage')
             <a href="{{ route('bookings.create') }}" class="inline-flex h-14 items-center justify-center gap-2 rounded-2xl bg-blue-600 px-6 text-sm font-black text-white shadow-2xl shadow-blue-600/25 transition hover:bg-blue-700 active:scale-[0.98]">
                 <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
@@ -44,7 +44,7 @@
             </nav>
             <div class="hidden items-center gap-3 px-4 text-[11px] font-bold text-slate-500 lg:flex">
                 <span class="inline-flex items-center gap-1.5"><span class="h-2 w-2 rounded-sm bg-emerald-200"></span> Available</span>
-                <span class="inline-flex items-center gap-1.5"><span class="h-2 w-2 rounded-sm bg-blue-200"></span> Booked</span>
+                <span class="inline-flex items-center gap-1.5"><span class="h-2 w-2 rounded-sm bg-blue-200"></span> Occupied</span>
                 <span class="inline-flex items-center gap-1.5"><span class="h-2 w-2 rounded-sm bg-violet-200"></span> Owner stay</span>
                 <span class="inline-flex items-center gap-1.5"><span class="h-2 w-2 rounded-sm bg-amber-200"></span> Maintenance</span>
                 <span class="inline-flex items-center gap-1.5"><span class="h-2 w-2 rounded-sm bg-slate-300"></span> Blocked</span>

@@ -96,11 +96,11 @@ class PortfolioModuleTest extends TestCase
             ->assertSee('Booking history');
     }
 
-    public function test_dashboard_occupancy_counts_booked_and_occupied_units(): void
+    public function test_dashboard_occupancy_counts_occupied_units(): void
     {
         $building = Building::create(['name' => 'Horizon Tower']);
 
-        foreach (['available', 'booked', 'occupied'] as $index => $status) {
+        foreach (['available', 'occupied'] as $index => $status) {
             Unit::create([
                 'building_id' => $building->id,
                 'unit_no' => '12'.($index + 1),
@@ -114,10 +114,10 @@ class PortfolioModuleTest extends TestCase
         $method->setAccessible(true);
         $counts = $method->invoke(new DashboardController());
 
-        $this->assertSame(3, $counts['total']);
-        $this->assertSame(2, $counts['occupied']);
+        $this->assertSame(2, $counts['total']);
+        $this->assertSame(1, $counts['occupied']);
         $this->assertSame(1, $counts['available']);
-        $this->assertSame(66.7, $counts['occupancy']);
+        $this->assertSame(50.0, $counts['occupancy']);
     }
 
     public function test_owner_can_only_view_assigned_units(): void

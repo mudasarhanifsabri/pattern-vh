@@ -28,7 +28,7 @@ class CeoDashboardController extends Controller
         $unitCount = max(Unit::count(), 1);
         $occupied = Unit::query()
             ->where(fn ($query) => $query
-                ->whereIn('availability_status', ['booked', 'occupied'])
+                ->where('availability_status', 'occupied')
                 ->orWhereHas('bookings', fn ($booking) => $booking
                     ->occupyingOn(today())))
             ->count();

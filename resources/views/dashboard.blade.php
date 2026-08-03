@@ -176,7 +176,7 @@
     @elseif ($owner)
         @php
             $ownerUnitsCount = $ownerUnits->count();
-            $occupiedOwnerUnits = $ownerUnits->filter(fn ($unit) => in_array($unit->availability_status, ['booked', 'occupied'], true) || $unit->bookings->isNotEmpty())->count();
+            $occupiedOwnerUnits = $ownerUnits->filter(fn ($unit) => $unit->availability_status === 'occupied' || $unit->bookings->isNotEmpty())->count();
             $availableOwnerUnits = $ownerUnits->filter(fn ($unit) => $unit->availability_status === 'available' && $unit->bookings->isEmpty())->count();
             $ownerCollectionTotal = $recentPayments->sum(fn ($payment) => (float) $payment->amount);
         @endphp
@@ -199,7 +199,7 @@
                                 <p class="mt-1 text-xl font-black">{{ $ownerUnitsCount }}</p>
                             </div>
                             <div class="rounded-2xl bg-white/12 p-3 backdrop-blur">
-                                <p class="text-[10px] font-bold uppercase text-white/55">Rented</p>
+                                <p class="text-[10px] font-bold uppercase text-white/55">Occupied</p>
                                 <p class="mt-1 text-xl font-black">{{ $occupiedOwnerUnits }}</p>
                             </div>
                             <div class="rounded-2xl bg-white/12 p-3 backdrop-blur">
@@ -252,9 +252,9 @@
                                     <p class="mt-1 text-sm font-semibold text-slate-500">{{ $unit->unit_type ?: 'Property' }}</p>
                                 </div>
                                 @php
-                                    $ownerUnitStatus = $unit->bookings->isNotEmpty() ? 'booked' : $unit->availability_status;
+                                    $ownerUnitStatus = $unit->bookings->isNotEmpty() ? 'occupied' : $unit->availability_status;
                                 @endphp
-                                <span class="shrink-0 rounded-full {{ in_array($ownerUnitStatus, ['occupied', 'booked'], true) ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700' }} px-2.5 py-1 text-[11px] font-black">{{ str($ownerUnitStatus)->headline() }}</span>
+                                <span class="shrink-0 rounded-full {{ $ownerUnitStatus === 'occupied' ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700' }} px-2.5 py-1 text-[11px] font-black">{{ str($ownerUnitStatus)->headline() }}</span>
                             </div>
                             <div class="mt-4 grid grid-cols-2 gap-3 text-sm">
                                 <div class="rounded-2xl bg-slate-50 p-3">

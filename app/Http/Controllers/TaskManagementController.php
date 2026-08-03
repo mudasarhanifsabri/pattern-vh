@@ -401,7 +401,7 @@ class TaskManagementController extends Controller
                 ->whereIn('booking_status', Booking::ACTIVE_STATUSES)
                 ->exists();
             Unit::whereKey($task->unit_id)->update([
-                'availability_status' => $activeBooking ? 'booked' : ($openTasks ? 'maintenance' : 'available'),
+                'availability_status' => $activeBooking ? 'occupied' : ($openTasks ? 'maintenance' : 'available'),
             ]);
             return;
         }

@@ -26,7 +26,7 @@ class Unit extends Model
 
     public const TYPES = ['Studio', '1 BHK', '2 BHK', '3 BHK', '4 BHK', '5 BHK', 'Villa', 'Penthouse'];
 
-    public const AVAILABILITY_STATUSES = ['available', 'booked', 'occupied', 'maintenance', 'blocked'];
+    public const AVAILABILITY_STATUSES = ['available', 'occupied', 'maintenance', 'blocked'];
 
     public const RENT_PERIODS = ['monthly', 'seasonal', 'yearly'];
 

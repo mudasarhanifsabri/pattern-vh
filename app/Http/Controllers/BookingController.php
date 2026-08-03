@@ -194,11 +194,13 @@ class BookingController extends Controller
             $hasAnotherActiveBooking = Booking::query()
                 ->where('unit_id', $booking->unit_id)
                 ->whereKeyNot($booking->id)
-                ->whereIn('booking_status', Booking::ACTIVE_STATUSES)
+                ->occupyingOn(today())
                 ->exists();
-            $booking->unit()->update([
-                'availability_status' => $hasAnotherActiveBooking ? 'booked' : 'available',
-            ]);
+            if (! in_array($booking->unit->availability_status, ['maintenance', 'blocked'], true)) {
+                $booking->unit()->update([
+                    'availability_status' => $hasAnotherActiveBooking ? 'occupied' : 'available',
+                ]);
+            }
 
             $booking->notificationLogs()->create([
                 'channel' => 'internal',

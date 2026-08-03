@@ -81,7 +81,7 @@
                         $picture = collect($unit->pictures ?? [])->first();
                         $activeBooking = $unit->bookings->first();
                         $displayStatus = $activeBooking ? 'occupied' : $unit->availability_status;
-                        $displayStatusLabel = $activeBooking ? 'Booked' : str($displayStatus)->headline();
+                        $displayStatusLabel = $activeBooking ? 'Occupied' : str($displayStatus)->headline();
                     @endphp
                     <article class="group overflow-hidden rounded-[1.5rem] border border-slate-200 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-xl hover:shadow-slate-950/10">
                         <div class="relative h-52 bg-slate-100">
@@ -93,7 +93,7 @@
                                 </div>
                             @endif
                             <div class="absolute left-4 top-4 flex gap-2">
-                                <span class="rounded-full {{ $displayStatus === 'available' ? 'bg-emerald-100 text-emerald-700' : (in_array($displayStatus, ['booked', 'occupied'], true) ? 'bg-blue-100 text-blue-700' : 'bg-amber-100 text-amber-700') }} px-3 py-1 text-xs font-black">{{ $displayStatusLabel }}</span>
+                                <span class="rounded-full {{ $displayStatus === 'available' ? 'bg-emerald-100 text-emerald-700' : ($displayStatus === 'occupied' ? 'bg-blue-100 text-blue-700' : 'bg-amber-100 text-amber-700') }} px-3 py-1 text-xs font-black">{{ $displayStatusLabel }}</span>
                             </div>
                             <span class="absolute right-4 top-4 rounded-full bg-white/90 px-3 py-1 text-xs font-black text-slate-700">{{ $unit->unit_type }}</span>
                             <div class="absolute inset-0 grid place-items-center bg-slate-950/0 opacity-0 transition group-hover:bg-slate-950/25 group-hover:opacity-100">

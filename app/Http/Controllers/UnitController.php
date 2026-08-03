@@ -26,7 +26,7 @@ class UnitController extends Controller
     {
         $owner = $this->currentOwner();
         $activeBookingStatuses = Booking::ACTIVE_STATUSES;
-        $unavailableStatuses = ['booked', 'occupied'];
+        $unavailableStatuses = ['occupied'];
         $activeBookingFilter = fn ($query) => $query
             ->whereIn('booking_status', $activeBookingStatuses)
             ->effectiveCheckoutOnOrAfter(today());

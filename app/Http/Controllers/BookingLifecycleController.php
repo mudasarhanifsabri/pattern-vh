@@ -225,11 +225,13 @@ class BookingLifecycleController extends Controller
         $hasAnotherActiveBooking = Booking::query()
             ->where('unit_id', $booking->unit_id)
             ->whereKeyNot($booking->id)
-            ->whereIn('booking_status', Booking::ACTIVE_STATUSES)
+            ->occupyingOn(today())
             ->exists();
-        $booking->unit()->update([
-            'availability_status' => $hasAnotherActiveBooking ? 'booked' : 'available',
-        ]);
+        if (! in_array($booking->unit->availability_status, ['maintenance', 'blocked'], true)) {
+            $booking->unit()->update([
+                'availability_status' => $hasAnotherActiveBooking ? 'occupied' : 'available',
+            ]);
+        }
         $cancelled = $invoiceScheduler->cancelFutureUnpaidInvoices($booking);
         $this->createCheckoutTasks($booking);
         $booking->depositRefund()->firstOrCreate([], [

@@ -15,9 +15,13 @@ class BookingWorkflow
             return;
         }
 
-        $booking->unit()->update([
-            'availability_status' => $booking->booking_status === 'checked_in' ? 'occupied' : 'booked',
-        ]);
+        if (! in_array($booking->unit->availability_status, ['maintenance', 'blocked'], true)) {
+            $booking->unit()->update([
+                'availability_status' => $booking->check_in_date?->lte(today()) && $booking->effective_check_out_date->gte(today())
+                    ? 'occupied'
+                    : 'available',
+            ]);
+        }
 
         $this->createCheckoutTasks($booking);
         $this->createNotificationLogs($booking);
