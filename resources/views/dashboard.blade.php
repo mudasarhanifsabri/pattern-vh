@@ -370,7 +370,7 @@
             <span class="inline-flex items-center gap-2 text-xs font-semibold text-slate-500"><span class="h-2 w-2 rounded-full bg-emerald-400"></span>Updated {{ $operationsDashboard['updatedLabel'] }}</span>
         </div>
 
-        <div class="mb-5 grid gap-3 xl:grid-cols-3">
+        <div class="mb-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
             @foreach($operationsDashboard['alertStrip'] as $alert)
                 <a href="{{ route($alert['route']) }}" class="rounded-2xl border p-4 transition hover:-translate-y-0.5 {{ $alert['tone'] === 'rose' ? 'border-rose-200 bg-rose-50 text-rose-700' : ($alert['tone'] === 'cyan' ? 'border-cyan-200 bg-cyan-50 text-cyan-700' : 'border-amber-200 bg-amber-50 text-amber-700') }}">
                     <div class="flex items-center justify-between gap-3">
@@ -384,6 +384,34 @@
                 </a>
             @endforeach
         </div>
+
+        @if($operationsDashboard['overdueCheckoutBookings']->isNotEmpty())
+            <section class="mb-5 overflow-hidden rounded-3xl border border-rose-200 bg-white shadow-sm">
+                <div class="flex flex-col gap-3 border-b border-rose-100 bg-rose-50 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                        <h2 class="text-lg font-black text-rose-950">Bookings requiring extension or checkout</h2>
+                        <p class="mt-1 text-sm font-semibold text-rose-700">Checkout date has passed, but the booking is still active and the unit remains occupied.</p>
+                    </div>
+                    <span class="inline-flex w-fit rounded-full bg-rose-600 px-3 py-1.5 text-xs font-black text-white">{{ $operationsDashboard['overdueCheckoutBookings']->count() }} need action</span>
+                </div>
+                <div class="divide-y divide-slate-100">
+                    @foreach($operationsDashboard['overdueCheckoutBookings'] as $overdueBooking)
+                        @php
+                            $daysOverdue = $overdueBooking->effective_check_out_date->diffInDays(today());
+                        @endphp
+                        <div class="flex flex-col gap-4 px-5 py-4 lg:flex-row lg:items-center lg:justify-between">
+                            <div class="grid min-w-0 flex-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                                <div><p class="text-[10px] font-black uppercase tracking-wider text-slate-400">Booking / Tenant</p><p class="mt-1 text-sm font-black text-[#071a3b]">{{ $overdueBooking->booking_no }}</p><p class="truncate text-xs text-slate-500">{{ $overdueBooking->tenant->full_name }}</p></div>
+                                <div><p class="text-[10px] font-black uppercase tracking-wider text-slate-400">Apartment</p><p class="mt-1 text-sm font-black text-[#071a3b]">{{ $overdueBooking->unit->building->name }}</p><p class="text-xs text-slate-500">Unit {{ $overdueBooking->unit->unit_no }}</p></div>
+                                <div><p class="text-[10px] font-black uppercase tracking-wider text-slate-400">Stay dates</p><p class="mt-1 text-sm font-black text-[#071a3b]">{{ $overdueBooking->check_in_date->format('d M Y') }}</p><p class="text-xs font-bold text-rose-600">Checkout {{ $overdueBooking->effective_check_out_date->format('d M Y') }}</p></div>
+                                <div><p class="text-[10px] font-black uppercase tracking-wider text-slate-400">Action overdue</p><p class="mt-1 text-sm font-black text-rose-700">{{ $daysOverdue }} {{ str('day')->plural($daysOverdue) }}</p><p class="text-xs text-slate-500">{{ str($overdueBooking->booking_status)->replace('_', ' ')->headline() }}</p></div>
+                            </div>
+                            <a href="{{ route('bookings.show', $overdueBooking) }}" class="inline-flex shrink-0 items-center justify-center rounded-xl bg-rose-600 px-4 py-3 text-xs font-black text-white hover:bg-rose-700">Extend or check out</a>
+                        </div>
+                    @endforeach
+                </div>
+            </section>
+        @endif
 
         <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
             @foreach($operationsDashboard['cards'] as $card)

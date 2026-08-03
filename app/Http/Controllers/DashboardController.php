@@ -121,6 +121,20 @@ class DashboardController extends Controller
             ->limit(5)
             ->get();
 
+        $overdueCheckoutBookings = Booking::query()
+            ->with([
+                'tenant',
+                'unit.building',
+                'extensionRequests' => fn ($query) => $query
+                    ->whereIn('status', Booking::OCCUPYING_EXTENSION_STATUSES),
+            ])
+            ->whereIn('booking_status', Booking::ACTIVE_STATUSES)
+            ->orderBy('check_out_date')
+            ->get()
+            ->filter(fn (Booking $booking) => $booking->effective_check_out_date->lt(today()))
+            ->sortBy(fn (Booking $booking) => $booking->effective_check_out_date->timestamp)
+            ->values();
+
         return [
             'periodLabel' => $periodStart->format('M j').' - '.$periodEnd->format('M j, Y'),
             'updatedLabel' => now()->format('H:i'),
@@ -142,9 +156,11 @@ class DashboardController extends Controller
             'occupiedNights' => $occupiedNights,
             'availableNights' => $availableNights,
             'todayMovements' => $todayMovements,
+            'overdueCheckoutBookings' => $overdueCheckoutBookings,
             'checkinsToday' => Booking::whereDate('check_in_date', today())->count(),
             'checkoutsToday' => Booking::whereDate('check_out_date', today())->count(),
             'alertStrip' => [
+                ['label' => 'Extend or Check Out', 'value' => $overdueCheckoutBookings->count(), 'note' => 'bookings passed checkout and need action', 'tone' => 'rose', 'route' => 'bookings.index'],
                 ['label' => 'Overdue Payments', 'value' => Invoice::where('balance_amount', '>', 0)->whereDate('due_date', '<', today())->count(), 'note' => 'payments are overdue', 'tone' => 'amber', 'route' => 'invoices.index'],
                 ['label' => 'Urgent Maintenance', 'value' => BookingTask::where('priority', 'urgent')->whereNotIn('status', ['completed', 'cancelled'])->count(), 'note' => 'urgent service requests', 'tone' => 'rose', 'route' => 'tasks.index'],
                 ['label' => 'Expiring Contracts', 'value' => OwnerUnitContract::whereDate('contract_end_date', '>=', today())->whereDate('contract_end_date', '<=', now()->addDays(30))->count(), 'note' => 'owner contracts expiring in 30 days', 'tone' => 'cyan', 'route' => 'owner-contracts.index'],
