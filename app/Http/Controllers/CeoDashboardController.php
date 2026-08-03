@@ -28,8 +28,7 @@ class CeoDashboardController extends Controller
         $unitCount = max(Unit::count(), 1);
         $occupied = Unit::query()
             ->whereHas('bookings', fn ($booking) => $booking
-                ->whereIn('booking_status', Booking::ACTIVE_STATUSES)
-                ->effectiveCheckoutOnOrAfter(today()))
+                ->whereIn('booking_status', Booking::ACTIVE_STATUSES))
             ->count();
 
         $months = collect(range(5, 0))->map(function (int $back): array {

@@ -225,7 +225,7 @@ class BookingLifecycleController extends Controller
         $hasAnotherActiveBooking = Booking::query()
             ->where('unit_id', $booking->unit_id)
             ->whereKeyNot($booking->id)
-            ->occupyingOn(today())
+            ->whereIn('booking_status', Booking::ACTIVE_STATUSES)
             ->exists();
         if (! in_array($booking->unit->availability_status, ['maintenance', 'blocked'], true)) {
             $booking->unit()->update([

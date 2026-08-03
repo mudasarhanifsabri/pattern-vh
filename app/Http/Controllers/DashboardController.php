@@ -49,7 +49,6 @@ class DashboardController extends Controller
                     'bookings' => fn ($query) => $query
                         ->with('tenant')
                         ->whereIn('booking_status', Booking::ACTIVE_STATUSES)
-                        ->effectiveCheckoutOnOrAfter(today())
                         ->orderBy('check_in_date'),
                 ])
                 ->get() : collect(),
@@ -276,8 +275,7 @@ class DashboardController extends Controller
     private function activeBookingFilter(): \Closure
     {
         return fn ($query) => $query
-            ->whereIn('booking_status', Booking::ACTIVE_STATUSES)
-            ->effectiveCheckoutOnOrAfter(today());
+            ->whereIn('booking_status', Booking::ACTIVE_STATUSES);
     }
 
     private function occupiedNightsForPeriod($periodStart, $periodEnd): int

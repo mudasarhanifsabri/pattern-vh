@@ -27,8 +27,7 @@ class UnitController extends Controller
         $owner = $this->currentOwner();
         $activeBookingStatuses = Booking::ACTIVE_STATUSES;
         $activeBookingFilter = fn ($query) => $query
-            ->whereIn('booking_status', $activeBookingStatuses)
-            ->effectiveCheckoutOnOrAfter(today());
+            ->whereIn('booking_status', $activeBookingStatuses);
 
         $units = Unit::query()
             ->with(['building', 'owners'])
