@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Expense;
 use App\Models\Invoice;
 use App\Models\Owner;
+use App\Models\OwnerOpeningBalance;
 use App\Models\Unit;
 use App\Support\OwnerStatementPdf;
 use Illuminate\Http\Request;
@@ -12,6 +13,36 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class OwnerStatementController extends Controller
 {
+    public function storeOpeningBalance(Request $request)
+    {
+        $validated = $request->validate([
+            'owner_id' => ['required', 'integer', 'exists:owners,id'],
+            'unit_id' => ['nullable', 'integer', 'exists:units,id'],
+            'balance_date' => ['required', 'date'],
+            'amount' => ['required', 'numeric'],
+            'notes' => ['nullable', 'string', 'max:191'],
+            'statement_from' => ['nullable', 'date'],
+            'statement_to' => ['nullable', 'date'],
+        ]);
+
+        $owner = Owner::with('units')->findOrFail($validated['owner_id']);
+        if (! empty($validated['unit_id']) && ! $owner->units->contains('id', (int) $validated['unit_id'])) {
+            return back()->withErrors(['unit_id' => 'The selected unit does not belong to this owner.'])->withInput();
+        }
+
+        $statementFrom = $validated['statement_from'] ?? null;
+        $statementTo = $validated['statement_to'] ?? null;
+        unset($validated['statement_from'], $validated['statement_to']);
+        OwnerOpeningBalance::create($validated + ['created_by' => $request->user()->id]);
+
+        return redirect()->route('owner-statements.index', array_filter([
+            'owner_id' => $owner->id,
+            'unit_id' => $validated['unit_id'] ?? null,
+            'from' => $statementFrom,
+            'to' => $statementTo,
+        ]))->with('status', 'Opening balance added.');
+    }
+
     public function index(Request $request)
     {
         $owner = $this->ownerFor($request);
@@ -170,13 +201,25 @@ class OwnerStatementController extends Controller
             ]);
 
         $rows = $revenueRows->concat($expenses)->sortBy('date')->values();
+        $openingRecord = OwnerOpeningBalance::query()
+            ->where('owner_id', $owner->id)
+            ->when($unitId, fn ($query) => $query->where('unit_id', $unitId), fn ($query) => $query->whereNull('unit_id'))
+            ->whereDate('balance_date', '<=', $from->toDateString())
+            ->latest('balance_date')
+            ->latest('id')
+            ->first();
+        $openingBalance = (float) ($openingRecord?->amount ?? 0);
+        $periodNet = (float) $rows->sum('net');
 
         return [
             'rows' => $rows,
             'gross' => $rows->sum('gross'),
             'management_fee' => $rows->sum('management_fee'),
             'expenses' => $rows->sum('owner_expense'),
-            'net' => $rows->sum('net'),
+            'opening_balance' => $openingBalance,
+            'opening_balance_date' => $openingRecord?->balance_date,
+            'period_net' => $periodNet,
+            'net' => $openingBalance + $periodNet,
         ];
     }
 
@@ -185,6 +228,7 @@ class OwnerStatementController extends Controller
         return response()->streamDownload(function () use ($owner, $statement): void {
             $handle = fopen('php://output', 'w');
             fputcsv($handle, ['Owner', $owner->full_name]);
+            fputcsv($handle, ['Opening Balance', $statement['opening_balance'], 'As of', $statement['opening_balance_date']?->format('Y-m-d')]);
             // Include both booking stay dates so the exported owner ledger can be reconciled by checkout period.
             fputcsv($handle, ['Date', 'Description', 'Owner Rent Entitlement', 'Owner Rent Collected', 'Check-in Date', 'Check-out Date', 'Rent Share', 'Management Fee', 'Owner Expense', 'Net']);
             foreach ($statement['rows'] as $row) {

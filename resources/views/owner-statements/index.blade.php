@@ -15,6 +15,12 @@
 <x-slot name="header"><div><p class="text-[11px] font-bold uppercase tracking-[0.22em] text-blue-600">Accounting</p><h1 class="text-2xl font-bold text-[#071a3b]">Owner Account Statement</h1></div></x-slot>
 
 <div class="{{ $ownerOnly ? 'tenant-app-screen' : '' }} space-y-5">
+    @if(session('status'))
+        <div class="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-700">{{ session('status') }}</div>
+    @endif
+    @if($errors->any())
+        <div class="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-bold text-rose-700">{{ $errors->first() }}</div>
+    @endif
     <section class="{{ $ownerOnly ? 'rounded-[1.6rem] bg-white p-5 shadow-[0_18px_45px_rgba(15,23,42,0.08)]' : 'erp-card p-5' }}">
         <form method="GET" class="grid gap-3 {{ $ownerOnly ? '' : 'lg:grid-cols-[1fr_1fr_150px_150px_auto] lg:items-end' }}">
             @can('owner-statements.manage')
@@ -44,6 +50,29 @@
         @endif
     </section>
 
+    @can('owner-statements.manage')
+        @if($owner)
+            <section class="erp-card p-5">
+                <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                    <div><h2 class="text-lg font-black text-[#071a3b]">Add opening balance</h2><p class="mt-1 text-sm text-slate-500">Set a dated starting balance for this owner or one selected unit. The latest balance dated on or before the statement start date is used.</p></div>
+                    @if($statement['opening_balance_date'] ?? null)<span class="w-fit rounded-full bg-blue-50 px-3 py-1.5 text-xs font-black text-blue-700">Current: AED {{ number_format($statement['opening_balance'], 2) }} from {{ $statement['opening_balance_date']->format('d M Y') }}</span>@endif
+                </div>
+                <form method="POST" action="{{ route('owner-statements.opening-balance.store') }}" class="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-[1fr_1fr_160px_180px_1fr_auto] xl:items-end">
+                    @csrf
+                    <input type="hidden" name="owner_id" value="{{ $owner->id }}">
+                    <input type="hidden" name="statement_from" value="{{ $from->format('Y-m-d') }}">
+                    <input type="hidden" name="statement_to" value="{{ $to->format('Y-m-d') }}">
+                    <div><x-input-label for="opening_owner" value="Owner" /><input id="opening_owner" value="{{ $owner->full_name }}" class="mt-1 h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm" disabled></div>
+                    <div><x-input-label for="opening_unit_id" value="Unit" /><select id="opening_unit_id" name="unit_id" class="erp-focus mt-1 h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm"><option value="">All units</option>@foreach($owner->units as $openingUnit)<option value="{{ $openingUnit->id }}" @selected(old('unit_id', $unit?->id) == $openingUnit->id)>{{ $openingUnit->building?->name }} / Unit {{ $openingUnit->unit_no }}</option>@endforeach</select></div>
+                    <div><x-input-label for="balance_date" value="Balance date" /><input id="balance_date" name="balance_date" type="date" value="{{ old('balance_date', $from->format('Y-m-d')) }}" class="erp-focus mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm" required></div>
+                    <div><x-input-label for="amount" value="Opening balance" /><input id="amount" name="amount" type="number" step="0.01" value="{{ old('amount') }}" placeholder="0.00" class="erp-focus mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm" required></div>
+                    <div><x-input-label for="opening_notes" value="Notes" /><input id="opening_notes" name="notes" value="{{ old('notes') }}" placeholder="Legacy balance, handover, etc." class="erp-focus mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm"></div>
+                    <button class="h-11 rounded-xl bg-blue-600 px-5 text-sm font-black text-white">Add balance</button>
+                </form>
+            </section>
+        @endif
+    @endcan
+
     @if($owner && $statement)
         <div class="flex justify-end">
             <a href="{{ route('owners.account.index', $owner) }}" class="inline-flex h-11 items-center rounded-2xl border border-blue-200 bg-blue-50 px-4 text-sm font-black text-blue-700">Detailed account ledger →</a>
@@ -57,6 +86,7 @@
                 </div>
                 <div class="grid grid-cols-2 gap-3 p-4">
                     @foreach([
+                        ['label' => 'Opening balance', 'value' => $statement['opening_balance']],
                         ['label' => 'Gross rent share', 'value' => $statement['gross']],
                         ['label' => 'Management fee', 'value' => $statement['management_fee']],
                         ['label' => 'Owner expenses', 'value' => $statement['expenses']],
@@ -70,8 +100,9 @@
                 </div>
             </section>
         @else
-            <section class="grid gap-4 md:grid-cols-4">
+            <section class="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
                 @foreach([
+                    ['label' => 'Opening balance', 'value' => $statement['opening_balance']],
                     ['label' => 'Gross rent share', 'value' => $statement['gross']],
                     ['label' => 'Management fee', 'value' => $statement['management_fee']],
                     ['label' => 'Owner expenses', 'value' => $statement['expenses']],
