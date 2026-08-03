@@ -256,11 +256,7 @@
                                 @endphp
                                 <span class="shrink-0 rounded-full {{ $ownerUnitStatus === 'occupied' ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700' }} px-2.5 py-1 text-[11px] font-black">{{ str($ownerUnitStatus)->headline() }}</span>
                             </div>
-                            <div class="mt-4 grid grid-cols-2 gap-3 text-sm">
-                                <div class="rounded-2xl bg-slate-50 p-3">
-                                    <p class="text-[10px] font-bold uppercase text-slate-400">Rent</p>
-                                    <p class="mt-1 font-black text-[#071a3b]">AED {{ number_format((float) $unit->rent_amount, 0) }}</p>
-                                </div>
+                            <div class="mt-4 grid gap-3 text-sm">
                                 <div class="rounded-2xl bg-slate-50 p-3">
                                     <p class="text-[10px] font-bold uppercase text-slate-400">Area</p>
                                     <p class="mt-1 font-black text-[#071a3b]">{{ $unit->building?->area ?: 'Dubai' }}</p>

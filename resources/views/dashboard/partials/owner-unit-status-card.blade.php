@@ -1,6 +1,5 @@
 @php
     $activeBooking = $unit->bookings->first();
-    $rentAmount = (float) ($activeBooking?->rent_amount ?: $unit->rent_amount);
     $displayStatus = $activeBooking
         ? 'Occupied'
         : (in_array($unit->availability_status, ['maintenance', 'blocked'], true)
@@ -19,7 +18,7 @@
         </span>
     </div>
     <div class="mt-3 grid gap-2 text-xs font-semibold text-slate-500">
-        <p>{{ $unit->unit_type }} / Rent AED {{ number_format($rentAmount, 2) }}</p>
+        <p>{{ $unit->unit_type }}</p>
         @if($activeBooking)
             <p class="rounded-2xl bg-blue-50 px-3 py-2 font-black text-blue-700">
                 {{ $activeBooking->check_in_date?->format('M d, Y') }} to {{ $activeBooking->effective_check_out_date?->format('M d, Y') }}

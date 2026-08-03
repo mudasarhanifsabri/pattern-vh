@@ -41,7 +41,7 @@ class ErpFoundationTest extends TestCase
         $this->assertTrue($admin->hasRole('Super Admin'));
     }
 
-    public function test_owner_dashboard_shows_unit_rent_and_booking_duration(): void
+    public function test_owner_dashboard_hides_unit_rent_and_shows_booking_duration(): void
     {
         $this->seed();
 
@@ -57,7 +57,7 @@ class ErpFoundationTest extends TestCase
             ->assertOk()
             ->assertSee('My units status')
             ->assertSee('Unit 1402')
-            ->assertSee('Rent AED 8,500.00')
+            ->assertDontSee('Rent AED 8,500.00')
             ->assertSee('Nora Al Mansoori')
             ->assertSee($booking->check_in_date->format('M d, Y').' to '.$booking->check_out_date->format('M d, Y'));
     }
