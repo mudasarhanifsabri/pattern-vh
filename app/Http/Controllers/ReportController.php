@@ -6,6 +6,7 @@ use App\Models\Booking;
 use App\Models\Expense;
 use App\Models\Invoice;
 use App\Models\Owner;
+use App\Models\OwnerAccountEntry;
 use App\Models\Payment;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -87,28 +88,49 @@ class ReportController extends Controller
     private function ownerIndex(Request $request, Owner $owner, Carbon $from, Carbon $to)
     {
         $rent = $this->ownerRentCollections($owner, $from, $to);
-        $expenses = $this->ownerExpenseQuery($owner, $from, $to)->sum('amount');
-        $revenue = $rent;
+        $registeredExpenses = (float) $this->ownerExpenseQuery($owner, $from, $to)->sum('amount');
+        $accountCredits = (float) $this->ownerAccountEntryQuery($owner, $from, $to)->where('direction', 'credit')->sum('amount');
+        $accountDebits = (float) $this->ownerAccountEntryQuery($owner, $from, $to)->where('direction', 'debit')->sum('amount');
+        $expenses = $registeredExpenses + $accountDebits;
+        $revenue = $rent + $accountCredits;
+
+        $expenseBreakdown = $this->ownerExpenseQuery($owner, $from, $to)
+            ->selectRaw('type, SUM(amount) total')
+            ->groupBy('type')
+            ->get()
+            ->concat($this->ownerAccountEntryQuery($owner, $from, $to)
+                ->where('direction', 'debit')
+                ->selectRaw('type, SUM(amount) total')
+                ->groupBy('type')
+                ->get())
+            ->groupBy('type')
+            ->map(fn ($rows, $type) => (object) ['type' => $type, 'total' => $rows->sum('total')])
+            ->sortByDesc('total')
+            ->values();
 
         return view('reports.index', [
             'from' => $from,
             'to' => $to,
             'cards' => [
-                ['name' => 'Rent collected', 'type' => 'profit_loss', 'value' => $revenue, 'note' => 'Approved rent payments for your properties'],
+                ['name' => 'Rent collected', 'type' => 'profit_loss', 'value' => $rent, 'note' => 'Approved rent payments for your properties'],
+                ['name' => 'Account credits', 'type' => 'profit_loss', 'value' => $accountCredits, 'note' => 'Credits entered in the owner account ledger'],
                 ['name' => 'Owner expenses', 'type' => 'expenses', 'value' => $expenses, 'note' => 'Expenses assigned to your properties'],
                 ['name' => 'Net owner income', 'type' => 'profit_loss', 'value' => $revenue - $expenses, 'note' => $revenue > 0 ? round((($revenue - $expenses) / $revenue) * 100, 1).'% margin' : 'No rent collected'],
                 ['name' => 'Cash collected', 'type' => 'payments', 'value' => $revenue, 'note' => 'Rent portion only'],
             ],
             'profitLoss' => [
                 'rent' => $rent,
-                'fees' => 0,
+                'fees' => $accountCredits,
                 'revenue' => $revenue,
                 'expenses' => $expenses,
+                'registered_expenses' => $registeredExpenses,
+                'account_credits' => $accountCredits,
+                'account_debits' => $accountDebits,
                 'vat' => 0,
                 'deposits' => 0,
                 'net' => $revenue - $expenses,
             ],
-            'expenseBreakdown' => $this->ownerExpenseQuery($owner, $from, $to)->selectRaw('type, SUM(amount) total')->groupBy('type')->orderByDesc('total')->get(),
+            'expenseBreakdown' => $expenseBreakdown,
             'invoiceStatus' => $this->ownerInvoiceQuery($owner)->selectRaw('status, COUNT(*) total, SUM(balance_amount) balance')->groupBy('status')->get(),
             'ownerReport' => true,
             'owner' => $owner,
@@ -169,6 +191,14 @@ class ReportController extends Controller
                 $query->where('owner_id', $owner->id)
                     ->orWhereIn('unit_id', $unitIds);
             });
+    }
+
+    private function ownerAccountEntryQuery(Owner $owner, Carbon $from, Carbon $to)
+    {
+        return OwnerAccountEntry::query()
+            ->where('owner_id', $owner->id)
+            ->whereDate('entry_date', '>=', $from->toDateString())
+            ->whereDate('entry_date', '<=', $to->toDateString());
     }
 
     private function ownerRentCollections(Owner $owner, Carbon $from, Carbon $to): float
@@ -232,7 +262,11 @@ class ReportController extends Controller
     private function ownerProfitLossCsv($handle, Owner $owner, Carbon $from, Carbon $to): void
     {
         $rent = $this->ownerRentCollections($owner, $from, $to);
-        $expenses = (float) $this->ownerExpenseQuery($owner, $from, $to)->sum('amount');
+        $registeredExpenses = (float) $this->ownerExpenseQuery($owner, $from, $to)->sum('amount');
+        $accountCredits = (float) $this->ownerAccountEntryQuery($owner, $from, $to)->where('direction', 'credit')->sum('amount');
+        $accountDebits = (float) $this->ownerAccountEntryQuery($owner, $from, $to)->where('direction', 'debit')->sum('amount');
+        $expenses = $registeredExpenses + $accountDebits;
+        $revenue = $rent + $accountCredits;
 
         fputcsv($handle, ['Pattern Vacation Homes - Owner Income']);
         fputcsv($handle, ['Owner', $owner->full_name]);
@@ -240,8 +274,11 @@ class ReportController extends Controller
         fputcsv($handle, []);
         fputcsv($handle, ['Account', 'AED']);
         fputcsv($handle, ['Collected rent income', $rent]);
-        fputcsv($handle, ['Owner expenses', -$expenses]);
-        fputcsv($handle, ['Net owner income', $rent - $expenses]);
+        fputcsv($handle, ['Owner account credits', $accountCredits]);
+        fputcsv($handle, ['Total owner income', $revenue]);
+        fputcsv($handle, ['Registered owner expenses', -$registeredExpenses]);
+        fputcsv($handle, ['Owner account debits', -$accountDebits]);
+        fputcsv($handle, ['Net owner income', $revenue - $expenses]);
     }
 
     private function ownerBookingCsv($handle, Owner $owner, Carbon $from, Carbon $to): void

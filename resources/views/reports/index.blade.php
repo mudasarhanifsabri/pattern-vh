@@ -36,7 +36,10 @@
     $profitRows = $ownerReport
         ? [
             ['Collected rent income', $profitLoss['rent']],
-            ['Owner expenses', -$profitLoss['expenses']],
+            ['Owner account credits', $profitLoss['account_credits']],
+            ['Total owner income', $profitLoss['revenue']],
+            ['Registered owner expenses', -$profitLoss['registered_expenses']],
+            ['Owner account debits', -$profitLoss['account_debits']],
             ['Net owner income', $profitLoss['net']],
         ]
         : [

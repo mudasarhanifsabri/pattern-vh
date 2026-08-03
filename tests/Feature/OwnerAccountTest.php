@@ -63,6 +63,42 @@ class OwnerAccountTest extends TestCase
             ->assertDontSee('Ledger row 16');
     }
 
+    public function test_manual_owner_account_entries_are_reflected_in_owner_report(): void
+    {
+        $this->seed();
+
+        $portalUser = User::where('email', 'demo.owner@example.com')->firstOrFail();
+        $owner = Owner::where('user_id', $portalUser->id)->orWhere('email', $portalUser->email)->firstOrFail();
+        $owner->accountEntries()->create([
+            'entry_date' => now()->toDateString(),
+            'type' => 'adjustment',
+            'direction' => 'credit',
+            'amount' => 700,
+            'description' => 'Report credit adjustment',
+        ]);
+        $owner->accountEntries()->create([
+            'entry_date' => now()->toDateString(),
+            'type' => 'other',
+            'direction' => 'debit',
+            'amount' => 125,
+            'description' => 'Report debit adjustment',
+        ]);
+
+        $query = ['from' => now()->toDateString(), 'to' => now()->toDateString()];
+        $this->actingAs($portalUser)->get(route('reports.index', $query))
+            ->assertOk()
+            ->assertSee('Owner account credits')
+            ->assertSee('AED 700.00')
+            ->assertSee('Owner account debits')
+            ->assertSee('AED -125.00');
+
+        $export = $this->actingAs($portalUser)->get(route('reports.export', ['type' => 'profit_loss', ...$query]));
+        $export->assertOk();
+        $csv = $export->streamedContent();
+        $this->assertStringContainsString('"Owner account credits",700', $csv);
+        $this->assertStringContainsString('"Owner account debits",-125', $csv);
+    }
+
     public function test_account_can_be_filtered_by_owner_unit_and_portal_owner_can_only_view_their_account(): void
     {
         $this->seed();
