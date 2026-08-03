@@ -35,12 +35,10 @@
 @php
     $profitRows = $ownerReport
         ? [
-            ['Collected rent income', $profitLoss['rent']],
-            ['Owner account credits', $profitLoss['account_credits']],
-            ['Total owner income', $profitLoss['revenue']],
-            ['Registered owner expenses', -$profitLoss['registered_expenses']],
-            ['Owner account debits', -$profitLoss['account_debits']],
-            ['Net owner income', $profitLoss['net']],
+            ['Opening balance', $ownerLedger['opening']],
+            ['Credits in period', $ownerLedger['rows']->sum('credit')],
+            ['Debits in period', -$ownerLedger['rows']->sum('debit')],
+            ['Closing balance', $ownerLedger['closing']],
         ]
         : [
             ['Rent revenue', $profitLoss['rent']],
@@ -81,6 +79,25 @@
             </article>
         @endforeach
     </section>
+
+    @if($ownerReport)
+        <section class="overflow-hidden rounded-[1.6rem] bg-white shadow-[0_18px_45px_rgba(15,23,42,0.08)]">
+            <div class="border-b border-slate-100 p-5"><h2 class="text-lg font-black text-[#071a3b]">Owner transaction report</h2><p class="mt-1 text-sm text-slate-500">Opening balance includes every transaction before {{ $from->format('d M Y') }}.</p></div>
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-slate-200 text-sm">
+                    <thead class="bg-slate-50 text-left text-[11px] font-bold uppercase tracking-[0.14em] text-slate-500"><tr><th class="px-4 py-3">Date</th><th class="px-4 py-3">Description</th><th class="px-4 py-3 text-right">Credit</th><th class="px-4 py-3 text-right">Debit</th><th class="px-4 py-3 text-right">Balance</th></tr></thead>
+                    <tbody class="divide-y divide-slate-100">
+                        <tr class="bg-blue-50"><td class="px-4 py-4 font-bold">{{ $from->format('d M Y') }}</td><td class="px-4 py-4 font-black text-[#071a3b]">Opening balance - all previous transactions</td><td class="px-4 py-4 text-right">-</td><td class="px-4 py-4 text-right">-</td><td class="px-4 py-4 text-right font-black">AED {{ number_format($ownerLedger['opening'], 2) }}</td></tr>
+                        @forelse($ownerLedger['rows'] as $row)
+                            <tr><td class="whitespace-nowrap px-4 py-4">{{ $row['date']->format('d M Y') }}</td><td class="px-4 py-4 font-semibold text-[#071a3b]">{{ $row['description'] }}</td><td class="px-4 py-4 text-right font-bold text-emerald-700">{{ $row['credit'] > 0 ? 'AED '.number_format($row['credit'], 2) : '-' }}</td><td class="px-4 py-4 text-right font-bold text-rose-600">{{ $row['debit'] > 0 ? 'AED '.number_format($row['debit'], 2) : '-' }}</td><td class="px-4 py-4 text-right font-black">AED {{ number_format($row['balance'], 2) }}</td></tr>
+                        @empty
+                            <tr><td colspan="5" class="px-4 py-10 text-center text-slate-500">No transactions in this date range.</td></tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    @endif
 
     <section class="grid gap-5 xl:grid-cols-[1.4fr_1fr]">
         <article class="{{ $ownerOnly ? 'overflow-hidden rounded-[1.6rem] bg-white shadow-[0_18px_45px_rgba(15,23,42,0.08)]' : 'erp-card overflow-hidden' }}">

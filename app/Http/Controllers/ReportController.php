@@ -7,6 +7,7 @@ use App\Models\Expense;
 use App\Models\Invoice;
 use App\Models\Owner;
 use App\Models\OwnerAccountEntry;
+use App\Models\OwnerPayoutTransfer;
 use App\Models\Payment;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -87,12 +88,15 @@ class ReportController extends Controller
 
     private function ownerIndex(Request $request, Owner $owner, Carbon $from, Carbon $to)
     {
-        $rent = $this->ownerRentCollections($owner, $from, $to);
+        $ledger = $this->ownerLedger($owner, $from, $to);
+        $rent = (float) $ledger['rows']->where('source', 'rent')->sum('credit');
         $registeredExpenses = (float) $this->ownerExpenseQuery($owner, $from, $to)->sum('amount');
         $accountCredits = (float) $this->ownerAccountEntryQuery($owner, $from, $to)->where('direction', 'credit')->sum('amount');
         $accountDebits = (float) $this->ownerAccountEntryQuery($owner, $from, $to)->where('direction', 'debit')->sum('amount');
         $expenses = $registeredExpenses + $accountDebits;
         $revenue = $rent + $accountCredits;
+        $periodCredits = (float) $ledger['rows']->sum('credit');
+        $periodDebits = (float) $ledger['rows']->sum('debit');
 
         $expenseBreakdown = $this->ownerExpenseQuery($owner, $from, $to)
             ->selectRaw('type, SUM(amount) total')
@@ -112,11 +116,10 @@ class ReportController extends Controller
             'from' => $from,
             'to' => $to,
             'cards' => [
-                ['name' => 'Rent collected', 'type' => 'profit_loss', 'value' => $rent, 'note' => 'Approved rent payments for your properties'],
-                ['name' => 'Account credits', 'type' => 'profit_loss', 'value' => $accountCredits, 'note' => 'Credits entered in the owner account ledger'],
-                ['name' => 'Owner expenses', 'type' => 'expenses', 'value' => $expenses, 'note' => 'Expenses assigned to your properties'],
-                ['name' => 'Net owner income', 'type' => 'profit_loss', 'value' => $revenue - $expenses, 'note' => $revenue > 0 ? round((($revenue - $expenses) / $revenue) * 100, 1).'% margin' : 'No rent collected'],
-                ['name' => 'Cash collected', 'type' => 'payments', 'value' => $revenue, 'note' => 'Rent portion only'],
+                ['name' => 'Opening balance', 'type' => 'profit_loss', 'value' => $ledger['opening'], 'note' => 'All transactions before '.$from->format('d M Y')],
+                ['name' => 'Total credits', 'type' => 'profit_loss', 'value' => $periodCredits, 'note' => 'Credits during selected dates'],
+                ['name' => 'Total debits', 'type' => 'expenses', 'value' => $periodDebits, 'note' => 'Debits during selected dates'],
+                ['name' => 'Closing balance', 'type' => 'profit_loss', 'value' => $ledger['closing'], 'note' => 'Opening balance plus period activity'],
             ],
             'profitLoss' => [
                 'rent' => $rent,
@@ -128,13 +131,89 @@ class ReportController extends Controller
                 'account_debits' => $accountDebits,
                 'vat' => 0,
                 'deposits' => 0,
-                'net' => $revenue - $expenses,
+                'net' => $ledger['closing'],
             ],
             'expenseBreakdown' => $expenseBreakdown,
             'invoiceStatus' => $this->ownerInvoiceQuery($owner)->selectRaw('status, COUNT(*) total, SUM(balance_amount) balance')->groupBy('status')->get(),
             'ownerReport' => true,
             'owner' => $owner,
+            'ownerLedger' => $ledger,
         ]);
+    }
+
+    private function ownerLedger(Owner $owner, Carbon $from, Carbon $to): array
+    {
+        $unitIds = $owner->units->pluck('id');
+        $shareByUnit = $owner->units->mapWithKeys(fn ($unit) => [$unit->id => (float) ($unit->pivot->share_percent ?? 100)]);
+        $managementByUnit = $owner->units->mapWithKeys(fn ($unit) => [$unit->id => (float) ($unit->management_fee_percent ?? 0)]);
+
+        $rentRows = Invoice::query()
+            ->with(['unit.building'])
+            ->whereIn('unit_id', $unitIds)
+            ->where('paid_amount', '>', 0)
+            ->whereNotIn('status', ['draft', 'cancelled'])
+            ->get()
+            ->flatMap(function (Invoice $invoice) use ($shareByUnit, $managementByUnit) {
+                $rentCollected = min((float) $invoice->paid_amount, (float) $invoice->rent_amount);
+                $eligibleRent = min($rentCollected, max((float) $invoice->rent_amount - (float) $invoice->pattern_topup_amount, 0));
+                $credit = $eligibleRent * (($shareByUnit[$invoice->unit_id] ?? 100) / 100);
+                $managementFee = $credit * (($managementByUnit[$invoice->unit_id] ?? 0) / 100);
+                $date = $invoice->stay_check_out_date ?: $invoice->period_end ?: $invoice->invoice_date;
+                if (! $date || $credit <= 0) return [];
+
+                $unitName = 'Unit '.$invoice->unit?->unit_no.' '.$invoice->unit?->building?->name;
+                $period = 'From '.$invoice->stay_check_in_date?->format('d M Y').' to '.$invoice->stay_check_out_date?->format('d M Y');
+                $rows = [[
+                    'date' => $date, 'description' => 'Rent collected - '.$unitName.' - '.$period,
+                    'credit' => $credit, 'debit' => 0.0, 'source' => 'rent',
+                ]];
+                if ($managementFee > 0) {
+                    $rows[] = ['date' => $date, 'description' => 'Management fee - '.$unitName, 'credit' => 0.0, 'debit' => $managementFee, 'source' => 'management_fee'];
+                }
+                return $rows;
+            });
+
+        $expenseRows = Expense::query()
+            ->with('unit.building')
+            ->where(function ($query) use ($owner, $unitIds): void {
+                $query->where('owner_id', $owner->id)->orWhereIn('unit_id', $unitIds);
+            })
+            ->get()
+            ->map(fn (Expense $expense) => [
+                'date' => $expense->incurred_on,
+                'description' => 'Expense: '.$expense->name.($expense->unit ? ' - Unit '.$expense->unit->unit_no.' '.$expense->unit->building?->name : ''),
+                'credit' => 0.0, 'debit' => (float) $expense->amount, 'source' => 'expense',
+            ]);
+
+        $manualRows = OwnerAccountEntry::where('owner_id', $owner->id)->get()->map(fn (OwnerAccountEntry $entry) => [
+            'date' => $entry->entry_date,
+            'description' => $entry->description.' - '.(OwnerAccountEntry::TYPES[$entry->type] ?? str($entry->type)->headline()),
+            'credit' => $entry->direction === 'credit' ? (float) $entry->amount : 0.0,
+            'debit' => $entry->direction === 'debit' ? (float) $entry->amount : 0.0,
+            'source' => 'account_entry',
+        ]);
+
+        $payoutRows = OwnerPayoutTransfer::where('owner_id', $owner->id)
+            ->whereNotNull('transferred_at')->get()->map(fn (OwnerPayoutTransfer $transfer) => [
+                'date' => $transfer->transferred_at,
+                'description' => 'Owner payout'.($transfer->reference_no ? ' - '.$transfer->reference_no : ''),
+                'credit' => 0.0, 'debit' => (float) $transfer->net_payout, 'source' => 'payout',
+            ]);
+
+        $allRows = $rentRows->concat($expenseRows)->concat($manualRows)->concat($payoutRows)
+            ->filter(fn ($row) => $row['date'])
+            ->sortBy(fn ($row) => $row['date']->timestamp)
+            ->values();
+        $opening = (float) $allRows->filter(fn ($row) => $row['date']->lt($from))->sum(fn ($row) => $row['credit'] - $row['debit']);
+        $balance = $opening;
+        $rows = $allRows->filter(fn ($row) => $row['date']->betweenIncluded($from, $to))->values()
+            ->map(function ($row) use (&$balance) {
+                $balance += $row['credit'] - $row['debit'];
+                $row['balance'] = $balance;
+                return $row;
+            });
+
+        return ['opening' => $opening, 'rows' => $rows, 'closing' => $balance];
     }
 
     private function ownerFor(Request $request): ?Owner
@@ -261,24 +340,18 @@ class ReportController extends Controller
 
     private function ownerProfitLossCsv($handle, Owner $owner, Carbon $from, Carbon $to): void
     {
-        $rent = $this->ownerRentCollections($owner, $from, $to);
-        $registeredExpenses = (float) $this->ownerExpenseQuery($owner, $from, $to)->sum('amount');
-        $accountCredits = (float) $this->ownerAccountEntryQuery($owner, $from, $to)->where('direction', 'credit')->sum('amount');
-        $accountDebits = (float) $this->ownerAccountEntryQuery($owner, $from, $to)->where('direction', 'debit')->sum('amount');
-        $expenses = $registeredExpenses + $accountDebits;
-        $revenue = $rent + $accountCredits;
+        $ledger = $this->ownerLedger($owner, $from, $to);
 
         fputcsv($handle, ['Pattern Vacation Homes - Owner Income']);
         fputcsv($handle, ['Owner', $owner->full_name]);
         fputcsv($handle, ['Period', $from->format('Y-m-d').' to '.$to->format('Y-m-d')]);
         fputcsv($handle, []);
-        fputcsv($handle, ['Account', 'AED']);
-        fputcsv($handle, ['Collected rent income', $rent]);
-        fputcsv($handle, ['Owner account credits', $accountCredits]);
-        fputcsv($handle, ['Total owner income', $revenue]);
-        fputcsv($handle, ['Registered owner expenses', -$registeredExpenses]);
-        fputcsv($handle, ['Owner account debits', -$accountDebits]);
-        fputcsv($handle, ['Net owner income', $revenue - $expenses]);
+        fputcsv($handle, ['Date', 'Description', 'Credit', 'Debit', 'Balance']);
+        fputcsv($handle, [$from->format('Y-m-d'), 'Opening balance - all previous transactions', '', '', $ledger['opening']]);
+        foreach ($ledger['rows'] as $row) {
+            fputcsv($handle, [$row['date']->format('Y-m-d'), $row['description'], $row['credit'], $row['debit'], $row['balance']]);
+        }
+        fputcsv($handle, [$to->format('Y-m-d'), 'Closing balance', '', '', $ledger['closing']]);
     }
 
     private function ownerBookingCsv($handle, Owner $owner, Carbon $from, Carbon $to): void

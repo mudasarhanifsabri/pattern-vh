@@ -67,8 +67,16 @@ class OwnerAccountTest extends TestCase
     {
         $this->seed();
 
-        $portalUser = User::where('email', 'demo.owner@example.com')->firstOrFail();
-        $owner = Owner::where('user_id', $portalUser->id)->orWhere('email', $portalUser->email)->firstOrFail();
+        $portalUser = User::factory()->create(['email' => 'report-ledger@example.com']);
+        $portalUser->assignRole('Owner');
+        $owner = Owner::create(['full_name' => 'Report Ledger Owner', 'mobile_no' => '+971500000005', 'email' => $portalUser->email, 'user_id' => $portalUser->id]);
+        $owner->accountEntries()->create([
+            'entry_date' => now()->subDay()->toDateString(),
+            'type' => 'opening_balance',
+            'direction' => 'credit',
+            'amount' => 300,
+            'description' => 'Previous transaction',
+        ]);
         $owner->accountEntries()->create([
             'entry_date' => now()->toDateString(),
             'type' => 'adjustment',
@@ -87,16 +95,23 @@ class OwnerAccountTest extends TestCase
         $query = ['from' => now()->toDateString(), 'to' => now()->toDateString()];
         $this->actingAs($portalUser)->get(route('reports.index', $query))
             ->assertOk()
-            ->assertSee('Owner account credits')
+            ->assertSee('Owner transaction report')
+            ->assertSee('Opening balance - all previous transactions')
+            ->assertSee('AED 300.00')
+            ->assertSee('Report credit adjustment')
             ->assertSee('AED 700.00')
-            ->assertSee('Owner account debits')
+            ->assertSee('Report debit adjustment')
             ->assertSee('AED -125.00');
 
         $export = $this->actingAs($portalUser)->get(route('reports.export', ['type' => 'profit_loss', ...$query]));
         $export->assertOk();
         $csv = $export->streamedContent();
-        $this->assertStringContainsString('"Owner account credits",700', $csv);
-        $this->assertStringContainsString('"Owner account debits",-125', $csv);
+        $this->assertStringContainsString('Opening balance - all previous transactions', $csv);
+        $this->assertStringContainsString(',,,300', $csv);
+        $this->assertStringContainsString('Report credit adjustment', $csv);
+        $this->assertStringContainsString(',700,0,', $csv);
+        $this->assertStringContainsString('Report debit adjustment', $csv);
+        $this->assertStringContainsString(',0,125,', $csv);
     }
 
     public function test_account_can_be_filtered_by_owner_unit_and_portal_owner_can_only_view_their_account(): void
