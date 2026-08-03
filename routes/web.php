@@ -385,9 +385,6 @@ Route::middleware('auth')->group(function () {
     Route::get('owner-statements/pdf', [OwnerStatementController::class, 'pdf'])
         ->middleware('permission:owner-statements.view|owner-statements.manage|portal.owner')
         ->name('owner-statements.pdf');
-    Route::post('owner-statements/opening-balance', [OwnerStatementController::class, 'storeOpeningBalance'])
-        ->middleware('permission:owner-statements.manage')
-        ->name('owner-statements.opening-balance.store');
     Route::get('owner-payouts', [OwnerPayoutController::class, 'index'])
         ->middleware('permission:owner-payouts.view|owner-payouts.manage|portal.owner')
         ->name('owner-payouts.index');

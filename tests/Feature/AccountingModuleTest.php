@@ -253,44 +253,6 @@ class AccountingModuleTest extends TestCase
         $this->assertStringContainsString('Checkout period owner expense', $export->streamedContent());
     }
 
-    public function test_accounting_manager_can_add_a_dated_owner_opening_balance(): void
-    {
-        $this->seed();
-
-        $admin = User::where('email', 'admin@example.com')->firstOrFail();
-        $owner = Owner::with('units')->firstOrFail();
-        $unit = $owner->units->firstOrFail();
-        $balanceDate = now()->startOfMonth()->toDateString();
-
-        $this->actingAs($admin)->post(route('owner-statements.opening-balance.store'), [
-            'owner_id' => $owner->id,
-            'unit_id' => $unit->id,
-            'balance_date' => $balanceDate,
-            'amount' => 1250.75,
-            'notes' => 'Legacy opening balance',
-            'statement_from' => $balanceDate,
-            'statement_to' => now()->endOfMonth()->toDateString(),
-        ])->assertRedirect();
-
-        $this->assertDatabaseHas('owner_opening_balances', [
-            'owner_id' => $owner->id,
-            'unit_id' => $unit->id,
-            'balance_date' => $balanceDate.' 00:00:00',
-            'amount' => 1250.75,
-        ]);
-
-        $query = ['owner_id' => $owner->id, 'unit_id' => $unit->id, 'from' => $balanceDate, 'to' => now()->endOfMonth()->toDateString()];
-        $this->actingAs($admin)->get(route('owner-statements.index', $query))
-            ->assertOk()
-            ->assertSee('Opening balance')
-            ->assertSee('AED 1,250.75');
-
-        $this->actingAs($admin)->get(route('owner-statements.pdf', [...$query, 'download' => 1]))
-            ->assertOk()
-            ->assertHeader('content-type', 'application/pdf')
-            ->assertHeader('content-disposition', 'attachment; filename="owner-statement-'.$owner->id.'-unit-'.$unit->id.'-'.now()->startOfMonth()->format('Ymd').'-'.now()->endOfMonth()->format('Ymd').'.pdf"');
-    }
-
     public function test_owner_payout_date_stays_with_the_paid_invoice_period_after_extension(): void
     {
         $this->seed();

@@ -77,11 +77,6 @@ class Owner extends Model
         return $this->hasMany(OwnerAccountEntry::class);
     }
 
-    public function openingBalances(): HasMany
-    {
-        return $this->hasMany(OwnerOpeningBalance::class);
-    }
-
     public function unitContracts(): HasMany
     {
         return $this->hasMany(OwnerUnitContract::class);
