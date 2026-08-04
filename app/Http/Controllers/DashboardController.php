@@ -11,7 +11,6 @@ use App\Models\InventoryItem;
 use App\Models\Invoice;
 use App\Models\NotificationLog;
 use App\Models\Owner;
-use App\Models\OwnerAccountEntry;
 use App\Models\OwnerPayoutTransfer;
 use App\Models\OwnerUnitContract;
 use App\Models\Payment;
@@ -19,6 +18,7 @@ use App\Models\PaymentCollectionRequest;
 use App\Models\Tenant;
 use App\Models\Unit;
 use App\Models\UtilityBill;
+use App\Support\OwnerBalanceCalculator;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 
@@ -59,7 +59,7 @@ class DashboardController extends Controller
             'bookingHistory' => $tenant ? $this->bookingHistory($tenant) : collect(),
             'attentionItems' => $this->attentionItems($tenant),
             'recentPayments' => $owner ? $this->ownerRecentPayments($owner) : $this->recentPayments($tenant),
-            'ownerBalance' => $owner ? $this->ownerBalance($owner) : 0,
+            'ownerBalance' => $owner ? app(OwnerBalanceCalculator::class)->calculate($owner) : 0,
             'ownerBookingHistory' => $owner ? $this->ownerBookingHistory($owner) : collect(),
         ]);
     }
@@ -425,32 +425,6 @@ class DashboardController extends Controller
             ->map(fn ($bookings) => $bookings->take(3)->values());
     }
 
-    private function ownerBalance(Owner $owner): float
-    {
-        $units = $owner->units()->get();
-        $unitIds = $units->pluck('id');
-        $shareByUnit = $units->mapWithKeys(fn ($unit) => [$unit->id => (float) ($unit->pivot->share_percent ?? 100)]);
-        $managementByUnit = $units->mapWithKeys(fn ($unit) => [$unit->id => (float) ($unit->management_fee_percent ?? 0)]);
-
-        $rentNet = Invoice::query()
-            ->whereIn('unit_id', $unitIds)
-            ->where('paid_amount', '>', 0)
-            ->whereNotIn('status', ['draft', 'cancelled'])
-            ->get()
-            ->sum(function (Invoice $invoice) use ($shareByUnit, $managementByUnit): float {
-                $rentCollected = min((float) $invoice->paid_amount, (float) $invoice->rent_amount);
-                $eligibleRent = min($rentCollected, max((float) $invoice->rent_amount - (float) $invoice->pattern_topup_amount, 0));
-                $gross = $eligibleRent * (($shareByUnit[$invoice->unit_id] ?? 100) / 100);
-
-                return $gross - ($gross * (($managementByUnit[$invoice->unit_id] ?? 0) / 100));
-            });
-        $manualNet = OwnerAccountEntry::where('owner_id', $owner->id)->get()
-            ->sum(fn (OwnerAccountEntry $entry): float => ($entry->direction === 'credit' ? 1 : -1) * (float) $entry->amount);
-        $expenses = (float) Expense::where('owner_id', $owner->id)->sum('amount');
-        $payouts = (float) OwnerPayoutTransfer::where('owner_id', $owner->id)->whereNotNull('transferred_at')->sum('net_payout');
-
-        return $rentNet + $manualNet - $expenses - $payouts;
-    }
 
     private function workspaceActions(): array
     {

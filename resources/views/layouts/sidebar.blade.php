@@ -69,7 +69,7 @@
             'label' => 'Accounting',
             'caption' => 'Money and reports',
             'icon' => 'M4 19V5m0 14h16M8 16v-5m4 5V8m4 8v-8',
-            'active' => ['accounting.*', 'finance-sheet.*', 'bank-reconciliation.*', 'invoices.*', 'payments.*', 'expenses.*', 'owner-payouts.*', 'owner-statements.*', 'payment-collection-requests.*', 'security-deposits.*', 'reports.*'],
+            'active' => ['accounting.*', 'finance-sheet.*', 'bank-reconciliation.*', 'invoices.*', 'payments.*', 'expenses.*', 'owner-payouts.*', 'owner-statements.*', 'owner-balances.*', 'payment-collection-requests.*', 'security-deposits.*', 'reports.*'],
             'permissions' => ['accounting.view', 'accounting.manage', 'bank-reconciliation.view', 'bank-reconciliation.manage', 'invoices.view', 'invoices.manage', 'payments.view', 'payments.manage', 'expenses.view', 'expenses.manage', 'owner-payouts.view', 'owner-payouts.manage', 'owner-statements.view', 'owner-statements.manage', 'payment-collection-requests.view', 'payment-collection-requests.manage', 'security-deposits.view', 'security-deposits.manage', 'reports.view', 'reports.export'],
             'items' => [
                 ['label' => 'Accounting dashboard', 'route' => 'accounting.index', 'active' => 'accounting.*', 'permissions' => ['accounting.view', 'accounting.manage']],
@@ -80,6 +80,7 @@
                 ['label' => 'Expenses', 'route' => 'expenses.index', 'active' => 'expenses.*', 'permissions' => ['expenses.view', 'expenses.manage']],
                 ['label' => 'Owner account manager', 'route' => 'owner-payouts.index', 'active' => 'owner-payouts.*', 'permissions' => ['owner-payouts.view', 'owner-payouts.manage']],
                 ['label' => 'Owner statements', 'route' => 'owner-statements.index', 'active' => 'owner-statements.*', 'permissions' => ['owner-statements.view', 'owner-statements.manage', 'portal.owner']],
+                ['label' => 'Owner balances', 'route' => 'owner-balances.index', 'active' => 'owner-balances.*', 'permissions' => ['owner-statements.view', 'owner-statements.manage', 'accounting.view', 'accounting.manage']],
                 ['label' => 'Collection requests', 'route' => 'payment-collection-requests.index', 'active' => 'payment-collection-requests.*', 'permissions' => ['payment-collection-requests.view', 'payment-collection-requests.manage']],
                 ['label' => 'Security deposits', 'route' => 'security-deposits.index', 'active' => 'security-deposits.*', 'permissions' => ['security-deposits.view', 'security-deposits.manage']],
                 ['label' => 'Reports', 'route' => 'reports.index', 'active' => 'reports.*', 'permissions' => ['reports.view', 'reports.export']],

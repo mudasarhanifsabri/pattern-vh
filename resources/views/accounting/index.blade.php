@@ -21,6 +21,7 @@
                     ['label' => 'Add expense', 'route' => 'expenses.create', 'can' => 'expenses.manage'],
                     ['label' => 'Bank reconciliation', 'route' => 'bank-reconciliation.index', 'can' => 'bank-reconciliation.view'],
                     ['label' => 'Owner statements', 'route' => 'owner-statements.index', 'can' => 'owner-statements.view'],
+                    ['label' => 'Owner balances', 'route' => 'owner-balances.index', 'can' => 'owner-statements.view'],
                     ['label' => 'Owner payouts', 'route' => 'owner-payouts.index', 'can' => 'owner-payouts.view'],
                     ['label' => 'Finance sheet', 'route' => 'finance-sheet.index', 'can' => 'accounting.view'],
                     ['label' => 'Reports & export', 'route' => 'reports.index', 'can' => 'reports.view'],

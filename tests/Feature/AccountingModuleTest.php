@@ -105,6 +105,18 @@ class AccountingModuleTest extends TestCase
         $this->actingAs($admin)->get(route('owner-payouts.excel', ['owner_id' => $owner->id]))
             ->assertOk()
             ->assertHeader('content-type', 'text/csv; charset=UTF-8');
+        $this->actingAs($admin)->get(route('owner-balances.index'))
+            ->assertOk()
+            ->assertSee('Total payable to owners')
+            ->assertSee('Owner-wise')
+            ->assertSee($owner->full_name);
+        $this->actingAs($admin)->get(route('owner-balances.index', ['group_by' => 'unit']))
+            ->assertOk()
+            ->assertSee('Unit-wise')
+            ->assertSee('Unit '.$unit->unit_no);
+        $this->actingAs($admin)->get(route('owner-balances.index', ['export' => 1]))
+            ->assertOk()
+            ->assertHeader('content-type', 'text/csv; charset=UTF-8');
         $this->actingAs($admin)->get(route('reports.index'))->assertOk()->assertSeeText('Reports & Profit/Loss');
         $this->actingAs($admin)->get(route('reports.export', ['type' => 'expenses']))->assertOk()->assertHeader('content-type', 'text/csv; charset=UTF-8');
     }
