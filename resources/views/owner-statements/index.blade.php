@@ -17,7 +17,61 @@
 <div class="{{ $ownerOnly ? 'tenant-app-screen' : '' }} space-y-5">
     @if(session('status'))<div class="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-700">{{ session('status') }}</div>@endif
     @if($errors->any())<div class="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-bold text-rose-700">{{ $errors->first() }}</div>@endif
-    <section class="{{ $ownerOnly ? 'rounded-[1.6rem] bg-white p-5 shadow-[0_18px_45px_rgba(15,23,42,0.08)]' : 'erp-card p-5' }}">
+    @if($ownerOnly)
+        <section class="rounded-[1.6rem] bg-white p-4 shadow-[0_18px_45px_rgba(15,23,42,0.08)]" x-data="{ filtersOpen: false, exportsOpen: false }">
+            <div class="flex items-center gap-3">
+                <div class="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-blue-50 text-blue-600">
+                    <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M6 3h12v18H6zM9 8h6M9 12h6M9 16h4"/></svg>
+                </div>
+                <div class="min-w-0 flex-1">
+                    <p class="truncate text-sm font-black text-[#071a3b]">{{ $unit ? ($unit->building?->name.' · Unit '.$unit->unit_no) : 'All properties' }}</p>
+                    <p class="mt-0.5 text-xs font-semibold text-slate-500">{{ $from->format('d M Y') }} – {{ $to->format('d M Y') }}</p>
+                </div>
+                <button type="button" @click="filtersOpen = ! filtersOpen; exportsOpen = false" class="pressable grid h-11 w-11 shrink-0 place-items-center rounded-2xl border border-slate-200 bg-white text-slate-600" :class="filtersOpen ? 'border-blue-200 bg-blue-50 text-blue-600' : ''" aria-label="Statement filters" :aria-expanded="filtersOpen">
+                    <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 7h10M18 7h2M14 4v6M4 17h2M10 17h10M6 14v6"/></svg>
+                </button>
+            </div>
+
+            <form method="GET" x-show="filtersOpen" x-transition x-cloak class="mt-4 border-t border-slate-100 pt-4">
+                <div>
+                    <x-input-label for="unit_id" value="Property" />
+                    <select id="unit_id" name="unit_id" class="erp-focus mt-1 h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm">
+                        <option value="">All properties</option>
+                        @foreach($owners as $unitOwner)
+                            @foreach($unitOwner->units as $unitOption)
+                                <option value="{{ $unitOption->id }}" @selected($unit?->id === $unitOption->id)>{{ $unitOption->building?->name }} / Unit {{ $unitOption->unit_no }}</option>
+                            @endforeach
+                        @endforeach
+                    </select>
+                </div>
+                <div class="mt-3 grid grid-cols-2 gap-3">
+                    <div><x-input-label for="from" value="From" /><x-text-input id="from" name="from" type="date" class="mt-1 block h-11 w-full rounded-xl px-2 text-xs" :value="$from->format('Y-m-d')" /></div>
+                    <div><x-input-label for="to" value="To" /><x-text-input id="to" name="to" type="date" class="mt-1 block h-11 w-full rounded-xl px-2 text-xs" :value="$to->format('Y-m-d')" /></div>
+                </div>
+                <button class="mt-3 inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#071a3b] px-4 text-sm font-black text-white">
+                    Apply filters
+                    <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg>
+                </button>
+            </form>
+
+            @if($owner)
+                <div class="relative mt-3 grid grid-cols-[1fr_48px] gap-2">
+                    <a href="{{ route('owner-statements.pdf', array_merge($statementQuery, ['download' => 1])) }}" class="pressable inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 text-sm font-black text-white shadow-lg shadow-blue-600/15">
+                        <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 21h14"/></svg>
+                        Download statement PDF
+                    </a>
+                    <button type="button" @click="exportsOpen = ! exportsOpen; filtersOpen = false" class="pressable grid h-11 place-items-center rounded-xl border border-slate-200 bg-slate-50 text-slate-600" aria-label="More statement actions" :aria-expanded="exportsOpen">
+                        <svg class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg>
+                    </button>
+                    <div x-show="exportsOpen" x-transition.origin.top.right x-cloak @click.outside="exportsOpen = false" class="absolute right-0 top-12 z-20 w-56 overflow-hidden rounded-2xl border border-slate-200 bg-white p-2 shadow-2xl shadow-slate-950/15">
+                        <a href="{{ route('owner-statements.pdf-preview', $statementQuery) }}" class="flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-bold text-slate-700 hover:bg-slate-50"><span class="grid h-8 w-8 place-items-center rounded-xl bg-slate-100"><svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z"/><circle cx="12" cy="12" r="2.5"/></svg></span> Preview PDF</a>
+                        <a href="{{ route('owner-statements.index', array_merge($statementQuery, ['export' => 1])) }}" class="flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-bold text-slate-700 hover:bg-slate-50"><span class="grid h-8 w-8 place-items-center rounded-xl bg-emerald-50 text-emerald-700"><svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 21h14"/></svg></span> Download CSV</a>
+                    </div>
+                </div>
+            @endif
+        </section>
+    @else
+    <section class="erp-card p-5">
         <form method="GET" class="grid gap-3 {{ $ownerOnly ? '' : 'lg:grid-cols-[1fr_1fr_150px_150px_auto] lg:items-end' }}">
             @can('owner-statements.manage')
                 <div><x-input-label for="owner_id" value="Owner" /><select id="owner_id" name="owner_id" class="erp-focus mt-1 h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm">@foreach($owners as $ownerOption)<option value="{{ $ownerOption->id }}" @selected($owner?->id === $ownerOption->id)>{{ $ownerOption->full_name }}</option>@endforeach</select></div>
@@ -45,6 +99,7 @@
             </div>
         @endif
     </section>
+    @endif
 
     @can('owner-statements.manage')
         @if($owner)

@@ -85,6 +85,12 @@ class ErpFoundationTest extends TestCase
         ] as $url) {
             $this->get($url)->assertOk();
         }
+
+        $this->get(route('owner-statements.index'))
+            ->assertOk()
+            ->assertSee('Download statement PDF')
+            ->assertSee('Apply filters')
+            ->assertDontSee('Owner Account Statement');
     }
 
     public function test_manifest_and_service_worker_are_available(): void
