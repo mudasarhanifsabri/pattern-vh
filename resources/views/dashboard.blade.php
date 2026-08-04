@@ -143,7 +143,7 @@
                 </section>
             @endif
 
-            <section class="grid grid-cols-2 gap-3">
+            <section class="grid grid-cols-4 gap-2">
                 @foreach([
                     ['label' => 'Check-in Guide', 'note' => 'Step by step instructions', 'route' => $booking ? route('bookings.show', $booking) : route('bookings.index'), 'icon' => 'M7 4h10v16H7zM10 8h4M10 12h4M10 16h4'],
                     ['label' => 'Wi-Fi Details', 'note' => 'Get apartment Wi-Fi information', 'route' => $booking ? route('bookings.show', $booking) : route('support.index'), 'icon' => 'M5 12a10 10 0 0 1 14 0M8.5 15.5a5 5 0 0 1 7 0M12 19h.01'],
@@ -178,7 +178,6 @@
             $ownerUnitsCount = $ownerUnits->count();
             $occupiedOwnerUnits = $ownerUnits->filter(fn ($unit) => $unit->bookings->isNotEmpty())->count();
             $availableOwnerUnits = $ownerUnits->filter(fn ($unit) => $unit->availability_status === 'available' && $unit->bookings->isEmpty())->count();
-            $ownerCollectionTotal = $recentPayments->sum(fn ($payment) => (float) $payment->amount);
         @endphp
 
         <div class="tenant-app-screen space-y-5 lg:hidden">
@@ -209,27 +208,22 @@
                         </div>
                     </div>
                 </div>
-                <div class="grid grid-cols-2 divide-x divide-slate-100 p-4 text-center">
+                <div class="flex items-center justify-between gap-3 p-4">
                     <div>
-                        <p class="text-xs font-bold text-slate-400">Recent collected rent</p>
-                        <p class="mt-1 text-lg font-black text-[#071a3b]">AED {{ number_format($ownerCollectionTotal, 0) }}</p>
+                        <p class="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">Current owner balance</p>
+                        <p class="mt-1 text-2xl font-black tracking-[-0.04em] {{ $ownerBalance < 0 ? 'text-rose-600' : 'text-[#071a3b]' }}">AED {{ number_format((float) $ownerBalance, 0) }}</p>
                     </div>
-                    <div>
-                        <p class="text-xs font-bold text-slate-400">Owner expenses</p>
-                        <p class="mt-1 text-lg font-black text-[#071a3b]">{{ collect($stats)->firstWhere('label', 'Owner expenses')['value'] ?? 'AED 0' }}</p>
-                    </div>
+                    <a href="{{ route('owner-statements.index') }}" class="grid h-11 w-11 place-items-center rounded-2xl bg-blue-50 text-blue-600" aria-label="Open owner statement"><svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg></a>
                 </div>
             </section>
 
             <section class="grid grid-cols-2 gap-3">
                 @foreach ($quickActions as $action)
-                    <a href="{{ route($action['route']) }}" class="relative min-h-[150px] rounded-[1.35rem] bg-white p-4 shadow-[0_14px_30px_rgba(15,23,42,0.07)] active:scale-[0.98]">
-                        <span class="grid h-14 w-14 place-items-center rounded-2xl {{ $action['tone'] === 'emerald' ? 'bg-emerald-50 text-emerald-700' : ($action['tone'] === 'amber' ? 'bg-amber-50 text-amber-700' : ($action['tone'] === 'slate' ? 'bg-slate-100 text-slate-700' : 'bg-blue-50 text-blue-700')) }}">
-                            <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 19V5m0 14h16M8 16v-5m4 5V8m4 8v-8"/></svg>
+                    <a href="{{ route($action['route']) }}" class="pressable flex min-w-0 flex-col items-center rounded-2xl bg-white px-1.5 py-3 text-center shadow-[0_10px_24px_rgba(15,23,42,0.06)]">
+                        <span class="grid h-10 w-10 place-items-center rounded-2xl {{ $action['tone'] === 'emerald' ? 'bg-emerald-50 text-emerald-700' : ($action['tone'] === 'amber' ? 'bg-amber-50 text-amber-700' : ($action['tone'] === 'slate' ? 'bg-slate-100 text-slate-700' : 'bg-blue-50 text-blue-700')) }}">
+                            <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 19V5m0 14h16M8 16v-5m4 5V8m4 8v-8"/></svg>
                         </span>
-                        <span class="mt-4 block text-[15px] font-black leading-tight text-[#071a3b]">{{ $action['label'] }}</span>
-                        <span class="mt-1 block pr-3 text-[13px] font-semibold leading-5 text-slate-500">{{ $action['note'] }}</span>
-                        <span class="absolute right-4 top-1/2 -translate-y-1/2 text-2xl text-slate-300">›</span>
+                        <span class="mt-2 block w-full truncate text-[10px] font-black leading-tight text-[#071a3b]">{{ $action['label'] }}</span>
                     </a>
                 @endforeach
             </section>
@@ -244,55 +238,50 @@
                 </div>
                 <div class="mt-5 space-y-3">
                     @forelse($ownerUnits as $unit)
-                        <a href="{{ route('units.show', $unit) }}" class="block rounded-3xl border border-slate-200 bg-white p-4 active:scale-[0.99]">
+                        @php
+                            $activeBooking = $unit->bookings->first();
+                            $unitHistory = $ownerBookingHistory->get($unit->id, collect());
+                            $ownerUnitStatus = $activeBooking ? 'occupied' : $unit->availability_status;
+                        @endphp
+                        <article class="rounded-3xl border border-slate-200 bg-white p-4">
                             <div class="flex items-start justify-between gap-3">
                                 <div class="min-w-0">
                                     <p class="text-xs font-bold uppercase tracking-[0.14em] text-blue-600">{{ $unit->building?->name }}</p>
                                     <h3 class="mt-1 text-lg font-black text-[#071a3b]">Unit {{ $unit->unit_no }}</h3>
                                     <p class="mt-1 text-sm font-semibold text-slate-500">{{ $unit->unit_type ?: 'Property' }}</p>
                                 </div>
-                                @php
-                                    $ownerUnitStatus = $unit->bookings->isNotEmpty() ? 'occupied' : $unit->availability_status;
-                                @endphp
                                 <span class="shrink-0 rounded-full {{ $ownerUnitStatus === 'occupied' ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700' }} px-2.5 py-1 text-[11px] font-black">{{ str($ownerUnitStatus)->headline() }}</span>
                             </div>
-                            <div class="mt-4 grid gap-3 text-sm">
-                                <div class="rounded-2xl bg-slate-50 p-3">
-                                    <p class="text-[10px] font-bold uppercase text-slate-400">Area</p>
-                                    <p class="mt-1 font-black text-[#071a3b]">{{ $unit->building?->area ?: 'Dubai' }}</p>
+                            @if($activeBooking)
+                                <div class="mt-4 rounded-2xl bg-blue-50 p-3">
+                                    <div class="flex items-center justify-between gap-2"><p class="text-[10px] font-black uppercase tracking-[0.12em] text-blue-500">Current booking</p><span class="text-[10px] font-black text-blue-700">{{ str($activeBooking->booking_status)->replace('_', ' ')->headline() }}</span></div>
+                                    <p class="mt-1.5 text-sm font-black text-[#071a3b]">{{ $activeBooking->tenant?->full_name }}</p>
+                                    <p class="mt-1 text-xs font-bold text-blue-700">{{ $activeBooking->check_in_date?->format('d M Y') }} – {{ $activeBooking->effective_check_out_date?->format('d M Y') }}</p>
                                 </div>
-                            </div>
-                        </a>
+                            @else
+                                <div class="mt-4 rounded-2xl bg-slate-50 px-3 py-3 text-xs font-bold text-slate-500">No current booking · {{ $unit->building?->area ?: 'Dubai' }}</div>
+                            @endif
+                            @if($unitHistory->isNotEmpty())
+                                <details class="group mt-3 border-t border-slate-100 pt-3">
+                                    <summary class="flex cursor-pointer list-none items-center justify-between text-xs font-black text-slate-600">Booking history <span class="text-blue-600 transition group-open:rotate-90">›</span></summary>
+                                    <div class="mt-3 space-y-2">
+                                        @foreach($unitHistory as $historyBooking)
+                                            <div class="rounded-2xl bg-slate-50 p-3">
+                                                <div class="flex items-start justify-between gap-2"><p class="truncate text-xs font-black text-[#071a3b]">{{ $historyBooking->tenant?->full_name }}</p><span class="shrink-0 text-[10px] font-bold text-slate-400">Checked out</span></div>
+                                                <p class="mt-1 text-[11px] font-semibold text-slate-500">{{ $historyBooking->check_in_date?->format('d M Y') }} – {{ $historyBooking->check_out_date?->format('d M Y') }}</p>
+                                            </div>
+                                        @endforeach
+                                    </div>
+                                </details>
+                            @endif
+                            <a href="{{ route('units.show', $unit) }}" class="mt-3 inline-flex text-xs font-black text-blue-600">View property details →</a>
+                        </article>
                     @empty
                         <p class="rounded-2xl border border-dashed border-slate-200 px-4 py-8 text-center text-sm text-slate-500">No units assigned yet.</p>
                     @endforelse
                 </div>
             </section>
 
-            <section class="rounded-[1.6rem] bg-white p-5 shadow-[0_18px_45px_rgba(15,23,42,0.08)]">
-                <div class="flex items-center justify-between gap-3">
-                    <div>
-                        <h2 class="text-xl font-black text-[#071a3b]">Recent Collections</h2>
-                        <p class="mt-1 text-sm font-semibold text-slate-500">Approved rent collected against your properties.</p>
-                    </div>
-                    <a href="{{ route('owner-payouts.index') }}" class="rounded-2xl bg-blue-50 px-3 py-2 text-xs font-black text-blue-700">Open</a>
-                </div>
-                <div class="mt-5 space-y-3">
-                    @forelse($recentPayments as $payment)
-                        <div class="rounded-3xl border border-slate-200 p-4">
-                            <div class="flex items-start justify-between gap-3">
-                                <div>
-                                    <p class="text-sm font-black text-[#071a3b]">{{ $payment->booking?->unit?->building?->name }} / Unit {{ $payment->booking?->unit?->unit_no }}</p>
-                                    <p class="mt-1 text-xs font-semibold text-slate-500">{{ $payment->invoice?->tenant?->full_name }} · {{ $payment->paid_at?->format('M d, Y') }}</p>
-                                </div>
-                                <span class="text-sm font-black text-emerald-700">AED {{ number_format((float) $payment->amount, 2) }}</span>
-                            </div>
-                        </div>
-                    @empty
-                        <p class="rounded-2xl border border-dashed border-slate-200 px-4 py-8 text-center text-sm text-slate-500">No approved rent collections yet.</p>
-                    @endforelse
-                </div>
-            </section>
         </div>
         <div class="hidden space-y-6 lg:block">
             <section class="overflow-hidden rounded-[2rem] bg-gradient-to-br from-[#061a38] via-[#0d2b5c] to-[#2563eb] p-7 text-white shadow-2xl shadow-blue-950/20">
