@@ -103,9 +103,9 @@
 
     @can('owner-statements.manage')
         @if($owner)
-            <section class="erp-card p-5">
-                <div><h2 class="text-lg font-black text-[#071a3b]">Add Zoho opening balance</h2><p class="mt-1 text-sm text-slate-500">Add the previous balance separately for each unit. Credit means Pattern owes the owner; Debit means the owner owes Pattern.</p></div>
-                <form method="POST" action="{{ route('owner-statements.opening-balance.store') }}" class="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-[1fr_150px_140px_170px_1fr_auto] xl:items-end">
+            <details class="erp-card group overflow-hidden">
+                <summary class="flex cursor-pointer list-none items-center justify-between gap-3 p-5"><div><h2 class="text-lg font-black text-[#071a3b]">Opening balance tools</h2><p class="mt-1 text-sm text-slate-500">Add or correct a previous unit balance only when required.</p></div><span class="grid h-10 w-10 place-items-center rounded-xl bg-blue-50 text-xl font-black text-blue-600 transition group-open:rotate-45">+</span></summary>
+                <form method="POST" action="{{ route('owner-statements.opening-balance.store') }}" class="grid gap-3 border-t border-slate-100 p-5 md:grid-cols-2 xl:grid-cols-[1fr_150px_140px_170px_1fr_auto] xl:items-end">
                     @csrf
                     <input type="hidden" name="owner_id" value="{{ $owner->id }}"><input type="hidden" name="statement_from" value="{{ $from->format('Y-m-d') }}"><input type="hidden" name="statement_to" value="{{ $to->format('Y-m-d') }}">
                     <div><x-input-label for="opening_unit" value="Owner unit" /><select id="opening_unit" name="unit_id" class="erp-focus mt-1 h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm" required><option value="">Select unit</option>@foreach($owner->units as $openingUnit)<option value="{{ $openingUnit->id }}" @selected(old('unit_id', $unit?->id) == $openingUnit->id)>{{ $openingUnit->building?->name }} / Unit {{ $openingUnit->unit_no }}</option>@endforeach</select></div>
@@ -115,7 +115,7 @@
                     <div><x-input-label for="opening_description" value="Description" /><input id="opening_description" name="description" value="{{ old('description', 'Zoho opening balance') }}" class="erp-focus mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm"></div>
                     <button class="h-11 rounded-xl bg-blue-600 px-5 text-sm font-black text-white">Add balance</button>
                 </form>
-            </section>
+            </details>
         @endif
     @endcan
 
@@ -150,7 +150,7 @@
                 </div>
             </section>
         @else
-            <section class="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+            <section class="hidden grid gap-4 md:grid-cols-2 xl:grid-cols-5" aria-hidden="true">
                 @foreach([
                     ['label' => 'Opening balance', 'value' => $statement['opening_balance']],
                     ['label' => 'Gross rent share', 'value' => $statement['gross']],
@@ -161,9 +161,18 @@
                     <article class="erp-card p-5"><p class="text-xs font-bold uppercase tracking-[0.16em] text-slate-400">{{ $card['label'] }}</p><p class="mt-3 text-2xl font-black text-[#071a3b]">AED {{ number_format((float)$card['value'], 2) }}</p></article>
                 @endforeach
             </section>
+            <section class="rounded-[1.7rem] border border-slate-200 bg-slate-100 p-3 shadow-xl shadow-slate-200/60 sm:p-5">
+                <div class="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                    <div><p class="text-[10px] font-black uppercase tracking-[0.16em] text-blue-600">A4 statement preview</p><p class="mt-1 text-sm font-semibold text-slate-500">This is the same document produced by Download PDF.</p></div>
+                    <a href="{{ route('owner-statements.pdf', array_merge($statementQuery, ['download' => 1])) }}" class="inline-flex h-10 items-center justify-center rounded-xl bg-blue-600 px-4 text-xs font-black text-white">Download A4 PDF</a>
+                </div>
+                <div class="mx-auto w-full max-w-[850px] overflow-hidden bg-white shadow-2xl shadow-slate-950/15" style="aspect-ratio: 210 / 297;">
+                    <iframe title="A4 owner statement for {{ $owner->full_name }}" src="{{ route('owner-statements.pdf', $statementQuery) }}#toolbar=0&navpanes=0&view=FitH" class="h-full w-full border-0 bg-white"></iframe>
+                </div>
+            </section>
         @endif
 
-        <section class="{{ $ownerOnly ? 'rounded-[1.6rem] bg-white p-5 shadow-[0_18px_45px_rgba(15,23,42,0.08)]' : 'erp-card overflow-hidden' }}">
+        <section class="{{ $ownerOnly ? 'rounded-[1.6rem] bg-white p-5 shadow-[0_18px_45px_rgba(15,23,42,0.08)]' : 'hidden' }}">
             <div class="{{ $ownerOnly ? '' : 'border-b border-slate-100 p-5' }}">
                 <h2 class="text-lg font-black text-[#071a3b]">Statement activity</h2>
                 @if($ownerOnly)

@@ -83,6 +83,8 @@ class AccountingModuleTest extends TestCase
         $this->actingAs($admin)->get(route('owner-statements.index', ['owner_id' => $owner->id, ...$statementDates]))
             ->assertOk()
             ->assertSee('Owner Account Statement')
+            ->assertSee('A4 statement preview')
+            ->assertSee('<iframe', false)
             ->assertSee('Rent collected')
             ->assertSee('AED 8,500.00')
             ->assertSee('Check-in:')
