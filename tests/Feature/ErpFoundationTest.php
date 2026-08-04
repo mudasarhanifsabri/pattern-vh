@@ -90,6 +90,7 @@ class ErpFoundationTest extends TestCase
             ->assertOk()
             ->assertSee('Download statement PDF')
             ->assertSee('Apply filters')
+            ->assertSee('Closing balance')
             ->assertDontSee('Owner Account Statement');
     }
 

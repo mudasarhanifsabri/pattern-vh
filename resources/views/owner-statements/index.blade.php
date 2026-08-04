@@ -120,27 +120,31 @@
     @endcan
 
     @if($owner && $statement)
-        <div class="flex justify-end">
+        <div class="{{ $ownerOnly ? 'hidden' : 'flex justify-end' }}">
             <a href="{{ route('owners.account.index', $owner) }}" class="inline-flex h-11 items-center rounded-2xl border border-blue-200 bg-blue-50 px-4 text-sm font-black text-blue-700">Detailed account ledger →</a>
         </div>
         @if($ownerOnly)
             <section class="overflow-hidden rounded-[1.6rem] bg-white shadow-[0_18px_45px_rgba(15,23,42,0.08)]">
-                <div class="bg-gradient-to-br from-slate-950 via-slate-800 to-blue-700 p-5 text-white">
-                    <p class="text-xs font-black uppercase tracking-[0.16em] text-blue-100">Statement</p>
-                    <h2 class="mt-2 text-2xl font-black leading-tight">{{ $owner->full_name }}</h2>
-                    <p class="mt-1 text-sm font-semibold text-white/70">{{ $from->format('M d, Y') }} to {{ $to->format('M d, Y') }}</p>
+                <div class="bg-gradient-to-br from-[#071a3b] via-[#12346b] to-blue-600 p-5 text-white">
+                    <div class="flex items-start justify-between gap-4">
+                        <div class="min-w-0">
+                            <p class="text-[10px] font-black uppercase tracking-[0.2em] text-blue-200">Closing balance</p>
+                            <p class="mt-2 text-3xl font-black tracking-[-0.04em]">AED {{ number_format((float) $statement['net'], 0) }}</p>
+                            <p class="mt-1 truncate text-xs font-semibold text-white/65">{{ $owner->full_name }}</p>
+                        </div>
+                        <span class="shrink-0 rounded-xl bg-white/10 px-2.5 py-2 text-[10px] font-black text-blue-100 ring-1 ring-white/15">{{ $from->format('d M') }} – {{ $to->format('d M Y') }}</span>
+                    </div>
                 </div>
-                <div class="grid grid-cols-2 gap-3 p-4">
+                <div class="grid grid-cols-2 gap-2.5 p-4">
                     @foreach([
                         ['label' => 'Opening balance', 'value' => $statement['opening_balance']],
                         ['label' => 'Gross rent share', 'value' => $statement['gross']],
                         ['label' => 'Management fee', 'value' => $statement['management_fee']],
                         ['label' => 'Owner expenses', 'value' => $statement['expenses']],
-                        ['label' => 'Closing balance', 'value' => $statement['net']],
                     ] as $card)
-                        <div class="rounded-2xl {{ $card['label'] === 'Closing balance' ? 'bg-blue-50' : 'bg-slate-50' }} p-3">
-                            <p class="text-[10px] font-bold uppercase text-slate-400">{{ $card['label'] }}</p>
-                            <p class="mt-1 text-lg font-black {{ $card['value'] < 0 ? 'text-rose-600' : 'text-[#071a3b]' }}">AED {{ number_format((float) $card['value'], 0) }}</p>
+                        <div class="rounded-2xl border border-slate-100 bg-slate-50/80 p-3">
+                            <p class="text-[9px] font-black uppercase tracking-[0.08em] text-slate-400">{{ $card['label'] }}</p>
+                            <p class="mt-1.5 text-base font-black {{ $card['value'] < 0 ? 'text-rose-600' : 'text-[#071a3b]' }}">AED {{ number_format((float) $card['value'], 0) }}</p>
                         </div>
                     @endforeach
                 </div>
@@ -162,10 +166,14 @@
         <section class="{{ $ownerOnly ? 'rounded-[1.6rem] bg-white p-5 shadow-[0_18px_45px_rgba(15,23,42,0.08)]' : 'erp-card overflow-hidden' }}">
             <div class="{{ $ownerOnly ? '' : 'border-b border-slate-100 p-5' }}">
                 <h2 class="text-lg font-black text-[#071a3b]">Statement activity</h2>
-                <p class="mt-1 text-sm text-slate-500">Rent collected and owner entitlement are included by each invoice period. Owner expenses use their incurred date; security deposits and Pattern top-up remain excluded.</p>
+                @if($ownerOnly)
+                    <p class="mt-1 text-xs leading-5 text-slate-500">Rent entitlement and owner expenses for this statement period.</p>
+                @else
+                    <p class="mt-1 text-sm text-slate-500">Rent collected and owner entitlement are included by each invoice period. Owner expenses use their incurred date; security deposits and Pattern top-up remain excluded.</p>
+                @endif
             </div>
 
-            <div class="mt-5 space-y-3 md:hidden">
+            <div class="mt-4 {{ $ownerOnly ? 'grid gap-3 lg:grid-cols-2' : 'space-y-3 md:hidden' }}">
                 @forelse($statement['rows'] as $row)
                     <article class="rounded-3xl border border-slate-200 p-4">
                         <div class="flex items-start justify-between gap-3">
@@ -190,7 +198,7 @@
                 @endforelse
             </div>
 
-            <div class="hidden overflow-x-auto md:block">
+            <div class="{{ $ownerOnly ? 'hidden' : 'hidden overflow-x-auto md:block' }}">
                 <table class="min-w-full divide-y divide-slate-200 text-sm"><thead class="bg-slate-50 text-left text-[11px] font-bold uppercase tracking-[0.16em] text-slate-500"><tr><th class="px-4 py-3">Checkout date</th><th class="px-4 py-3">Invoice / Booking</th><th class="px-4 py-3">Stay dates</th><th class="px-4 py-3">Owner rent entitlement</th><th class="px-4 py-3">Rent share</th><th class="px-4 py-3">Mgmt fee</th><th class="px-4 py-3">Expense</th><th class="px-4 py-3">Net payable</th></tr></thead><tbody class="divide-y divide-slate-100 bg-white">@forelse($statement['rows'] as $row)<tr><td class="px-4 py-4">{{ $row['date']->format('M d, Y') }}</td><td class="px-4 py-4"><p class="font-bold text-[#071a3b]">{{ $row['description'] }}</p></td><td class="px-4 py-4 text-xs font-semibold text-slate-500">{{ $row['booking_duration'] ?? '-' }}</td><td class="px-4 py-4">{{ $row['rent_collected'] !== null ? 'AED '.number_format($row['rent_collected'], 2) : '-' }}</td><td class="px-4 py-4">AED {{ number_format($row['gross'], 2) }}</td><td class="px-4 py-4">AED {{ number_format($row['management_fee'], 2) }}</td><td class="px-4 py-4">AED {{ number_format($row['owner_expense'], 2) }}</td><td class="px-4 py-4 font-black text-[#071a3b]">AED {{ number_format($row['net'], 2) }}</td></tr>@empty<tr><td colspan="8" class="px-4 py-10 text-center text-sm text-slate-500">No statement rows for this period.</td></tr>@endforelse</tbody></table>
             </div>
         </section>

@@ -11,7 +11,7 @@
         : (request()->routeIs('tenant.invoices.show') ? route('tenant.invoices.index') : null);
 @endphp
 
-<header class="tenant-topbar sticky top-0 z-20 mx-auto flex h-[76px] w-full max-w-[430px] items-center gap-3 border-b-0 bg-[#f7f9fe]/95 px-4 pt-3 backdrop-blur max-[380px]:px-3 {{ $ownerOnly ? 'lg:max-w-7xl lg:px-8' : '' }}">
+<header class="tenant-topbar sticky top-0 z-20 mx-auto flex h-[76px] w-full max-w-[430px] items-center gap-3 border-b-0 bg-[#f7f9fe]/95 px-4 pt-3 backdrop-blur max-[380px]:px-3 {{ $ownerOnly ? 'lg:max-w-3xl lg:px-6' : '' }}">
     <a href="{{ $tenantTopbarBackRoute ?: route('dashboard') }}" class="pressable touch-target grid h-11 w-11 shrink-0 place-items-center overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-slate-200" aria-label="{{ $tenantTopbarBackRoute ? 'Back to bookings' : 'Pattern home' }}">
         @if($tenantTopbarBackRoute)
             <svg class="h-5 w-5 text-[#071a3b]" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M15 19l-7-7 7-7" /></svg>

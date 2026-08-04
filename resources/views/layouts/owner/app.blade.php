@@ -22,10 +22,10 @@
     <div class="min-h-screen">
         @include('layouts.tenant.topbar')
 
-        <main class="mobile-app-main mobile-app-safe mx-auto w-full max-w-[430px] px-4 pb-28 pt-2 max-[380px]:px-3 lg:max-w-7xl lg:px-8 lg:pb-12 lg:pt-6">
+        <main class="mobile-app-main mobile-app-safe mx-auto w-full max-w-[430px] px-4 pb-28 pt-2 max-[380px]:px-3 lg:max-w-3xl lg:px-6 lg:pb-12 lg:pt-6">
             @if(session('portal_preview_admin_id'))
                 @php($previewRecord = session('portal_preview_record', []))
-                <div class="mb-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-bold text-amber-900 shadow-sm">
+                <div class="mb-4 rounded-2xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-xs font-bold text-amber-900 shadow-sm">
                     <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                         <span>Viewing as {{ $previewRecord['name'] ?? auth()->user()?->name }}{{ isset($previewRecord['role']) ? ' ('.$previewRecord['role'].')' : '' }}.</span>
                         <a href="{{ route('admin.portal-preview.stop') }}" class="inline-flex h-10 items-center justify-center rounded-xl bg-amber-900 px-4 text-xs font-black uppercase tracking-[0.12em] text-white">Return to Super Admin</a>
