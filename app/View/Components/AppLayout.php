@@ -12,6 +12,16 @@ class AppLayout extends Component
      */
     public function render(): View
     {
+        $user = auth()->user();
+        $ownerPortal = $user?->can('portal.owner')
+            && ! $user?->can('accounting.view')
+            && ! $user?->can('accounting.manage')
+            && ! $user?->can('users.manage');
+
+        if ($ownerPortal) {
+            return view('layouts.owner.app');
+        }
+
         return view('layouts.app');
     }
 }
