@@ -72,14 +72,23 @@ class ExpenseController extends Controller
         ActivityLogger::log('expenses.created', "Created expense {$expense->expense_no}.", $expense);
         $expense->load(['owner', 'unit.building']);
         if ($expense->owner) {
-            app(PushEventLogger::class)->toOwner(
-                $expense->owner,
-                'New property expense',
-                "{$expense->expense_no}: {$expense->name} - AED ".number_format((float) $expense->amount, 2),
-                ['type' => 'owner_expense', 'expense_id' => $expense->id, 'url' => route('owner-statements.index')]
-            );
+            try {
+                app(PushEventLogger::class)->toOwner(
+                    $expense->owner,
+                    'New property expense',
+                    "{$expense->expense_no}: {$expense->name} - AED ".number_format((float) $expense->amount, 2),
+                    ['type' => 'owner_expense', 'expense_id' => $expense->id, 'url' => route('owner-statements.index')]
+                );
+            } catch (\Throwable $exception) {
+                report($exception);
+            }
+
             if (filled($expense->owner->email)) {
-                Mail::to($expense->owner->email)->queue(new OwnerExpenseRecordedMail($expense));
+                try {
+                    Mail::to($expense->owner->email)->queue(new OwnerExpenseRecordedMail($expense));
+                } catch (\Throwable $exception) {
+                    report($exception);
+                }
             }
         }
 
