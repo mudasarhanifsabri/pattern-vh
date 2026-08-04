@@ -175,6 +175,51 @@ class AccountingModuleTest extends TestCase
         $this->assertSoftDeleted('expenses', ['id' => $expense->id]);
     }
 
+    public function test_unit_zoho_balance_carries_into_later_owner_statement(): void
+    {
+        $this->seed();
+
+        $admin = User::where('email', 'admin@example.com')->firstOrFail();
+        $owner = Owner::create(['full_name' => 'Zoho Balance Owner', 'mobile_no' => '+971500009999']);
+        $unit = Unit::create([
+            'building_id' => Unit::firstOrFail()->building_id,
+            'unit_no' => 'ZOHO-01',
+            'unit_type' => 'Studio',
+            'availability_status' => 'available',
+        ]);
+        $owner->units()->attach($unit->id, ['share_percent' => 100]);
+
+        $this->actingAs($admin)->post(route('owner-statements.opening-balance.store'), [
+            'owner_id' => $owner->id,
+            'unit_id' => $unit->id,
+            'entry_date' => '2026-06-15',
+            'direction' => 'credit',
+            'amount' => 2500,
+            'description' => 'Zoho migrated balance',
+            'statement_from' => '2026-06-16',
+            'statement_to' => '2026-08-04',
+        ])->assertRedirect();
+
+        $this->assertDatabaseHas('owner_account_entries', [
+            'owner_id' => $owner->id,
+            'unit_id' => $unit->id,
+            'type' => 'opening_balance',
+            'direction' => 'credit',
+            'amount' => 2500,
+        ]);
+
+        $query = ['owner_id' => $owner->id, 'unit_id' => $unit->id, 'from' => '2026-06-16', 'to' => '2026-08-04'];
+        $this->actingAs($admin)->get(route('owner-statements.index', $query))
+            ->assertOk()
+            ->assertSee('Opening balance')
+            ->assertSee('AED 2,500.00')
+            ->assertSee('Closing balance');
+
+        $this->actingAs($admin)->get(route('owner-statements.pdf', $query))
+            ->assertOk()
+            ->assertHeader('content-type', 'application/pdf');
+    }
+
     public function test_accounting_finance_sheet_exports_invoice_owner_periods(): void
     {
         $this->seed();

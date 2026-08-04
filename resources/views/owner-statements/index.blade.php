@@ -15,6 +15,8 @@
 <x-slot name="header"><div><p class="text-[11px] font-bold uppercase tracking-[0.22em] text-blue-600">Accounting</p><h1 class="text-2xl font-bold text-[#071a3b]">Owner Account Statement</h1></div></x-slot>
 
 <div class="{{ $ownerOnly ? 'tenant-app-screen' : '' }} space-y-5">
+    @if(session('status'))<div class="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-700">{{ session('status') }}</div>@endif
+    @if($errors->any())<div class="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-bold text-rose-700">{{ $errors->first() }}</div>@endif
     <section class="{{ $ownerOnly ? 'rounded-[1.6rem] bg-white p-5 shadow-[0_18px_45px_rgba(15,23,42,0.08)]' : 'erp-card p-5' }}">
         <form method="GET" class="grid gap-3 {{ $ownerOnly ? '' : 'lg:grid-cols-[1fr_1fr_150px_150px_auto] lg:items-end' }}">
             @can('owner-statements.manage')
@@ -44,6 +46,24 @@
         @endif
     </section>
 
+    @can('owner-statements.manage')
+        @if($owner)
+            <section class="erp-card p-5">
+                <div><h2 class="text-lg font-black text-[#071a3b]">Add Zoho opening balance</h2><p class="mt-1 text-sm text-slate-500">Add the previous balance separately for each unit. Credit means Pattern owes the owner; Debit means the owner owes Pattern.</p></div>
+                <form method="POST" action="{{ route('owner-statements.opening-balance.store') }}" class="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-[1fr_150px_140px_170px_1fr_auto] xl:items-end">
+                    @csrf
+                    <input type="hidden" name="owner_id" value="{{ $owner->id }}"><input type="hidden" name="statement_from" value="{{ $from->format('Y-m-d') }}"><input type="hidden" name="statement_to" value="{{ $to->format('Y-m-d') }}">
+                    <div><x-input-label for="opening_unit" value="Owner unit" /><select id="opening_unit" name="unit_id" class="erp-focus mt-1 h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm" required><option value="">Select unit</option>@foreach($owner->units as $openingUnit)<option value="{{ $openingUnit->id }}" @selected(old('unit_id', $unit?->id) == $openingUnit->id)>{{ $openingUnit->building?->name }} / Unit {{ $openingUnit->unit_no }}</option>@endforeach</select></div>
+                    <div><x-input-label for="opening_date" value="Balance date" /><input id="opening_date" name="entry_date" type="date" value="{{ old('entry_date', $from->copy()->subDay()->format('Y-m-d')) }}" class="erp-focus mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm" required></div>
+                    <div><x-input-label for="opening_direction" value="Balance type" /><select id="opening_direction" name="direction" class="erp-focus mt-1 h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm"><option value="credit">Credit</option><option value="debit" @selected(old('direction') === 'debit')>Debit</option></select></div>
+                    <div><x-input-label for="opening_amount" value="Amount" /><input id="opening_amount" name="amount" type="number" min="0.01" step="0.01" value="{{ old('amount') }}" placeholder="0.00" class="erp-focus mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm" required></div>
+                    <div><x-input-label for="opening_description" value="Description" /><input id="opening_description" name="description" value="{{ old('description', 'Zoho opening balance') }}" class="erp-focus mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm"></div>
+                    <button class="h-11 rounded-xl bg-blue-600 px-5 text-sm font-black text-white">Add balance</button>
+                </form>
+            </section>
+        @endif
+    @endcan
+
     @if($owner && $statement)
         <div class="flex justify-end">
             <a href="{{ route('owners.account.index', $owner) }}" class="inline-flex h-11 items-center rounded-2xl border border-blue-200 bg-blue-50 px-4 text-sm font-black text-blue-700">Detailed account ledger →</a>
@@ -57,12 +77,13 @@
                 </div>
                 <div class="grid grid-cols-2 gap-3 p-4">
                     @foreach([
+                        ['label' => 'Opening balance', 'value' => $statement['opening_balance']],
                         ['label' => 'Gross rent share', 'value' => $statement['gross']],
                         ['label' => 'Management fee', 'value' => $statement['management_fee']],
                         ['label' => 'Owner expenses', 'value' => $statement['expenses']],
-                        ['label' => 'Net payable', 'value' => $statement['net']],
+                        ['label' => 'Closing balance', 'value' => $statement['net']],
                     ] as $card)
-                        <div class="rounded-2xl {{ $card['label'] === 'Net payable' ? 'bg-blue-50' : 'bg-slate-50' }} p-3">
+                        <div class="rounded-2xl {{ $card['label'] === 'Closing balance' ? 'bg-blue-50' : 'bg-slate-50' }} p-3">
                             <p class="text-[10px] font-bold uppercase text-slate-400">{{ $card['label'] }}</p>
                             <p class="mt-1 text-lg font-black {{ $card['value'] < 0 ? 'text-rose-600' : 'text-[#071a3b]' }}">AED {{ number_format((float) $card['value'], 0) }}</p>
                         </div>
@@ -70,12 +91,13 @@
                 </div>
             </section>
         @else
-            <section class="grid gap-4 md:grid-cols-4">
+            <section class="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
                 @foreach([
+                    ['label' => 'Opening balance', 'value' => $statement['opening_balance']],
                     ['label' => 'Gross rent share', 'value' => $statement['gross']],
                     ['label' => 'Management fee', 'value' => $statement['management_fee']],
                     ['label' => 'Owner expenses', 'value' => $statement['expenses']],
-                    ['label' => 'Net payable', 'value' => $statement['net']],
+                    ['label' => 'Closing balance', 'value' => $statement['net']],
                 ] as $card)
                     <article class="erp-card p-5"><p class="text-xs font-bold uppercase tracking-[0.16em] text-slate-400">{{ $card['label'] }}</p><p class="mt-3 text-2xl font-black text-[#071a3b]">AED {{ number_format((float)$card['value'], 2) }}</p></article>
                 @endforeach

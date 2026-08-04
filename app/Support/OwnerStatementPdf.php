@@ -20,7 +20,7 @@ class OwnerStatementPdf
             ->implode(', ');
 
         $title = ($unitTitle ?: 'Owner Portfolio').' Statement of Accounts';
-        $openingBalance = 0.0;
+        $openingBalance = (float) ($statement['opening_balance'] ?? 0);
         $billedAmount = (float) $statement['gross'];
         $amountPaid = (float) $statement['management_fee'] + (float) $statement['expenses'];
         $balanceDue = (float) $statement['net'];

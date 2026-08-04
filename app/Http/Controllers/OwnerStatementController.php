@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\Expense;
 use App\Models\Invoice;
 use App\Models\Owner;
+use App\Models\OwnerAccountEntry;
+use App\Models\OwnerPayoutTransfer;
 use App\Models\Unit;
 use App\Support\OwnerStatementPdf;
 use Illuminate\Http\Request;
@@ -12,6 +14,39 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class OwnerStatementController extends Controller
 {
+    public function storeOpeningBalance(Request $request)
+    {
+        $validated = $request->validate([
+            'owner_id' => ['required', 'integer', 'exists:owners,id'],
+            'unit_id' => ['required', 'integer', 'exists:units,id'],
+            'entry_date' => ['required', 'date'],
+            'direction' => ['required', 'in:credit,debit'],
+            'amount' => ['required', 'numeric', 'min:0.01'],
+            'description' => ['nullable', 'string', 'max:191'],
+            'statement_from' => ['nullable', 'date'],
+            'statement_to' => ['nullable', 'date'],
+        ]);
+        $owner = Owner::with('units')->findOrFail($validated['owner_id']);
+        abort_unless($owner->units->contains('id', (int) $validated['unit_id']), 422);
+
+        $owner->accountEntries()->create([
+            'unit_id' => $validated['unit_id'],
+            'entry_date' => $validated['entry_date'],
+            'type' => 'opening_balance',
+            'direction' => $validated['direction'],
+            'amount' => $validated['amount'],
+            'description' => $validated['description'] ?: 'Zoho opening balance',
+            'created_by' => $request->user()->id,
+        ]);
+
+        return redirect()->route('owner-statements.index', array_filter([
+            'owner_id' => $owner->id,
+            'unit_id' => $validated['unit_id'],
+            'from' => $validated['statement_from'] ?? null,
+            'to' => $validated['statement_to'] ?? null,
+        ]))->with('status', 'Unit opening balance added successfully.');
+    }
+
     public function index(Request $request)
     {
         $owner = $this->ownerFor($request);
@@ -169,15 +204,77 @@ class OwnerStatementController extends Controller
                 'net' => -1 * (float) $expense->amount,
             ]);
 
-        $rows = $revenueRows->concat($expenses)->sortBy('date')->values();
+        $manualEntries = OwnerAccountEntry::query()
+            ->where('owner_id', $owner->id)
+            ->when($unitId, fn ($query) => $query->where('unit_id', $unitId))
+            ->whereDate('entry_date', '>=', $from->toDateString())
+            ->whereDate('entry_date', '<=', $to->toDateString())
+            ->get()
+            ->map(fn (OwnerAccountEntry $entry): array => [
+                'date' => $entry->entry_date,
+                'description' => $entry->description.' / '.(OwnerAccountEntry::TYPES[$entry->type] ?? str($entry->type)->headline()),
+                'booking_rent' => null, 'rent_collected' => null, 'booking_from' => null, 'booking_to' => null, 'booking_duration' => null,
+                'gross' => $entry->direction === 'credit' ? (float) $entry->amount : 0,
+                'management_fee' => 0,
+                'owner_expense' => $entry->direction === 'debit' ? (float) $entry->amount : 0,
+                'net' => ($entry->direction === 'credit' ? 1 : -1) * (float) $entry->amount,
+            ]);
+
+        $payouts = OwnerPayoutTransfer::query()
+            ->where('owner_id', $owner->id)
+            ->whereNotNull('transferred_at')
+            ->when($unitId, fn ($query) => $query->where('unit_id', $unitId))
+            ->whereDate('transferred_at', '>=', $from->toDateString())
+            ->whereDate('transferred_at', '<=', $to->toDateString())
+            ->get()
+            ->map(fn (OwnerPayoutTransfer $transfer): array => [
+                'date' => $transfer->transferred_at,
+                'description' => 'Owner payout'.($transfer->reference_no ? ' / '.$transfer->reference_no : ''),
+                'booking_rent' => null, 'rent_collected' => null, 'booking_from' => null, 'booking_to' => null, 'booking_duration' => null,
+                'gross' => 0, 'management_fee' => 0, 'owner_expense' => (float) $transfer->net_payout, 'net' => -1 * (float) $transfer->net_payout,
+            ]);
+
+        $rows = $revenueRows->concat($expenses)->concat($manualEntries)->concat($payouts)->sortBy('date')->values();
+        $openingBalance = $this->openingBalance($owner, $from, $unitId, $shareByUnit, $managementByUnit);
+        $periodNet = (float) $rows->sum('net');
 
         return [
             'rows' => $rows,
             'gross' => $rows->sum('gross'),
             'management_fee' => $rows->sum('management_fee'),
             'expenses' => $rows->sum('owner_expense'),
-            'net' => $rows->sum('net'),
+            'opening_balance' => $openingBalance,
+            'period_net' => $periodNet,
+            'net' => $openingBalance + $periodNet,
         ];
+    }
+
+    private function openingBalance(Owner $owner, $from, ?int $unitId, $shareByUnit, $managementByUnit): float
+    {
+        $unitIds = $owner->units->pluck('id')->when($unitId, fn ($ids) => $ids->filter(fn ($id) => (int) $id === $unitId));
+        $invoiceNet = Invoice::query()
+            ->with(['booking', 'extensionRequest'])
+            ->whereIn('unit_id', $unitIds)
+            ->get()
+            ->filter(fn (Invoice $invoice) => $invoice->stay_check_out_date?->lt($from))
+            ->sum(function (Invoice $invoice) use ($shareByUnit, $managementByUnit): float {
+                $rentCollected = min((float) $invoice->paid_amount, (float) $invoice->rent_amount);
+                $ownerRent = min($rentCollected, max((float) $invoice->rent_amount - (float) $invoice->pattern_topup_amount, 0));
+                $gross = $ownerRent * (($shareByUnit[$invoice->unit_id] ?? 100) / 100);
+                return $gross - ($gross * (($managementByUnit[$invoice->unit_id] ?? 0) / 100));
+            });
+        $expenseDebits = (float) Expense::where('owner_id', $owner->id)
+            ->when($unitId, fn ($query) => $query->where('unit_id', $unitId))
+            ->whereDate('incurred_on', '<', $from->toDateString())->sum('amount');
+        $manualNet = (float) OwnerAccountEntry::where('owner_id', $owner->id)
+            ->when($unitId, fn ($query) => $query->where('unit_id', $unitId))
+            ->whereDate('entry_date', '<', $from->toDateString())
+            ->get()->sum(fn (OwnerAccountEntry $entry) => ($entry->direction === 'credit' ? 1 : -1) * (float) $entry->amount);
+        $payoutDebits = (float) OwnerPayoutTransfer::where('owner_id', $owner->id)
+            ->when($unitId, fn ($query) => $query->where('unit_id', $unitId))
+            ->whereNotNull('transferred_at')->whereDate('transferred_at', '<', $from->toDateString())->sum('net_payout');
+
+        return (float) $invoiceNet - $expenseDebits + $manualNet - $payoutDebits;
     }
 
     private function export(Owner $owner, array $statement, $from, $to): StreamedResponse
@@ -185,6 +282,7 @@ class OwnerStatementController extends Controller
         return response()->streamDownload(function () use ($owner, $statement): void {
             $handle = fopen('php://output', 'w');
             fputcsv($handle, ['Owner', $owner->full_name]);
+            fputcsv($handle, ['Opening Balance', $statement['opening_balance']]);
             // Include both booking stay dates so the exported owner ledger can be reconciled by checkout period.
             fputcsv($handle, ['Date', 'Description', 'Owner Rent Entitlement', 'Owner Rent Collected', 'Check-in Date', 'Check-out Date', 'Rent Share', 'Management Fee', 'Owner Expense', 'Net']);
             foreach ($statement['rows'] as $row) {
@@ -201,7 +299,7 @@ class OwnerStatementController extends Controller
                     $row['net'],
                 ]);
             }
-            fputcsv($handle, ['Totals', '', '', '', '', '', $statement['gross'], $statement['management_fee'], $statement['expenses'], $statement['net']]);
+            fputcsv($handle, ['Closing Balance', '', '', '', '', '', $statement['gross'], $statement['management_fee'], $statement['expenses'], $statement['net']]);
             fclose($handle);
         }, 'owner-statement-'.$owner->id.'-'.$from->format('Ymd').'-'.$to->format('Ymd').'.csv', ['Content-Type' => 'text/csv']);
     }
