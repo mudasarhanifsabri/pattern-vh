@@ -63,6 +63,43 @@ class OwnerAccountTest extends TestCase
             ->assertDontSee('Ledger row 16');
     }
 
+    public function test_admin_can_delete_only_an_opening_balance_entry(): void
+    {
+        $this->seed();
+        $admin = User::where('email', 'admin@example.com')->firstOrFail();
+        $owner = Owner::create(['full_name' => 'Opening Balance Owner', 'mobile_no' => '+971500000009']);
+        $openingBalance = $owner->accountEntries()->create([
+            'entry_date' => now()->toDateString(),
+            'type' => 'opening_balance',
+            'direction' => 'credit',
+            'amount' => 500,
+            'description' => 'Incorrect opening balance',
+            'created_by' => $admin->id,
+        ]);
+        $adjustment = $owner->accountEntries()->create([
+            'entry_date' => now()->toDateString(),
+            'type' => 'adjustment',
+            'direction' => 'credit',
+            'amount' => 100,
+            'description' => 'Protected adjustment',
+            'created_by' => $admin->id,
+        ]);
+
+        $this->actingAs($admin)->get(route('owners.account.index', $owner))
+            ->assertOk()
+            ->assertSee(route('owners.account.destroy', [$owner, $openingBalance]), false);
+
+        $this->actingAs($admin)
+            ->delete(route('owners.account.destroy', [$owner, $adjustment]))
+            ->assertStatus(422);
+        $this->assertDatabaseHas('owner_account_entries', ['id' => $adjustment->id]);
+
+        $this->actingAs($admin)
+            ->delete(route('owners.account.destroy', [$owner, $openingBalance]))
+            ->assertRedirect(route('owners.account.index', $owner));
+        $this->assertDatabaseMissing('owner_account_entries', ['id' => $openingBalance->id]);
+    }
+
     public function test_manual_owner_account_entries_are_reflected_in_owner_report(): void
     {
         $this->seed();

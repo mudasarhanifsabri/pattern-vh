@@ -146,6 +146,9 @@ Route::middleware('auth')->group(function () {
     Route::post('owners/{owner}/account', [OwnerAccountController::class, 'store'])
         ->middleware('permission:owners.manage')
         ->name('owners.account.store');
+    Route::delete('owners/{owner}/account/{entry}', [OwnerAccountController::class, 'destroy'])
+        ->middleware('permission:owners.manage|owner-statements.manage')
+        ->name('owners.account.destroy');
 
     foreach ([
         'tenants' => TenantController::class,

@@ -34,6 +34,8 @@ class OwnerAccountController extends Controller
             ->get()
             ->map(fn (OwnerAccountEntry $entry): array => [
                 'key' => 'entry-'.$entry->id,
+                'entry_id' => $entry->id,
+                'deletable' => $entry->type === 'opening_balance',
                 'date' => $entry->entry_date,
                 'type' => $entry->type,
                 'type_label' => OwnerAccountEntry::TYPES[$entry->type] ?? str($entry->type)->headline(),
@@ -269,6 +271,17 @@ class OwnerAccountController extends Controller
         ActivityLogger::log('owner_accounts.entry_created', "Added {$entry->type} entry to {$owner->full_name}'s account.", $entry);
 
         return redirect()->route('owners.account.index', $owner)->with('status', 'Account entry added successfully.');
+    }
+
+    public function destroy(Owner $owner, OwnerAccountEntry $entry)
+    {
+        abort_unless((int) $entry->owner_id === (int) $owner->id, 404);
+        abort_unless($entry->type === 'opening_balance', 422, 'Only manual opening balances can be deleted here.');
+
+        ActivityLogger::log('owner_accounts.opening_balance_deleted', "Deleted opening balance from {$owner->full_name}'s account.", $entry);
+        $entry->delete();
+
+        return redirect()->route('owners.account.index', $owner)->with('status', 'Opening balance deleted successfully.');
     }
 
     private function authorizeOwner(Request $request, Owner $owner): void
