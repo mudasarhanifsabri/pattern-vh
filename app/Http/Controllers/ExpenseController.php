@@ -244,6 +244,8 @@ class ExpenseController extends Controller
 
     private function nextExpenseNo(): string
     {
-        return ReferenceNumber::next(Expense::class, 'expense_no', 'EXP');
+        // Deleted expenses retain their unique reference in the database, so they
+        // must participate in number generation to avoid duplicate-key failures.
+        return ReferenceNumber::next(Expense::class, 'expense_no', 'EXP', 'Ymd', 4, true);
     }
 }

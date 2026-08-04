@@ -109,6 +109,44 @@ class AccountingModuleTest extends TestCase
         $this->actingAs($admin)->get(route('reports.export', ['type' => 'expenses']))->assertOk()->assertHeader('content-type', 'text/csv; charset=UTF-8');
     }
 
+    public function test_expense_number_does_not_reuse_a_soft_deleted_reference(): void
+    {
+        $this->seed();
+        Mail::fake();
+
+        $admin = User::where('email', 'admin@example.com')->firstOrFail();
+        $deletedReference = 'EXP-'.now()->format('Ymd').'-0001';
+
+        $deletedExpense = Expense::create([
+            'expense_no' => $deletedReference,
+            'name' => 'Deleted historical expense',
+            'type' => 'other',
+            'expense_to_role' => 'company',
+            'association' => 'company',
+            'incurred_on' => now()->toDateString(),
+            'amount' => 10,
+            'created_by' => $admin->id,
+            'updated_by' => $admin->id,
+        ]);
+        $deletedExpense->delete();
+
+        $this->actingAs($admin)
+            ->post(route('expenses.store'), [
+                'name' => 'New expense after deletion',
+                'type' => 'internet',
+                'expense_to_role' => 'company',
+                'association' => 'company',
+                'incurred_on' => now()->toDateString(),
+                'amount' => 100,
+            ])
+            ->assertRedirect();
+
+        $newExpense = Expense::where('name', 'New expense after deletion')->firstOrFail();
+
+        $this->assertNotSame($deletedReference, $newExpense->expense_no);
+        $this->assertStringStartsWith('EXP-'.now()->format('Ymd').'-', $newExpense->expense_no);
+    }
+
     public function test_expense_list_can_be_filtered_by_unit(): void
     {
         $this->seed();
