@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Mail\OwnerExpenseRecordedMail;
 use App\Models\Agent;
 use App\Models\Expense;
 use App\Models\OperationsTeamMember;
@@ -11,9 +12,11 @@ use App\Models\Unit;
 use App\Support\ActivityLogger;
 use App\Support\ErpStoragePath;
 use App\Support\ReferenceNumber;
+use App\Support\PushEventLogger;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
@@ -67,6 +70,18 @@ class ExpenseController extends Controller
         ]));
 
         ActivityLogger::log('expenses.created', "Created expense {$expense->expense_no}.", $expense);
+        $expense->load(['owner', 'unit.building']);
+        if ($expense->owner) {
+            app(PushEventLogger::class)->toOwner(
+                $expense->owner,
+                'New property expense',
+                "{$expense->expense_no}: {$expense->name} - AED ".number_format((float) $expense->amount, 2),
+                ['type' => 'owner_expense', 'expense_id' => $expense->id, 'url' => route('owner-statements.index')]
+            );
+            if (filled($expense->owner->email)) {
+                Mail::to($expense->owner->email)->queue(new OwnerExpenseRecordedMail($expense));
+            }
+        }
 
         return redirect()->route('expenses.show', $expense)->with('status', 'Expense recorded successfully.');
     }

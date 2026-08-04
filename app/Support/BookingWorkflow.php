@@ -3,6 +3,7 @@
 namespace App\Support;
 
 use App\Mail\BookingSecurityCheckInMail;
+use App\Mail\BookingGuestConfirmationMail;
 use App\Models\Booking;
 use App\Models\OperationsTeamMember;
 use Illuminate\Support\Facades\Mail;
@@ -100,7 +101,7 @@ class BookingWorkflow
         $booking->loadMissing(['tenant', 'unit.building']);
 
         foreach (['email', 'whatsapp', 'push'] as $channel) {
-            $booking->notificationLogs()->firstOrCreate(
+            $log = $booking->notificationLogs()->firstOrCreate(
                 ['channel' => $channel, 'subject' => 'Booking confirmation'],
                 [
                     'recipient' => match ($channel) {
@@ -109,7 +110,7 @@ class BookingWorkflow
                         default => $booking->tenant->mobile_no,
                     },
                     'message' => "Booking {$booking->booking_no} confirmed for {$booking->unit->building->name} Unit {$booking->unit->unit_no}.",
-                    'status' => 'pending',
+                    'status' => $channel === 'email' ? 'queued' : 'pending',
                     'payload' => [
                         'booking_no' => $booking->booking_no,
                         'unit_id' => $booking->unit_id,
@@ -119,6 +120,10 @@ class BookingWorkflow
                     ],
                 ],
             );
+
+            if ($channel === 'email' && $log->wasRecentlyCreated && filled($booking->tenant->email)) {
+                Mail::to($booking->tenant->email)->queue(new BookingGuestConfirmationMail($booking));
+            }
         }
     }
 

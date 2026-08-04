@@ -37,14 +37,28 @@ class WelcomePasswordSetupNotification extends Notification implements ShouldQue
             'email' => $notifiable->getEmailForPasswordReset(),
         ]);
 
+        $portalType = match (true) {
+            str_contains(strtolower($this->portalName), 'tenant') => 'tenant',
+            str_contains(strtolower($this->portalName), 'agent') => 'agent',
+            str_contains(strtolower($this->portalName), 'operations'), str_contains(strtolower($this->portalName), 'maintainer') => 'maintainer',
+            default => 'owner',
+        };
+        $subjects = [
+            'owner' => 'Welcome to Pattern - Your Owner Portal is Ready',
+            'tenant' => 'Welcome to Pattern - Your Guest Portal is Ready',
+            'agent' => 'Welcome to Pattern - Your Agent Portal is Ready',
+            'maintainer' => 'Welcome to Pattern - Your Team Portal is Ready',
+        ];
+
         return (new MailMessage)
-            ->subject('Welcome to Pattern Vacation Homes - Owner Portal Access')
-            ->view('emails.welcome-password-setup', [
+            ->subject($subjects[$portalType])
+            ->view('emails.welcome.'.$portalType, [
                 'ownerName' => $notifiable->name,
                 'ownerEmail' => $notifiable->getEmailForPasswordReset(),
                 'portalName' => $this->portalName,
                 'loginUrl' => URL::route('login'),
                 'setupUrl' => $setupUrl,
+                'portalType' => $portalType,
             ]);
     }
 

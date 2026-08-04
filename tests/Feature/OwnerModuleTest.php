@@ -102,6 +102,21 @@ class OwnerModuleTest extends TestCase
         Notification::assertSentTo($user, WelcomePasswordSetupNotification::class);
     }
 
+    public function test_each_portal_uses_a_separate_welcome_email(): void
+    {
+        $user = User::factory()->create(['name' => 'Portal User']);
+
+        foreach ([
+            'Pattern RMS Owner Portal' => 'emails.welcome.owner',
+            'Pattern RMS Tenant Portal' => 'emails.welcome.tenant',
+            'Pattern RMS Agent Portal' => 'emails.welcome.agent',
+            'Pattern RMS Operations Portal' => 'emails.welcome.maintainer',
+        ] as $portal => $view) {
+            $message = (new WelcomePasswordSetupNotification('test-token', $portal))->toMail($user);
+            $this->assertSame($view, $message->view);
+        }
+    }
+
     public function test_duplicate_owner_create_opens_existing_owner_instead_of_creating_another_row(): void
     {
         $this->seed();

@@ -3,6 +3,8 @@
 namespace Tests\Feature;
 
 use App\Mail\BookingSecurityCheckInMail;
+use App\Mail\BookingGuestConfirmationMail;
+use App\Mail\BookingStayReminderMail;
 use App\Models\Agent;
 use App\Models\Booking;
 use App\Models\BookingDepositRefund;
@@ -60,7 +62,7 @@ class BookingModuleTest extends TestCase
             'availability_status' => 'available',
             'rent_period' => 'monthly',
         ]);
-        $tenant = Tenant::create(['full_name' => 'Booking Tenant', 'mobile_no' => '+971501234000', 'identity_type' => 'passport']);
+        $tenant = Tenant::create(['full_name' => 'Booking Tenant', 'mobile_no' => '+971501234000', 'email' => 'booking.tenant@example.com', 'identity_type' => 'passport']);
         $agent = Agent::create(['full_name' => 'Booking Agent', 'mobile_no' => '+971501234111', 'identity_type' => 'passport', 'commission_percent' => 5]);
         OperationsTeamMember::create(['full_name' => 'Auto Cleaner', 'mobile_no' => '+971501234222', 'identity_type' => 'emirates_id', 'team_role' => 'cleaner', 'availability_status' => 'available', 'auto_assign_checkout_cleaning' => true]);
         OperationsTeamMember::create(['full_name' => 'Auto Technician', 'mobile_no' => '+971501234333', 'identity_type' => 'emirates_id', 'team_role' => 'technician', 'availability_status' => 'available', 'auto_assign_checkout_inspection' => true]);
@@ -104,6 +106,23 @@ class BookingModuleTest extends TestCase
         $this->assertDatabaseHas('notification_logs', ['booking_id' => $booking->id, 'channel' => 'push', 'subject' => 'Checkout inspection assigned']);
         Mail::assertQueued(BookingSecurityCheckInMail::class, fn (BookingSecurityCheckInMail $mail): bool => $mail->booking->is($booking)
             && count($mail->attachments()) >= 1);
+        Mail::assertQueued(BookingGuestConfirmationMail::class, fn (BookingGuestConfirmationMail $mail): bool => $mail->booking->is($booking));
+    }
+
+    public function test_guest_receives_seven_day_checkout_or_extension_reminder(): void
+    {
+        $this->seed();
+        Mail::fake();
+
+        $booking = Booking::with('tenant')->whereIn('booking_status', Booking::ACTIVE_STATUSES)->firstOrFail();
+        $booking->update(['check_out_date' => today()->addDays(7)->toDateString(), 'booking_status' => 'confirmed']);
+        $booking->extensionRequests()->delete();
+        $booking->tenant->update(['email' => 'reminder.guest@example.com']);
+
+        $this->artisan('bookings:send-reminders')->assertSuccessful();
+
+        Mail::assertQueued(BookingStayReminderMail::class, fn (BookingStayReminderMail $mail): bool => $mail->booking->is($booking) && $mail->days === 7);
+        $this->assertDatabaseHas('notification_logs', ['booking_id' => $booking->id, 'channel' => 'email', 'subject' => 'Checkout reminder 7 days']);
     }
 
     public function test_admin_creating_a_draft_booking_also_generates_its_invoice(): void

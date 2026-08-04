@@ -9,11 +9,13 @@ use App\Models\OperationsTeamMember;
 use App\Models\Owner;
 use App\Models\Tenant;
 use App\Models\TtLockSetting;
+use App\Mail\BookingStayReminderMail;
 use App\Support\TtLockApi;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schedule;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Minishlink\WebPush\VAPID;
 use Spatie\Permission\Models\Permission;
@@ -69,13 +71,15 @@ Artisan::command('bookings:send-reminders', function () {
     $count = 0;
 
     Booking::query()
-        ->with(['tenant', 'unit.building'])
-        ->whereIn('booking_status', ['confirmed', 'checked_in'])
-        ->whereIn('check_out_date', [now()->addDays(7)->toDateString(), now()->addDays(3)->toDateString()])
+        ->with(['tenant', 'unit.building', 'extensionRequests'])
+        ->whereIn('booking_status', Booking::ACTIVE_STATUSES)
         ->each(function (Booking $booking) use (&$count): void {
-            $days = now()->startOfDay()->diffInDays($booking->check_out_date->startOfDay());
+            $days = (int) now()->startOfDay()->diffInDays($booking->tenant_check_out_date, false);
+            if (! in_array($days, [7, 3], true)) {
+                return;
+            }
             foreach (['email', 'whatsapp', 'push'] as $channel) {
-                $booking->notificationLogs()->firstOrCreate(
+                $log = $booking->notificationLogs()->firstOrCreate(
                     ['channel' => $channel, 'subject' => "Checkout reminder {$days} days"],
                     [
                         'recipient' => match ($channel) {
@@ -92,9 +96,12 @@ Artisan::command('bookings:send-reminders', function () {
                             'url' => route('dashboard'),
                             'integration_ready' => true,
                         ],
-                        'sent_at' => $channel === 'email' ? now() : null,
+                        'sent_at' => null,
                     ],
                 );
+                if ($channel === 'email' && $log->wasRecentlyCreated && filled($booking->tenant->email)) {
+                    Mail::to($booking->tenant->email)->queue(new BookingStayReminderMail($booking, $days));
+                }
                 $count++;
             }
         });

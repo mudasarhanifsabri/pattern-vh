@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Mail\OwnerExpenseRecordedMail;
 use App\Models\Expense;
 use App\Models\BankAccount;
 use App\Models\BankTransaction;
@@ -14,6 +15,7 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Mail;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 use Spatie\Permission\PermissionRegistrar;
@@ -33,6 +35,7 @@ class AccountingModuleTest extends TestCase
     {
         $this->seed();
         Storage::fake(config('filesystems.default'));
+        Mail::fake();
 
         $admin = User::where('email', 'admin@example.com')->firstOrFail();
         $owner = Owner::where('email', 'mariam.owner@example.com')->firstOrFail();
@@ -62,6 +65,7 @@ class AccountingModuleTest extends TestCase
 
         $this->assertSame('owner_account', $expense->association);
         $this->assertNotNull($expense->receipt_path);
+        Mail::assertQueued(OwnerExpenseRecordedMail::class, fn (OwnerExpenseRecordedMail $mail): bool => $mail->expense->is($expense));
 
         $this->actingAs($admin)->get(route('expenses.show', $expense))->assertOk()->assertSee('Owner AC service');
         $payoutPayment = Payment::query()
