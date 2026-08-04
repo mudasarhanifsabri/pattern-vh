@@ -215,6 +215,22 @@
                     </div>
                     <a href="{{ route('owner-statements.index') }}" class="grid h-11 w-11 place-items-center rounded-2xl bg-blue-50 text-blue-600" aria-label="Open owner statement"><svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg></a>
                 </div>
+                @if($ownerUpcomingBalance->isNotEmpty())
+                    <div class="border-t border-slate-100 px-4 py-3">
+                        <div class="flex items-center justify-between gap-3">
+                            <p class="text-[10px] font-black uppercase tracking-[0.14em] text-blue-500">Upcoming after checkout</p>
+                            <p class="text-xs font-black text-blue-700">AED {{ number_format((float) $ownerUpcomingBalance->sum('amount'), 0) }}</p>
+                        </div>
+                        <div class="mt-2 space-y-1.5">
+                            @foreach($ownerUpcomingBalance->take(3) as $upcoming)
+                                <div class="flex items-center justify-between gap-3 rounded-xl bg-slate-50 px-3 py-2">
+                                    <div class="min-w-0"><p class="truncate text-[11px] font-black text-[#071a3b]">{{ $upcoming['invoice']->unit?->building?->name }} · Unit {{ $upcoming['invoice']->unit?->unit_no }}</p><p class="mt-0.5 text-[10px] font-semibold text-slate-500">{{ $upcoming['is_extension'] ? 'Extension' : 'Booking' }} · Checkout {{ $upcoming['checkout']->format('d M Y') }}</p></div>
+                                    <span class="shrink-0 text-xs font-black text-blue-700">AED {{ number_format((float) $upcoming['amount'], 0) }}</span>
+                                </div>
+                            @endforeach
+                        </div>
+                    </div>
+                @endif
             </section>
 
             <section class="grid grid-cols-2 gap-3">

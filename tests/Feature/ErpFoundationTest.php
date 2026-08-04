@@ -58,6 +58,13 @@ class ErpFoundationTest extends TestCase
         $historyBooking->check_out_date = now()->subMonths(2)->addDays(7)->startOfDay();
         $historyBooking->save();
 
+        $balanceCalculator = app(\App\Support\OwnerBalanceCalculator::class);
+        $ownerRecord = \App\Models\Owner::where('user_id', $owner->id)->orWhere('email', $owner->email)->firstOrFail();
+        $this->assertLessThan(
+            $balanceCalculator->calculate($ownerRecord),
+            $balanceCalculator->calculate($ownerRecord, null, today())
+        );
+
         $this->actingAs($owner)
             ->get(route('dashboard'))
             ->assertOk()
@@ -67,6 +74,8 @@ class ErpFoundationTest extends TestCase
             ->assertSee('My units status')
             ->assertSee('Unit 1402')
             ->assertSee('Current owner balance')
+            ->assertSee('Upcoming after checkout')
+            ->assertSee('Checkout '.$booking->check_out_date->format('d M Y'))
             ->assertSee('Current booking')
             ->assertSee('Booking history')
             ->assertSee('Checked out')

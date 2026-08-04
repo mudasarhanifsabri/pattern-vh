@@ -59,7 +59,8 @@ class DashboardController extends Controller
             'bookingHistory' => $tenant ? $this->bookingHistory($tenant) : collect(),
             'attentionItems' => $this->attentionItems($tenant),
             'recentPayments' => $owner ? $this->ownerRecentPayments($owner) : $this->recentPayments($tenant),
-            'ownerBalance' => $owner ? app(OwnerBalanceCalculator::class)->calculate($owner) : 0,
+            'ownerBalance' => $owner ? app(OwnerBalanceCalculator::class)->calculate($owner, null, today()) : 0,
+            'ownerUpcomingBalance' => $owner ? app(OwnerBalanceCalculator::class)->upcoming($owner, today()) : collect(),
             'ownerBookingHistory' => $owner ? $this->ownerBookingHistory($owner) : collect(),
         ]);
     }
