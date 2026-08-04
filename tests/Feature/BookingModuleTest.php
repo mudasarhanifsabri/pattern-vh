@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Mail\BookingSecurityCheckInMail;
 use App\Mail\BookingGuestConfirmationMail;
 use App\Mail\BookingStayReminderMail;
+use App\Mail\BookingOverdueStayWarningMail;
 use App\Models\Agent;
 use App\Models\Booking;
 use App\Models\BookingDepositRefund;
@@ -123,6 +124,22 @@ class BookingModuleTest extends TestCase
 
         Mail::assertQueued(BookingStayReminderMail::class, fn (BookingStayReminderMail $mail): bool => $mail->booking->is($booking) && $mail->days === 7);
         $this->assertDatabaseHas('notification_logs', ['booking_id' => $booking->id, 'channel' => 'email', 'subject' => 'Checkout reminder 7 days']);
+    }
+
+    public function test_guest_receives_soft_warning_after_checkout_date_passes(): void
+    {
+        $this->seed();
+        Mail::fake();
+
+        $booking = Booking::with('tenant')->whereIn('booking_status', Booking::ACTIVE_STATUSES)->firstOrFail();
+        $booking->update(['check_out_date' => today()->subDay()->toDateString(), 'booking_status' => 'confirmed']);
+        $booking->extensionRequests()->delete();
+        $booking->tenant->update(['email' => 'overdue.guest@example.com']);
+
+        $this->artisan('bookings:send-reminders')->assertSuccessful();
+
+        Mail::assertQueued(BookingOverdueStayWarningMail::class, fn (BookingOverdueStayWarningMail $mail): bool => $mail->booking->is($booking));
+        $this->assertDatabaseHas('notification_logs', ['booking_id' => $booking->id, 'channel' => 'email', 'subject' => 'Checkout overdue - action required']);
     }
 
     public function test_admin_creating_a_draft_booking_also_generates_its_invoice(): void

@@ -10,6 +10,7 @@ use App\Models\Owner;
 use App\Models\Tenant;
 use App\Models\TtLockSetting;
 use App\Mail\BookingStayReminderMail;
+use App\Mail\BookingOverdueStayWarningMail;
 use App\Support\TtLockApi;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
@@ -75,7 +76,20 @@ Artisan::command('bookings:send-reminders', function () {
         ->whereIn('booking_status', Booking::ACTIVE_STATUSES)
         ->each(function (Booking $booking) use (&$count): void {
             $days = (int) now()->startOfDay()->diffInDays($booking->tenant_check_out_date, false);
-            if (! in_array($days, [7, 3], true)) {
+            if (! in_array($days, [7, 3, -1], true)) {
+                return;
+            }
+            if ($days === -1) {
+                $subject = 'Checkout overdue - action required';
+                $message = "Your confirmed checkout date for booking {$booking->booking_no} has passed. Please extend and pay or confirm checkout. Door access may be restricted.";
+                $log = $booking->notificationLogs()->firstOrCreate(
+                    ['channel' => 'email', 'subject' => $subject],
+                    ['recipient' => $booking->tenant->email, 'message' => $message, 'status' => 'queued', 'payload' => ['booking_id' => $booking->id, 'url' => route('dashboard'), 'actions' => ['request_extension', 'confirm_checkout']]],
+                );
+                if ($log->wasRecentlyCreated && filled($booking->tenant->email)) {
+                    Mail::to($booking->tenant->email)->queue(new BookingOverdueStayWarningMail($booking));
+                }
+                $count++;
                 return;
             }
             foreach (['email', 'whatsapp', 'push'] as $channel) {
