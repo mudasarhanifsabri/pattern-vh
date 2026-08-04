@@ -482,6 +482,37 @@ class BookingModuleTest extends TestCase
             ->assertSee($extendedCheckout->format('M d, Y'));
     }
 
+    public function test_mobile_calendar_shows_checked_out_history_and_available_units(): void
+    {
+        $this->seed();
+
+        $admin = User::where('email', 'admin@example.com')->firstOrFail();
+        $booking = Booking::where('booking_no', 'BK-DEMO-0001')->firstOrFail();
+        $booking->forceFill([
+            'check_in_date' => today()->subDays(10),
+            'check_out_date' => today()->subDays(3),
+            'booking_status' => 'checked_out',
+        ])->save();
+        $availableUnit = Unit::create([
+            'building_id' => $booking->unit->building_id,
+            'unit_no' => 'CAL-AVAILABLE',
+            'unit_type' => 'Studio',
+            'availability_status' => 'available',
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('availability-calendar.index', [
+                'start' => today()->subDays(12)->toDateString(),
+                'days' => 14,
+            ]))
+            ->assertOk()
+            ->assertSee($booking->tenant->full_name)
+            ->assertSee($booking->check_in_date->format('M d, Y'))
+            ->assertSee($booking->check_out_date->format('M d, Y'))
+            ->assertSee('Unit '.$availableUnit->unit_no)
+            ->assertSee('Available for booking');
+    }
+
     public function test_dashboard_handles_a_booking_for_an_archived_apartment(): void
     {
         $this->seed();
