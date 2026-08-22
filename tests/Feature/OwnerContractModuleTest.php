@@ -130,4 +130,24 @@ class OwnerContractModuleTest extends TestCase
             ->assertDontSee('Admin template helper')
             ->assertDontSee('{{contract_no}}');
     }
+
+    public function test_contract_pages_keep_working_after_the_linked_unit_is_archived(): void
+    {
+        $this->seed();
+
+        $admin = User::where('email', 'admin@example.com')->firstOrFail();
+        $contract = OwnerUnitContract::where('contract_no', 'PMC-DEMO-0001')->firstOrFail();
+
+        $contract->unit()->firstOrFail()->delete();
+
+        $this->actingAs($admin)
+            ->get(route('owner-contracts.index'))
+            ->assertOk()
+            ->assertSee($contract->contract_no);
+
+        $this->actingAs($admin)
+            ->get(route('owner-contracts.show', $contract))
+            ->assertOk()
+            ->assertSee($contract->contract_no);
+    }
 }
