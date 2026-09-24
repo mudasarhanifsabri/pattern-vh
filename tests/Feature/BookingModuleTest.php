@@ -233,7 +233,15 @@ class BookingModuleTest extends TestCase
         $this->actingAs($admin)->get(route('bookings.index'))->assertOk()->assertSee('Booking registry');
         $this->actingAs($admin)->get(route('availability-calendar.index'))->assertOk()->assertSee('Availability calendar')->assertSee($booking->unit->unit_no);
         $this->actingAs($admin)->get(route('bookings.create'))->assertOk()->assertSee('Automation preview');
-        $this->actingAs($admin)->get(route('bookings.show', $booking))->assertOk()->assertSee('Booking Confirmation PDF');
+        $invoice = $booking->invoices()->firstOrFail();
+
+        $this->actingAs($admin)
+            ->get(route('bookings.show', $booking))
+            ->assertOk()
+            ->assertSee('Booking Confirmation PDF')
+            ->assertSee('View documents')
+            ->assertSee(route('bookings.confirmation-pdf', $booking), false)
+            ->assertSee(route('invoices.pdf', $invoice), false);
         $this->actingAs($admin)->get(route('bookings.confirmation-pdf', $booking))->assertOk()->assertHeader('content-type', 'application/pdf');
         $this->assertDatabaseHas('notification_logs', ['booking_id' => $booking->id, 'subject' => 'Booking confirmation', 'status' => 'sent']);
     }

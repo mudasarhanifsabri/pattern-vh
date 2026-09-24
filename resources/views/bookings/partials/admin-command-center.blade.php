@@ -69,6 +69,72 @@
         ['Passport', $booking->tenant->passport_emirates_id_no ?? null],
         ['Emirates ID', $booking->tenant->emirates_id_no ?? $booking->tenant->passport_emirates_id_no ?? null],
     ];
+    $bookingDocuments = collect([
+        [
+            'label' => 'Booking confirmation',
+            'detail' => $booking->booking_no.'.pdf',
+            'url' => route('bookings.confirmation-pdf', $booking),
+        ],
+    ]);
+
+    if (auth()->user()->canAny(['tenants.view', 'tenants.manage']) && $booking->tenant->document_path) {
+        $bookingDocuments->push([
+            'label' => 'Tenant identity document',
+            'detail' => $booking->tenant->document_original_name ?: 'Passport / Emirates ID',
+            'url' => route('tenants.document', $booking->tenant),
+        ]);
+    }
+
+    if (auth()->user()->canAny(['invoices.view', 'invoices.manage'])) {
+        $invoices->each(function ($invoice) use ($bookingDocuments) {
+            $bookingDocuments->push([
+                'label' => 'Invoice '.$invoice->invoice_no,
+                'detail' => 'Invoice PDF',
+                'url' => route('invoices.pdf', $invoice),
+            ]);
+        });
+    }
+
+    if (auth()->user()->canAny(['receipts.view', 'receipts.manage'])) {
+        $invoices->flatMap->receipts->each(function ($receipt) use ($bookingDocuments) {
+            $bookingDocuments->push([
+                'label' => 'Receipt '.$receipt->receipt_no,
+                'detail' => 'Receipt PDF',
+                'url' => route('receipts.pdf', $receipt),
+            ]);
+        });
+    }
+
+    if (auth()->user()->canAny(['units.view', 'units.manage'])) {
+        foreach ([
+            'title_deed' => ['Title deed', $booking->unit->title_deed_original_name],
+            'dtcm_permit' => ['DTCM permit', $booking->unit->dtcm_permit_original_name],
+        ] as $type => [$label, $originalName]) {
+            if ($booking->unit->getAttribute("{$type}_path")) {
+                $bookingDocuments->push([
+                    'label' => $label,
+                    'detail' => $originalName ?: str($type)->replace('_', ' ')->headline(),
+                    'url' => route('units.document', [$booking->unit, $type]),
+                ]);
+            }
+        }
+    }
+
+    if ($booking->dtcmCheckin && auth()->user()->canAny(['dtcm-checkins.view', 'dtcm-checkins.manage'])) {
+        $bookingDocuments->push([
+            'label' => 'DTCM check-in',
+            'detail' => $booking->dtcmCheckin->portal_reference ?: str($booking->dtcmCheckin->status)->headline(),
+            'url' => route('dtcm-checkins.index', ['booking_id' => $booking->id]),
+        ]);
+    }
+
+    if ($booking->checkInInspectionItems->isNotEmpty() || $inspectionDone) {
+        $bookingDocuments->push([
+            'label' => 'Inspection report',
+            'detail' => $inspectionDone ? 'Checkout inspection completed' : 'Check-in inspection',
+            'url' => route('bookings.inspection', $booking),
+        ]);
+    }
     $activityRows = collect()
         ->merge($booking->notificationLogs->take(4)->map(fn ($log) => [
             'title' => str($log->subject ?: $log->channel)->headline(),
@@ -407,15 +473,23 @@
             </section>
 
             <section id="documents" class="scroll-mt-32 rounded-[1.4rem] border border-slate-200 bg-white p-5 shadow-sm">
-                <h2 class="text-lg font-black text-[#071a3b]">Documents</h2>
+                <div class="flex items-center justify-between gap-3">
+                    <h2 class="text-lg font-black text-[#071a3b]">Documents</h2>
+                    <span class="rounded-full bg-blue-50 px-3 py-1 text-xs font-black text-blue-700">{{ $bookingDocuments->count() }} available</span>
+                </div>
                 <div class="mt-4 grid gap-3 md:grid-cols-3">
-                    @foreach(['Booking confirmation', 'Invoice / receipt', 'Tenant documents', 'DTCM check-in', 'Title deed / permit', 'Inspection report'] as $document)
-                        <div class="rounded-2xl border border-slate-200 p-4">
-                            <p class="font-black text-[#071a3b]">{{ $document }}</p>
-                            <p class="mt-1 text-xs font-semibold text-slate-500">Available from related workflow.</p>
-                        </div>
+                    @foreach($bookingDocuments as $document)
+                        <a href="{{ $document['url'] }}" target="_blank" rel="noopener" class="group rounded-2xl border border-slate-200 p-4 transition hover:border-blue-200 hover:bg-blue-50">
+                            <div class="flex items-start justify-between gap-3">
+                                <div><p class="font-black text-[#071a3b]">{{ $document['label'] }}</p><p class="mt-1 break-all text-xs font-semibold text-slate-500">{{ $document['detail'] }}</p></div>
+                                <span class="text-xs font-black text-blue-600 group-hover:underline">Open</span>
+                            </div>
+                        </a>
                     @endforeach
                 </div>
+                @if($bookingDocuments->count() === 1)
+                    <p class="mt-4 rounded-xl bg-slate-50 px-4 py-3 text-xs font-semibold text-slate-500">Other documents will appear here automatically after they are uploaded or generated.</p>
+                @endif
             </section>
 
             <section id="activity-log" class="scroll-mt-32 rounded-[1.4rem] border border-slate-200 bg-white p-5 shadow-sm">
@@ -720,12 +794,17 @@
                 </div>
 
                 <div x-show="modal === 'documents'" class="grid gap-3 sm:grid-cols-2">
-                    @foreach(['Passport / Emirates ID', 'Booking confirmation', 'Invoice', 'Receipt', 'DTCM check-in', 'Inspection report'] as $doc)
-                        <div class="rounded-2xl border border-slate-200 p-4">
-                            <p class="font-black text-[#071a3b]">{{ $doc }}</p>
-                            <p class="mt-1 text-xs font-semibold text-slate-500">Open from linked record when uploaded.</p>
-                        </div>
+                    @foreach($bookingDocuments as $document)
+                        <a href="{{ $document['url'] }}" target="_blank" rel="noopener" class="group rounded-2xl border border-slate-200 p-4 transition hover:border-blue-200 hover:bg-blue-50">
+                            <div class="flex items-start justify-between gap-3">
+                                <div><p class="font-black text-[#071a3b]">{{ $document['label'] }}</p><p class="mt-1 break-all text-xs font-semibold text-slate-500">{{ $document['detail'] }}</p></div>
+                                <span class="text-xs font-black text-blue-600 group-hover:underline">Open</span>
+                            </div>
+                        </a>
                     @endforeach
+                    @if($bookingDocuments->count() === 1)
+                        <p class="rounded-2xl bg-slate-50 p-4 text-xs font-semibold leading-5 text-slate-500 sm:col-span-2">No additional files have been uploaded or generated for this booking yet.</p>
+                    @endif
                 </div>
 
                 <div x-show="modal === 'timeline'" class="space-y-3">
