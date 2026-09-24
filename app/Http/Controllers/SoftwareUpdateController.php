@@ -19,7 +19,9 @@ class SoftwareUpdateController extends Controller
             'latestLog' => rescue(fn () => $this->latestLog(), null, report: true),
             'productionLogs' => rescue(fn () => $this->productionLogs(), [], report: true),
             'phpBinary' => PHP_BINARY,
-            'composerBinary' => implode(' ', $this->composerCommand()),
+            'composerBinary' => $this->composerCommand()[0] === '__skip__'
+                ? 'Unavailable (step will be skipped)'
+                : implode(' ', $this->composerCommand()),
             'gitBinary' => config('erp.git_binary'),
         ]);
     }
@@ -76,22 +78,22 @@ class SoftwareUpdateController extends Controller
             $steps['Download latest code'] = [config('erp.git_binary'), 'pull', '--ff-only'];
         }
 
+        // Clear cached config and compiled Blade views immediately after pulling.
+        // This ensures UI-only releases become active even when an optional build
+        // tool such as Composer or NPM is unavailable on shared hosting.
+        if (! empty($validated['clear_cache'])) {
+            $steps['Clear cached files'] = [$php, 'artisan', 'optimize:clear'];
+        }
+
         if (! empty($validated['composer_install'])) {
-            $steps['Install PHP dependencies'] = [
-                ...$this->composerCommand(),
-                'install',
-                '--no-dev',
-                '--optimize-autoloader',
-                '--no-interaction',
-            ];
+            $composer = $this->composerCommand();
+            $steps['Install PHP dependencies'] = $composer[0] === '__skip__'
+                ? $composer
+                : [...$composer, 'install', '--no-dev', '--optimize-autoloader', '--no-interaction'];
         }
 
         if (! empty($validated['npm_build'])) {
             $steps['Build frontend assets'] = $this->frontendBuildCommand();
-        }
-
-        if (! empty($validated['clear_cache'])) {
-            $steps['Clear cached files'] = [$php, 'artisan', 'optimize:clear'];
         }
 
         if (! empty($validated['migrate'])) {
@@ -110,7 +112,9 @@ class SoftwareUpdateController extends Controller
         $configured = trim((string) config('erp.composer_binary'));
         $finder = new ExecutableFinder;
 
-        if ($configured !== '' && ! str_contains($configured, DIRECTORY_SEPARATOR)) {
+        $configuredIsPath = str_contains($configured, '/') || str_contains($configured, '\\');
+
+        if ($configured !== '' && ! $configuredIsPath) {
             $resolved = $finder->find($configured);
             if ($resolved) {
                 return [$resolved];
@@ -140,9 +144,10 @@ class SoftwareUpdateController extends Controller
             }
         }
 
-        // Keep the configured value in the error log so hosting support can see
-        // exactly which missing path must be corrected.
-        return [$configured ?: 'composer'];
+        return [
+            '__skip__',
+            'Composer is unavailable on this server. Configured path: '.($configured ?: 'composer').'. Existing vendor dependencies were preserved.',
+        ];
     }
 
     private function runStep(string $label, array $command, string $logPath): bool

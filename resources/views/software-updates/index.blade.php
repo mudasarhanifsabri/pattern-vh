@@ -35,11 +35,11 @@
                 <div class="grid gap-3 p-5 md:grid-cols-2">
                     @foreach([
                         'git_pull' => ['Download latest code', 'Runs git pull --ff-only from your connected GitHub/cPanel repository.', true],
-                        'composer_install' => ['Install PHP dependencies', 'Runs composer install --no-dev --optimize-autoloader.', true],
+                        'composer_install' => ['Install PHP dependencies', 'Runs Composer when available; otherwise preserves existing vendor dependencies.', false],
                         'clear_cache' => ['Clear old cache', 'Clears stale config, routes, views, and app cache before migration.', true],
                         'migrate' => ['Run database migrations', 'Applies new tables/columns safely while preserving existing records.', true],
                         'build_cache' => ['Rebuild Laravel cache', 'Optimizes config, routes, events, and views for production speed.', true],
-                        'npm_build' => ['Build frontend assets', 'Runs npm run build so new UI styles and app scripts are published.', true],
+                        'npm_build' => ['Build frontend assets', 'Runs npm run build so new UI styles and app scripts are published.', false],
                     ] as $name => [$label, $copy, $checked])
                         <label class="flex gap-3 rounded-2xl border border-slate-200 bg-white p-4 transition hover:border-blue-200 hover:bg-blue-50/40">
                             <input type="checkbox" name="{{ $name }}" value="1" @checked($checked) class="mt-1 h-4 w-4 rounded border-slate-300 text-blue-600">
