@@ -432,6 +432,8 @@ Route::middleware('auth')->group(function () {
     Route::get('software-updates', [SoftwareUpdateController::class, 'index'])
         ->middleware('permission:software-updates.manage|users.manage')
         ->name('software-updates.index');
+    Route::get('software-updates/run', fn () => redirect()->route('software-updates.index'))
+        ->middleware('permission:software-updates.manage|users.manage');
     Route::post('software-updates/run', [SoftwareUpdateController::class, 'run'])
         ->middleware('permission:software-updates.manage|users.manage')
         ->name('software-updates.run');
