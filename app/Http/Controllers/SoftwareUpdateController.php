@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
+use Symfony\Component\Process\ExecutableFinder;
 use Symfony\Component\Process\Process;
 
 class SoftwareUpdateController extends Controller
@@ -18,7 +19,7 @@ class SoftwareUpdateController extends Controller
             'latestLog' => rescue(fn () => $this->latestLog(), null, report: true),
             'productionLogs' => rescue(fn () => $this->productionLogs(), [], report: true),
             'phpBinary' => PHP_BINARY,
-            'composerBinary' => config('erp.composer_binary'),
+            'composerBinary' => implode(' ', $this->composerCommand()),
             'gitBinary' => config('erp.git_binary'),
         ]);
     }
@@ -76,7 +77,13 @@ class SoftwareUpdateController extends Controller
         }
 
         if (! empty($validated['composer_install'])) {
-            $steps['Install PHP dependencies'] = [config('erp.composer_binary'), 'install', '--no-dev', '--optimize-autoloader', '--no-interaction'];
+            $steps['Install PHP dependencies'] = [
+                ...$this->composerCommand(),
+                'install',
+                '--no-dev',
+                '--optimize-autoloader',
+                '--no-interaction',
+            ];
         }
 
         if (! empty($validated['npm_build'])) {
@@ -96,6 +103,46 @@ class SoftwareUpdateController extends Controller
         }
 
         return $steps;
+    }
+
+    private function composerCommand(): array
+    {
+        $configured = trim((string) config('erp.composer_binary'));
+        $finder = new ExecutableFinder;
+
+        if ($configured !== '' && ! str_contains($configured, DIRECTORY_SEPARATOR)) {
+            $resolved = $finder->find($configured);
+            if ($resolved) {
+                return [$resolved];
+            }
+        }
+
+        if ($configured !== '' && is_file($configured)) {
+            return str_ends_with(strtolower($configured), '.phar')
+                ? [PHP_BINARY, $configured]
+                : [$configured];
+        }
+
+        if ($resolved = $finder->find('composer')) {
+            return [$resolved];
+        }
+
+        foreach ([
+            '/usr/local/bin/composer',
+            '/usr/bin/composer',
+            '/opt/cpanel/composer/bin/composer',
+            base_path('composer.phar'),
+        ] as $candidate) {
+            if (is_file($candidate)) {
+                return str_ends_with(strtolower($candidate), '.phar')
+                    ? [PHP_BINARY, $candidate]
+                    : [$candidate];
+            }
+        }
+
+        // Keep the configured value in the error log so hosting support can see
+        // exactly which missing path must be corrected.
+        return [$configured ?: 'composer'];
     }
 
     private function runStep(string $label, array $command, string $logPath): bool
