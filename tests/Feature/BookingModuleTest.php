@@ -240,6 +240,7 @@ class BookingModuleTest extends TestCase
             ->assertOk()
             ->assertSee('Booking Confirmation PDF')
             ->assertSee('View documents')
+            ->assertSee('href="#documents"', false)
             ->assertSee(route('bookings.confirmation-pdf', $booking), false)
             ->assertSee(route('invoices.pdf', $invoice), false);
         $this->actingAs($admin)->get(route('bookings.confirmation-pdf', $booking))->assertOk()->assertHeader('content-type', 'application/pdf');

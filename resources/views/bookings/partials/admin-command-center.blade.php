@@ -277,7 +277,7 @@
                         </div>
                     </div>
                     <div class="mt-5 grid gap-3 sm:grid-cols-2">
-                        <button type="button" @click="modal = 'documents'" class="rounded-xl border border-blue-100 px-4 py-2.5 text-sm font-black text-blue-700">View documents</button>
+                        <a href="#documents" class="rounded-xl border border-blue-100 px-4 py-2.5 text-center text-sm font-black text-blue-700">View documents</a>
                         <a href="{{ route('tenants.show', $booking->tenant) }}" class="rounded-xl border border-slate-200 px-4 py-2.5 text-center text-sm font-black text-slate-700">Tenant profile</a>
                     </div>
                 </div>
